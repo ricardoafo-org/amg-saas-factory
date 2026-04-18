@@ -10,6 +10,7 @@ import { getAvailableSlots, bookSlot, type AvailableSlot } from '@/actions/slots
 import { calcOilRecommendation, estimateOilDate } from '@/lib/oil';
 import { matchOptionByNlp, classifyIntent } from '@/lib/nlp/classifier';
 import { resolveWithClaude } from '@/actions/nlp';
+import { readSlotCache, writeSlotCache, clearSlotCache } from '@/core/chatbot/slot-cache';
 
 type FlowNodeAny = {
   message?: string;
@@ -33,12 +34,17 @@ type Props = {
   businessName: string;
   services?: Service[];
   ivaRate: number;
+  /** Pre-select a service when the chatbot opens (from ServiceGrid CTA) */
+  initialService?: string;
+  /** Callback fired when booking step advances (0-based index) */
+  onStepChange?: (step: number) => void;
 };
 
 let msgCounter = 0;
 function mkKey() { return `msg-${++msgCounter}`; }
 
-export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, policyVersion, policyHash, services = [], ivaRate }: Props) {
+
+export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, policyVersion, policyHash, services = [], ivaRate, onStepChange }: Props) {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<string>(flow.start);
   const [variables, setVariables] = useState<Record<string, string>>({});
@@ -51,6 +57,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [nlpInput, setNlpInput] = useState('');
+  const [slotCacheBanner, setSlotCacheBanner] = useState<string | null>(null);
   // Multi-select service state
   const [selectedServiceValues, setSelectedServiceValues] = useState<string[]>([]);
   const [showServiceSummary, setShowServiceSummary] = useState(false);
@@ -133,7 +140,9 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
       setCurrentNodeId(nodeId);
       getAvailableSlots(tenantId, today, 14)
         .then((available) => {
+          writeSlotCache(tenantId, available);
           setSlots(available);
+          setSlotCacheBanner(null);
           setLoadingSlots(false);
           if (available.length > 0) {
             addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
@@ -144,7 +153,16 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
         })
         .catch(() => {
           setLoadingSlots(false);
-          if (node.next) setCurrentNodeId(node.next);
+          // Try localStorage cache on network error
+          const cached = readSlotCache(tenantId);
+          if (cached && cached.length > 0) {
+            setSlots(cached);
+            setSlotCacheBanner('Mostrando disponibilidad guardada · puede no reflejar cambios recientes');
+            addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
+          } else {
+            addBotMessage(`Sin conexión — llámanos al ${phone}`, 300);
+            if (node.next) setCurrentNodeId(node.next);
+          }
         });
       return;
     }
@@ -179,6 +197,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
         userAgent: navigator.userAgent,
       });
       if (slotId) await bookSlot(slotId, tenantId).catch(() => null);
+      onStepChange?.(3); // step 3 = Confirmado
       if (node.next) goToNode(node.next, vars);
       else setDone(true);
     } catch {
@@ -279,6 +298,8 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
     };
     setVariables(newVars);
     setSlots([]);
+    setSlotCacheBanner(null);
+    clearSlotCache(tenantId);
     const nextNodeId = currentNode?.next ?? 'ask_name';
     goToNode(nextNodeId, newVars);
   }
@@ -499,6 +520,11 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
               {showSlots && (
                 <div className="space-y-2">
                   <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Fechas disponibles</p>
+                  {slotCacheBanner && (
+                    <p className="text-[10px] text-warning font-mono px-2 py-1 rounded bg-warning/10 border border-warning/20">
+                      ⚠ {slotCacheBanner}
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     {slots.slice(0, 6).map((slot) => {
                       const d = new Date(slot.slotDate + 'T00:00:00');
