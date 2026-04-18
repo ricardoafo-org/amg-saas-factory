@@ -4,6 +4,9 @@ import { headers } from 'next/headers';
 import { getPb } from '@/lib/pb';
 import { loadClientConfig } from '@/lib/config';
 import { Resend } from 'resend';
+import { render } from '@react-email/render';
+import { AppointmentConfirmation } from '@/emails/AppointmentConfirmation';
+import { QuoteRequest } from '@/emails/QuoteRequest';
 
 async function getClientIp(): Promise<string> {
   try {
@@ -111,38 +114,29 @@ async function sendBookingConfirmation(opts: {
 
   const resend = new Resend(apiKey);
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
+  const baseUrl = process.env['NEXT_PUBLIC_BASE_URL'] ?? 'http://localhost:3000';
 
-  const servicesHtml = opts.serviceNames
-    .map((s) => `<li style="padding:4px 0">${s}</li>`)
-    .join('');
+  const html = await render(
+    AppointmentConfirmation({
+      customerName: opts.name,
+      serviceName: opts.serviceNames.join(', '),
+      scheduledAt: opts.date,
+      plate: opts.matricula,
+      businessName: opts.businessName,
+      businessPhone: clientConfig.contact.phone,
+      businessAddress: `${clientConfig.address.street}, ${clientConfig.address.city}`,
+      warrantyNote: 'Garantía de reparación: 3 meses o 2.000 km (RD 1457/1986)',
+      cancelLink: `${baseUrl}/cancelar`,
+      baseUrl,
+      primaryColor: clientConfig.branding.primaryColor,
+    }),
+  );
 
   await resend.emails.send({
     from: fromEmail,
     to: opts.to,
     subject: `Confirmación de cita — ${opts.businessName}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#111">
-        <h2 style="color:#dc2626">Cita recibida</h2>
-        <p>Hola <strong>${opts.name}</strong>,</p>
-        <p>Hemos recibido tu solicitud de cita en <strong>${opts.businessName}</strong>.</p>
-        <table style="width:100%;border-collapse:collapse;margin:16px 0">
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#555;vertical-align:top">Servicios</td>
-              <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600">
-                <ul style="margin:0;padding-left:16px">${servicesHtml}</ul>
-              </td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#555">Matrícula</td>
-              <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600">${opts.matricula}</td></tr>
-          <tr><td style="padding:8px;color:#555">Fecha preferida</td>
-              <td style="padding:8px;font-weight:600">${opts.date}</td></tr>
-        </table>
-        <p style="color:#555;font-size:14px">Te llamaremos al número facilitado para confirmar la hora exacta.</p>
-        <p style="margin-top:16px;color:#555;font-size:13px;font-style:italic;border-top:1px solid #eee;padding-top:12px">
-          Garantía de reparación: 3 meses o 2.000 km (RD 1457/1986 Art. 16).
-          Todo trabajo está sujeto a presupuesto previo (RD 1457/1986 Art. 14).
-        </p>
-        <p style="margin-top:16px;color:#888;font-size:12px">— ${opts.businessName}</p>
-      </div>
-    `,
+    html,
   });
 }
 
@@ -246,26 +240,26 @@ async function sendQuoteConfirmation(opts: {
 
   const resend = new Resend(apiKey);
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
+  const baseUrl = process.env['NEXT_PUBLIC_BASE_URL'] ?? 'http://localhost:3000';
+
+  const html = await render(
+    QuoteRequest({
+      customerName: opts.name,
+      serviceType: opts.serviceType,
+      vehicleDescription: '',
+      businessName: opts.businessName,
+      businessPhone: clientConfig.contact.phone,
+      validUntilStr: opts.validUntil,
+      baseUrl,
+      primaryColor: clientConfig.branding.primaryColor,
+    }),
+  );
 
   await resend.emails.send({
     from: fromEmail,
     to: opts.to,
     subject: `Solicitud de presupuesto recibida — ${opts.businessName}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#111">
-        <h2 style="color:#dc2626">Solicitud de presupuesto recibida</h2>
-        <p>Hola <strong>${opts.name}</strong>,</p>
-        <p>Hemos recibido tu solicitud de presupuesto en <strong>${opts.businessName}</strong>. Te contactaremos en 24h con el presupuesto detallado.</p>
-        <table style="width:100%;border-collapse:collapse;margin:16px 0">
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#555">Tipo de servicio</td>
-              <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600">${opts.serviceType}</td></tr>
-          <tr><td style="padding:8px;color:#555">Válido hasta</td>
-              <td style="padding:8px;font-weight:600">${opts.validUntil}</td></tr>
-        </table>
-        <p style="color:#555;font-size:13px;font-style:italic">Este presupuesto es orientativo y sin compromiso (RD 1457/1986). Válido 12 días hábiles. Los precios no incluyen IVA hasta emisión de factura.</p>
-        <p style="margin-top:24px;color:#888;font-size:12px">— ${opts.businessName}</p>
-      </div>
-    `,
+    html,
   });
 }
 
