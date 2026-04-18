@@ -381,6 +381,8 @@ async function main() {
     { name: 'Mecánica General',    description: 'Diagnóstico y reparación de averías',               base_price: 65.00, duration: 90, category: 'reparacion'   },
     { name: 'Cambio de Neumáticos',description: 'Montaje, equilibrado y alineación',                 base_price: 15.00, duration: 30, category: 'neumaticos'   },
     { name: 'Revisión de Frenos',  description: 'Inspección y sustitución de pastillas y discos',    base_price: 79.99, duration: 75, category: 'seguridad'    },
+    { name: 'Diagnóstico Electrónico', description: 'Diagnóstico completo con escáner profesional e informe detallado', base_price: 45.00, duration: 60, category: 'electronica' },
+    { name: 'Escáner OBD',            description: 'Lectura rápida de códigos de error y borrado de averías',          base_price: 25.00, duration: 30, category: 'electronica' },
   ];
 
   const serviceIds = [];

@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Wrench, Car, Settings, CircleDot, Shield, ArrowRight } from 'lucide-react';
+import { Wrench, Car, Settings, CircleDot, Shield, Cpu, ArrowRight } from 'lucide-react';
 import type { Service } from '@/core/types/adapter';
 
 type Props = {
@@ -17,14 +17,18 @@ const SERVICE_ICONS: Record<string, React.ElementType> = {
   'mecanica-general': Settings,
   'cambio-neumaticos': CircleDot,
   'frenos': Shield,
+  'diagnostico-electronico': Cpu,
+  'escaner-obd': Cpu,
 };
 
 const SERVICE_GRADIENT: Record<string, string> = {
-  'cambio-aceite':    'from-amber-500/20 to-transparent',
-  'pre-itv':          'from-blue-500/20 to-transparent',
-  'mecanica-general': 'from-primary/20 to-transparent',
-  'cambio-neumaticos':'from-slate-500/20 to-transparent',
-  'frenos':           'from-rose-500/20 to-transparent',
+  'cambio-aceite':           'from-amber-500/20 to-transparent',
+  'pre-itv':                 'from-blue-500/20 to-transparent',
+  'mecanica-general':        'from-primary/20 to-transparent',
+  'cambio-neumaticos':       'from-slate-500/20 to-transparent',
+  'frenos':                  'from-rose-500/20 to-transparent',
+  'diagnostico-electronico': 'from-cyan-500/20 to-transparent',
+  'escaner-obd':             'from-cyan-500/20 to-transparent',
 };
 
 function formatCurrency(amount: number, locale: string, currency: string) {

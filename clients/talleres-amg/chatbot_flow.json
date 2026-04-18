@@ -18,6 +18,8 @@
         { "label": "Cambio de aceite",  "next": "ask_matricula", "value": "cambio-aceite" },
         { "label": "Revisión Pre-ITV",  "next": "ask_matricula", "value": "pre-itv" },
         { "label": "Mecánica general",  "next": "ask_matricula", "value": "mecanica-general" },
+        { "label": "Diagnóstico Electrónico", "value": "diagnostico-electronico", "next": "ask_matricula" },
+        { "label": "Escáner OBD", "value": "escaner-obd", "next": "ask_matricula" },
         { "label": "Otro",              "next": "ask_matricula", "value": "otro" }
       ]
     },
