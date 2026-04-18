@@ -30,6 +30,14 @@ Research-driven, conversion-optimized. Key patterns from Jiffy Lube / Kwik Fit /
 - Testimonial carousel
 - WCAG 2.1 AA accessibility baseline
 
+## Sprint 3.5 — Email Templates & Testing Setup
+
+Before QA, implement email system:
+- **Templates** (React Email library): appointment confirmations, quotes (RD 1457/1986), reminders, cancellations
+- **Testing** (Mailtrap): catch test emails, verify parsing/rendering before production
+- **Integration**: Resend SDK currently hardcoded; prepare for template variables + dynamic content
+- Scope: bootstrap infrastructure, not send full email journeys (those happen in Sprint 6 SMS reminders)
+
 ## Sprint 4 — QA Industry Standards
 
 **Philosophy:** test behavior, not implementation. Tests green + web broken = wrong tests.
