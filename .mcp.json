@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "pocketbase": {
+      "command": "npx",
+      "args": ["-y", "pocketbase-mcp"],
+      "env": {
+        "PB_URL": "http://127.0.0.1:8090",
+        "PB_ADMIN_EMAIL": "${POCKETBASE_ADMIN_EMAIL}",
+        "PB_ADMIN_PASSWORD": "${POCKETBASE_ADMIN_PASSWORD}"
+      }
+    }
+  }
+}
