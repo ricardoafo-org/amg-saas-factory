@@ -40,6 +40,8 @@ export default async function Home() {
             policyUrl={config.privacyPolicy.url}
             policyVersion={config.privacyPolicy.version}
             policyHash={config.privacyPolicy.hash}
+            services={config.services}
+            ivaRate={config.ivaRate}
           />
         </div>
       </section>

@@ -244,7 +244,7 @@ const SCHEMAS = {
   appointments: [
     field('tenant_id', 'text', { required: true }),
     field('slot_id', 'text', { required: true }),
-    field('service_id', 'text', { required: true }),
+    field('service_ids', 'json', { required: true }),
     field('customer_name', 'text', { required: true }),
     field('customer_email', 'email', { required: true }),
     field('customer_phone', 'text', { required: true }),
@@ -267,6 +267,32 @@ const SCHEMAS = {
     field('iva_rate', 'number'),
     field('total_amount', 'number'),
     field('email_sent', 'bool'),
+  ],
+
+  quotes: [
+    field('tenant_id', 'text', { required: true }),
+    field('customer_name', 'text'),
+    field('customer_email', 'email'),
+    field('customer_phone', 'text'),
+    field('vehicle_description', 'text'),
+    field('vehicle_plate', 'text'),
+    field('problem_description', 'text'),
+    field('service_type', 'text'),
+    field('items', 'json'),
+    field('subtotal', 'number'),
+    field('iva_rate', 'number'),
+    field('total', 'number'),
+    field('status', 'select', {
+      required: true,
+      options: { maxSelect: 1, values: ['pending', 'sent', 'approved', 'rejected', 'invoiced'] },
+    }),
+    field('valid_until', 'date'),
+    field('notes', 'text'),
+    field('pdf_url', 'text'),
+    field('source', 'select', {
+      required: true,
+      options: { maxSelect: 1, values: ['chatbot', 'manual'] },
+    }),
   ],
 
   consent_log: [

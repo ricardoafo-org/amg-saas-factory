@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, Check } from 'lucide-react';
 import type { ChatbotFlow, FlowOption } from '@/lib/chatbot/engine';
-import { saveAppointment } from '@/actions/chatbot';
+import type { Service } from '@/core/types/adapter';
+import { saveAppointment, saveQuoteRequest } from '@/actions/chatbot';
 import { getAvailableSlots, bookSlot, type AvailableSlot } from '@/actions/slots';
 import { calcOilRecommendation, estimateOilDate } from '@/lib/oil';
 import { matchOptionByNlp, classifyIntent } from '@/lib/nlp/classifier';
@@ -13,6 +14,7 @@ import { resolveWithClaude } from '@/actions/nlp';
 type FlowNodeAny = {
   message?: string;
   options?: FlowOption[];
+  multi_select?: boolean;
   collect?: string;
   action?: string;
   params?: Record<string, string>;
@@ -28,12 +30,14 @@ type Props = {
   policyUrl: string;
   policyVersion: string;
   policyHash: string;
+  services?: Service[];
+  ivaRate?: number;
 };
 
 let msgCounter = 0;
 function mkKey() { return `msg-${++msgCounter}`; }
 
-export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, policyHash }: Props) {
+export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, policyHash, services = [], ivaRate = 0.21 }: Props) {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<string>(flow.start);
   const [variables, setVariables] = useState<Record<string, string>>({});
@@ -46,6 +50,9 @@ export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, po
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [nlpInput, setNlpInput] = useState('');
+  // Multi-select service state
+  const [selectedServiceValues, setSelectedServiceValues] = useState<string[]>([]);
+  const [showServiceSummary, setShowServiceSummary] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,6 +79,11 @@ export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, po
 
     if (node.action === 'save_appointment') {
       handleSave(nodeId, node, vars);
+      return;
+    }
+
+    if (node.action === 'save_quote') {
+      handleSaveQuote(nodeId, node, vars);
       return;
     }
 
@@ -144,6 +156,13 @@ export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, po
   async function handleSave(nodeId: string, node: FlowNodeAny, vars: Record<string, string>) {
     setSaving(true);
     const slotId = vars['selected_slot_id'];
+    // service_ids stored as JSON array in vars; fallback to single 'service' for backwards compat
+    const rawServiceIds = vars['service_ids'];
+    const serviceIds: string[] = rawServiceIds
+      ? (JSON.parse(rawServiceIds) as string[])
+      : vars['service']
+        ? [vars['service']]
+        : [];
     try {
       await saveAppointment({
         tenantId,
@@ -153,7 +172,7 @@ export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, po
         customerName: vars['customer_name'] ?? '',
         customerPhone: vars['customer_phone'] ?? '',
         customerEmail: vars['customer_email'] ?? '',
-        serviceId: vars['service'] ?? '',
+        serviceIds,
         policyVersion,
         policyHash,
         userAgent: navigator.userAgent,
@@ -173,13 +192,79 @@ export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, po
     addUserMessage(option.label);
     const newVars = { ...variables };
     if (option.value) {
-      if (currentNodeId === 'ask_service') newVars['service'] = option.value;
       if (currentNodeId === 'ask_fuel') newVars['fuel'] = option.value;
       if (currentNodeId === 'oil_ask_fuel') newVars['oil_ask_fuel'] = option.value;
+      if (currentNodeId === 'quote_ask_service_type') newVars['quote_service_type'] = option.value;
     }
     setVariables(newVars);
     setSlots([]);
     goToNode(option.next, newVars);
+  }
+
+  async function handleSaveQuote(nodeId: string, node: FlowNodeAny, vars: Record<string, string>) {
+    setSaving(true);
+    try {
+      await saveQuoteRequest({
+        tenantId,
+        customerName: vars['quote_customer_name'] ?? '',
+        customerPhone: vars['quote_customer_phone'] ?? '',
+        customerEmail: vars['quote_customer_email'] ?? '',
+        vehicleDescription: vars['quote_vehicle'] ?? '',
+        problemDescription: vars['quote_problem'] ?? '',
+        serviceType: vars['quote_service_type'] ?? vars['quote_service'] ?? '',
+        policyVersion,
+        policyHash,
+        userAgent: navigator.userAgent,
+      });
+      if (node.next) goToNode(node.next, vars);
+      else setDone(true);
+    } catch {
+      addBotMessage('Lo sentimos, hubo un error al registrar tu solicitud. Por favor llámanos directamente.', 200);
+      setDone(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleServiceCheckboxToggle(value: string) {
+    setSelectedServiceValues((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
+  }
+
+  function handleConfirmServiceSelection() {
+    if (selectedServiceValues.length === 0) return;
+    const node = flow.nodes['ask_service'] as FlowNodeAny | undefined;
+    if (!node?.options) return;
+
+    // Build labels for display
+    const selectedOptions = (node.options as Array<FlowOption & { value?: string }>).filter(
+      (o) => o.value && selectedServiceValues.includes(o.value),
+    );
+    const labels = selectedOptions.map((o) => o.label).join(', ');
+    addUserMessage(labels);
+
+    // Determine the next node from first option's next (all point to ask_matricula)
+    const nextNodeId = selectedOptions[0]?.next ?? node.next ?? 'ask_matricula';
+
+    // Store service IDs as JSON array in variables; also keep legacy 'service' for single-service compat
+    const newVars: Record<string, string> = {
+      ...variables,
+      service_ids: JSON.stringify(selectedServiceValues),
+      service: selectedServiceValues[0] ?? '',
+      _service_summary_next: nextNodeId,
+    };
+    setVariables(newVars);
+    setSelectedServiceValues([]);
+    setShowServiceSummary(true);
+    // keep currentNodeId at ask_service so summary renders
+    setCurrentNodeId('ask_service');
+  }
+
+  function handleServiceSummaryConfirm() {
+    setShowServiceSummary(false);
+    const nextNodeId = variables['_service_summary_next'] ?? 'ask_matricula';
+    goToNode(nextNodeId, variables);
   }
 
   function handleSlotSelect(slot: AvailableSlot) {
@@ -261,7 +346,19 @@ export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, po
 
   const isLopdNode = currentNode?.action === 'collect_lopd_consent';
   const showSlots = slots.length > 0 && !loadingSlots;
-  const showOptions = currentNode?.options && !loadingSlots && slots.length === 0;
+  const isMultiSelectNode = !!(currentNode?.options && currentNode?.multi_select);
+  const showMultiSelect = isMultiSelectNode && !loadingSlots && slots.length === 0 && !showServiceSummary;
+  const showOptions = !!(currentNode?.options && !currentNode?.multi_select && !loadingSlots && slots.length === 0);
+
+  // For summary after confirmation (when showServiceSummary is true)
+  const confirmedServiceIds: string[] = (() => {
+    try { return JSON.parse(variables['service_ids'] ?? '[]') as string[]; }
+    catch { return []; }
+  })();
+  const confirmedServicesData = services.filter((s) => confirmedServiceIds.includes(s.id));
+  const confirmedBaseTotal = confirmedServicesData.reduce((acc, s) => acc + s.basePrice, 0);
+  const confirmedIva = confirmedBaseTotal * ivaRate;
+  const confirmedTotal = confirmedBaseTotal + confirmedIva;
 
   return (
     <div className="flex flex-col rounded-[--radius-xl] overflow-hidden w-full max-w-md mx-auto glass-strong border border-primary/15" style={{ boxShadow: '0 0 40px hsl(349 90% 52% / 0.08)' }}>
@@ -421,6 +518,89 @@ export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, po
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Multi-select service checkboxes */}
+              {showMultiSelect && (
+                <div className="space-y-2.5">
+                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Selecciona uno o más servicios</p>
+                  <div className="space-y-1.5">
+                    {(currentNode!.options as Array<FlowOption & { value?: string }>).map((opt) => {
+                      const isChecked = opt.value ? selectedServiceValues.includes(opt.value) : false;
+                      return (
+                        <button
+                          key={opt.next + opt.label}
+                          onClick={() => opt.value && handleServiceCheckboxToggle(opt.value)}
+                          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-[--radius-lg] border text-xs font-medium text-left transition-all duration-150 ${
+                            isChecked
+                              ? 'border-primary/60 bg-primary/10 text-primary'
+                              : 'border-border/60 bg-background/40 text-foreground hover:border-primary/30 hover:bg-primary/5'
+                          }`}
+                        >
+                          <div className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                            isChecked ? 'bg-primary border-primary' : 'border-border'
+                          }`}>
+                            {isChecked && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+                          </div>
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedServiceValues.length === 0 && (
+                    <p className="text-[10px] text-muted-foreground/60">Selecciona al menos un servicio para continuar</p>
+                  )}
+                  {selectedServiceValues.length > 0 && (
+                    <button
+                      onClick={handleConfirmServiceSelection}
+                      className="w-full h-10 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all"
+                    >
+                      Confirmar selección ({selectedServiceValues.length})
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Service booking summary (shown after multi-select confirmation) */}
+              {showServiceSummary && currentNodeId === 'ask_service' && (
+                <div className="space-y-3">
+                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Resumen de servicios</p>
+                  <div className="rounded-[--radius-lg] border border-border/60 bg-background/40 overflow-hidden">
+                    {confirmedServicesData.length > 0 ? (
+                      <div className="divide-y divide-border/40">
+                        {confirmedServicesData.map((s) => (
+                          <div key={s.id} className="flex justify-between items-center px-3.5 py-2 text-xs">
+                            <span className="text-foreground">{s.name}</span>
+                            <span className="text-muted-foreground font-mono">{s.basePrice.toFixed(2)} €</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-3.5 py-2 text-xs text-muted-foreground">Servicios seleccionados</div>
+                    )}
+                    <div className="border-t border-border/60 px-3.5 py-2 space-y-1 text-xs bg-background/20">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Base imponible</span>
+                        <span className="font-mono">{confirmedBaseTotal.toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>IVA ({(ivaRate * 100).toFixed(0)}%)</span>
+                        <span className="font-mono">{confirmedIva.toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-foreground pt-1 border-t border-border/40">
+                        <span>Total estimado</span>
+                        <span className="font-mono gradient-text">{confirmedTotal.toFixed(2)} €</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/60">Precio orientativo. IVA incluido. El presupuesto definitivo puede variar según el diagnóstico.</p>
+                  <button
+                    onClick={handleServiceSummaryConfirm}
+                    className="w-full h-10 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all"
+                  >
+                    Continuar con la reserva
+                  </button>
                 </div>
               )}
 

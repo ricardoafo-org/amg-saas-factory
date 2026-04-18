@@ -6,6 +6,7 @@
       "message": "Hola, soy el asistente de Talleres AMG. ¿En qué puedo ayudarte hoy?",
       "options": [
         { "label": "Reservar cita",         "next": "ask_service" },
+        { "label": "Solicitar presupuesto",  "next": "quote_ask_service_type" },
         { "label": "Calcular cambio aceite", "next": "oil_ask_fuel" },
         { "label": "Consultar precios",      "next": "pricing_info" },
         { "label": "Horario y ubicación",    "next": "location_info" }
@@ -13,7 +14,8 @@
     },
 
     "ask_service": {
-      "message": "¿Qué servicio necesitas?",
+      "message": "¿Qué servicios necesitas? Puedes seleccionar varios.",
+      "multi_select": true,
       "options": [
         { "label": "Cambio de aceite",  "next": "ask_matricula", "value": "cambio-aceite" },
         { "label": "Revisión Pre-ITV",  "next": "ask_matricula", "value": "pre-itv" },
@@ -119,6 +121,57 @@
     },
     "goodbye": {
       "message": "¡Hasta pronto! Recuerda que puedes llamarnos o escribirnos por WhatsApp cuando necesites."
+    },
+
+    "quote_ask_service_type": {
+      "message": "¿Para qué tipo de servicio necesitas el presupuesto?",
+      "options": [
+        { "label": "Mecánica",          "next": "quote_ask_vehicle", "value": "mecanica" },
+        { "label": "Electrónica",       "next": "quote_ask_vehicle", "value": "electronica" },
+        { "label": "Carrocería",        "next": "quote_ask_vehicle", "value": "carroceria" },
+        { "label": "Otro / No lo sé",   "next": "quote_ask_vehicle", "value": "otro" }
+      ]
+    },
+    "quote_ask_vehicle": {
+      "message": "¿Cuál es la marca, modelo y año de tu vehículo? (Ej: Ford Focus 2019)",
+      "collect": "quote_vehicle",
+      "next": "quote_ask_problem"
+    },
+    "quote_ask_problem": {
+      "message": "Descríbenos el problema o lo que necesitas que revisemos:",
+      "collect": "quote_problem",
+      "next": "quote_ask_name"
+    },
+    "quote_ask_name": {
+      "message": "¿Cuál es tu nombre?",
+      "collect": "quote_customer_name",
+      "next": "quote_ask_phone"
+    },
+    "quote_ask_phone": {
+      "message": "¿Y tu número de teléfono?",
+      "collect": "quote_customer_phone",
+      "next": "quote_ask_email"
+    },
+    "quote_ask_email": {
+      "message": "¿Tu correo electrónico? (para enviarte el presupuesto)",
+      "collect": "quote_customer_email",
+      "next": "lopd_consent_quote"
+    },
+    "lopd_consent_quote": {
+      "message": "Para enviar tu solicitud de presupuesto necesito tu consentimiento explícito para el tratamiento de tus datos personales conforme a la LOPDGDD.",
+      "action": "collect_lopd_consent",
+      "params": {
+        "policy_url": "https://talleresentamg.es/privacidad",
+        "policy_version": "1.0.0"
+      },
+      "next": "save_quote"
+    },
+    "save_quote": {
+      "action": "save_quote",
+      "next": "quote_confirmation"
+    },
+    "quote_confirmation": {
+      "message": "Hemos recibido tu solicitud. Te contactaremos en 24h con el presupuesto. ¡Gracias!"
     }
   }
 }
