@@ -1,8 +1,18 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { getPb } from '@/lib/pb';
 import { loadClientConfig } from '@/lib/config';
 import { Resend } from 'resend';
+
+async function getClientIp(): Promise<string> {
+  try {
+    const h = await headers();
+    return h.get('x-forwarded-for')?.split(',')[0]?.trim()
+      ?? h.get('x-real-ip')
+      ?? 'unknown';
+  } catch { return 'unknown'; }
+}
 
 const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
 const clientConfig = loadClientConfig(TENANT_ID);
@@ -23,6 +33,7 @@ type AppointmentPayload = {
 
 export async function saveAppointment(payload: AppointmentPayload) {
   const pb = await getPb();
+  const ip = await getClientIp();
 
   await pb.collection('consent_log').create({
     tenant_id: payload.tenantId,
@@ -31,7 +42,7 @@ export async function saveAppointment(payload: AppointmentPayload) {
     policy_hash: payload.policyHash,
     consented: true,
     consented_at: new Date().toISOString(),
-    ip_address: '',
+    ip_address: ip,
     user_agent: payload.userAgent,
     form_context: 'chatbot_booking',
   });
@@ -165,6 +176,7 @@ function addBusinessDays(date: Date, days: number): Date {
 
 export async function saveQuoteRequest(payload: QuotePayload) {
   const pb = await getPb();
+  const ip = await getClientIp();
 
   // LOPDGDD: consent MUST be logged first — throw if this fails
   await pb.collection('consent_log').create({
@@ -174,7 +186,7 @@ export async function saveQuoteRequest(payload: QuotePayload) {
     policy_hash: payload.policyHash,
     consented: true,
     consented_at: new Date().toISOString(),
-    ip_address: '',
+    ip_address: ip,
     user_agent: payload.userAgent,
     form_context: 'chatbot_quote',
   });
