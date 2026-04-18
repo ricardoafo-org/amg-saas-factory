@@ -19,24 +19,40 @@
 - Price transparency: IVA breakdown on all prices (EU Right to Repair Directive 2024/1799, July 2026)
 - Legal footer: consumer rights, cancellation policy, taller registration number
 
-## Sprint 3 — UI Redesign (no approval needed)
+## Sprint 3 — UI Redesign + Brand System
 
-Research-driven, conversion-optimized. Key patterns from Jiffy Lube / Kwik Fit / Norauto:
-- Above-fold sticky booking CTA (mobile-first, thumb zone)
-- Trust signal stack: Google rating, warranty badge, certifications, testimonials
-- Service cards: "From €X · ~45min · 3-month guarantee" at a glance
-- Live "next available slot" indicator
-- Progress indicator on booking flow
-- Testimonial carousel
-- WCAG 2.1 AA accessibility baseline
+**Brand & Design Foundations (Week 1):**
+- Logo redesign (current is too plain/simple; should reflect automotive/trust positioning)
+- Color palette (primary, secondary, semantic colors for CTAs, errors, trust signals)
+- Design tokens (spacing scale, typography, border radius, shadows, motion curves)
+- Motion system: define easing curves, duration defaults, hover/active states
+
+**Design System Implementation (Week 2-3):**
+- Research-driven, conversion-optimized. Key patterns from Jiffy Lube / Kwik Fit / Norauto:
+  - Above-fold sticky booking CTA (mobile-first, thumb zone)
+  - Trust signal stack: Google rating, warranty badge, certifications, testimonials
+  - Service cards: "From €X · ~45min · 3-month guarantee" at a glance
+  - Live "next available slot" indicator
+  - Progress indicator on booking flow
+  - Testimonial carousel
+  - WCAG 2.1 AA accessibility baseline
+
+**Email & SMS Template Design (Week 3):**
+- Email template designs aligned with brand (logo, colors, typography, motion micro-interactions)
+- SMS/reminder designs (text-only but brand-consistent formatting)
+- Figma/design system component library for templates
 
 ## Sprint 3.5 — Email Templates & Testing Setup
 
-Before QA, implement email system:
-- **Templates** (React Email library): appointment confirmations, quotes (RD 1457/1986), reminders, cancellations
-- **Testing** (Mailtrap): catch test emails, verify parsing/rendering before production
-- **Integration**: Resend SDK currently hardcoded; prepare for template variables + dynamic content
-- Scope: bootstrap infrastructure, not send full email journeys (those happen in Sprint 6 SMS reminders)
+**Email Infrastructure:**
+- Implement React Email library with design-system-aligned components
+- Test templates: appointment confirmations, quotes (RD 1457/1986), reminders, cancellations
+- **Testing coverage**: template rendering (Jest), Mailtrap integration tests, SMS preview tests
+- Resend SDK integration with dynamic variables (customer name, dates, prices, links)
+
+**Design QA:**
+- Visual regression tests for email templates (screenshot diffs for each brand variant)
+- A/B test variants stored as template versions
 
 ## Sprint 4 — QA Industry Standards
 
@@ -53,10 +69,11 @@ Before QA, implement email system:
 - ITV all three age brackets
 - Multi-service booking flow
 - Presupuesto flow
+- **Email/SMS templates:** rendering tests (Jest), Mailtrap inbox verification, A/B variants
 - Accessibility: axe-core on all pages (WCAG 2.1 AA)
 - Core Web Vitals: Lighthouse CI, fail build if LCP > 2.5s
 - Contract tests: PocketBase schema vs TypeScript types
-- Visual regression: Playwright screenshots
+- Visual regression: Playwright screenshots (including email template screenshots)
 
 ## Sprint 5 — Observability
 
