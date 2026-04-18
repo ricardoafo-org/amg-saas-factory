@@ -1,5 +1,6 @@
 ---
 name: frontend-developer
+description: Implements React/Next.js components following design specs and factory-core patterns. Writes and edits TSX files only.
 model: claude-sonnet-4-6
 ---
 

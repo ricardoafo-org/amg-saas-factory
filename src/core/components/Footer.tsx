@@ -1,8 +1,9 @@
-import { Phone, MessageCircle, MapPin, Mail } from 'lucide-react';
+import { Phone, MessageCircle, MapPin, Mail, ExternalLink } from 'lucide-react';
 import type { LocalBusiness } from '@/core/types/adapter';
 
 export function Footer({ config }: { config: LocalBusiness }) {
-  const { businessName, contact, address, operatingHours } = config;
+  const { businessName, contact, address, operatingHours, legal } = config;
+  const currentYear = new Date().getFullYear();
   const waNumber = contact.whatsapp?.replace(/\D/g, '');
 
   const weekHours = operatingHours?.find((h) => h.day === 'monday');
@@ -76,13 +77,63 @@ export function Footer({ config }: { config: LocalBusiness }) {
         </div>
       </div>
 
-      <div className="border-t border-border/30 px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <p className="text-[11px] text-muted-foreground/40 font-mono">
-          © {new Date().getFullYear()} {businessName} · Todos los derechos reservados
+      {/* Consumer rights note */}
+      <div className="border-t border-border/30 px-5 py-3 flex items-center justify-center gap-2">
+        <p className="text-[10px] text-muted-foreground/35 font-mono text-center">
+          Tus derechos como consumidor:{' '}
+          <a
+            href="https://www.ocu.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-muted-foreground/60 transition-colors inline-flex items-center gap-0.5"
+          >
+            ocu.org <ExternalLink className="h-2.5 w-2.5 inline" />
+          </a>
+          {' '}·{' '}
+          <a
+            href="https://sede.dgt.gob.es"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-muted-foreground/60 transition-colors inline-flex items-center gap-0.5"
+          >
+            ITV — DGT <ExternalLink className="h-2.5 w-2.5 inline" />
+          </a>
         </p>
-        <a href={config.privacyPolicy?.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
-          Política de Privacidad
-        </a>
+      </div>
+
+      {/* Legal bottom bar */}
+      <div className="border-t border-border/30 px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <p className="text-[11px] text-muted-foreground/40 font-mono text-center sm:text-left">
+          © {currentYear} {businessName}
+          {legal?.cif ? ` — CIF: ${legal.cif}` : ''}
+          {legal?.registrationNumber
+            ? ` — Inscrito en el Registro de Talleres de la Región de Murcia n.º ${legal.registrationNumber}`
+            : ''}
+        </p>
+        <nav className="flex items-center gap-3 flex-wrap justify-center">
+          <a
+            href="/politica-de-privacidad"
+            className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+          >
+            Privacidad
+          </a>
+          <span className="text-muted-foreground/20 text-[11px]">·</span>
+          <a
+            href="/politica-de-cookies"
+            className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+          >
+            Cookies
+          </a>
+          <span className="text-muted-foreground/20 text-[11px]">·</span>
+          <a
+            href={config.privacyPolicy?.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+          >
+            Política de Privacidad
+          </a>
+        </nav>
       </div>
     </footer>
   );

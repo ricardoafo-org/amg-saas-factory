@@ -1,5 +1,6 @@
 ---
 name: ui-designer
+description: Produces concrete UI/UX specs with exact Tailwind classes, spacing, and breakpoints. Returns specs only — never writes app code.
 model: claude-sonnet-4-6
 ---
 

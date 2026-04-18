@@ -121,7 +121,11 @@ async function sendBookingConfirmation(opts: {
               <td style="padding:8px;font-weight:600">${opts.date}</td></tr>
         </table>
         <p style="color:#555;font-size:14px">Te llamaremos al número facilitado para confirmar la hora exacta.</p>
-        <p style="margin-top:24px;color:#888;font-size:12px">— ${opts.businessName}</p>
+        <p style="margin-top:16px;color:#555;font-size:13px;font-style:italic;border-top:1px solid #eee;padding-top:12px">
+          Garantía de reparación: 3 meses o 2.000 km (RD 1457/1986 Art. 16).
+          Todo trabajo está sujeto a presupuesto previo (RD 1457/1986 Art. 14).
+        </p>
+        <p style="margin-top:16px;color:#888;font-size:12px">— ${opts.businessName}</p>
       </div>
     `,
   });

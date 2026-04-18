@@ -306,6 +306,15 @@ const SCHEMAS = {
     field('user_agent', 'text'),
     field('form_context', 'text', { required: true }),
   ],
+
+  cookie_consents: [
+    field('tenant_id', 'text', { required: true }),
+    field('session_id', 'text'),
+    field('analytics', 'bool'),
+    field('marketing', 'bool'),
+    field('consented_at', 'text'),
+    field('user_agent', 'text'),
+  ],
 };
 
 // ---------------------------------------------------------------------------

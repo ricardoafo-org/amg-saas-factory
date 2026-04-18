@@ -98,5 +98,10 @@
   },
   "ivaRate": 0.21,
   "locale": "es-ES",
-  "currency": "EUR"
+  "currency": "EUR",
+  "legal": {
+    "cif": "B-30123456",
+    "registrationNumber": "MU-1234",
+    "dpoEmail": "privacidad@talleresentamg.es"
+  }
 }

@@ -594,7 +594,12 @@ export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, po
                       </div>
                     </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground/60">Precio orientativo. IVA incluido. El presupuesto definitivo puede variar según el diagnóstico.</p>
+                  <p className="text-[10px] text-muted-foreground/60">
+                    Precio orientativo. IVA incluido. El presupuesto definitivo puede variar según el diagnóstico.
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/50 border-t border-border/30 pt-2 mt-1">
+                    Todo trabajo está sujeto a presupuesto previo según RD 1457/1986.
+                  </p>
                   <button
                     onClick={handleServiceSummaryConfirm}
                     className="w-full h-10 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all"

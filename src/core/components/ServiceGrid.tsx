@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Wrench, Car, Settings, CircleDot, Shield, Cpu, ScanLine, ArrowRight } from 'lucide-react';
+import { Wrench, Car, Settings, CircleDot, Shield, Cpu, ScanLine, ArrowRight, BadgeCheck } from 'lucide-react';
 import type { Service } from '@/core/types/adapter';
 
 type Props = {
@@ -115,6 +115,12 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
                       <span>Total</span>
                       <span className="gradient-text">{fmt(total)}</span>
                     </div>
+                  </div>
+
+                  {/* Warranty badge — RD 1457/1986 Art. 16 */}
+                  <div className="mt-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/5 border border-primary/15 w-fit text-[10px] text-primary/70 font-medium">
+                    <BadgeCheck className="h-3 w-3 shrink-0" aria-hidden />
+                    <span>3 meses o 2.000 km de garantía en reparaciones</span>
                   </div>
 
                   {/* Duration + CTA hint */}
