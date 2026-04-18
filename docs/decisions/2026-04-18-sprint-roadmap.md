@@ -58,10 +58,14 @@
 
 **Philosophy:** test behavior, not implementation. Tests green + web broken = wrong tests.
 
+**Testing patterns & best practices:** `.claude/skills/qa-testing-patterns/STRATEGY.md` (mandatory reference before writing tests)
+
 **Pyramid:**
 - Unit: NLP classifier (50+ real Spanish input fixtures), oil calc, ITV calc — pure logic
 - Integration: server actions against real PocketBase (not mocks)
-- E2E: full user journeys in real browser
+- E2E: full user journeys in real browser (Page Object Model pattern)
+- API contracts: TypeScript types ↔ PocketBase schema sync
+- Visual regression: Playwright screenshots + baseline comparisons
 
 **Coverage:**
 - All chatbot paths (happy + error: PB down, no slots, LOPD rejected)
