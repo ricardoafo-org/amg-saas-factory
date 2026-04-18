@@ -5,16 +5,18 @@ import { ChatEngine } from '@/core/chatbot/ChatEngine';
 import { Footer } from '@/core/components/Footer';
 import { loadClientConfig, loadChatbotFlow } from '@/lib/config';
 import type { ChatbotFlow } from '@/lib/chatbot/engine';
+import { getNextAvailableSlot } from '@/actions/slots';
 
 const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
 
-export default function Home() {
+export default async function Home() {
   const config = loadClientConfig(TENANT_ID);
   const flow = loadChatbotFlow(TENANT_ID) as ChatbotFlow;
+  const nextSlot = await getNextAvailableSlot(config.tenantId);
 
   return (
     <>
-      <Hero config={config} />
+      <Hero config={config} nextSlot={nextSlot} />
       <ServiceGrid services={config.services} ivaRate={config.ivaRate} locale={config.locale} currency={config.currency} />
 
       {config.industry === 'automotive' && <ItvCountdown />}

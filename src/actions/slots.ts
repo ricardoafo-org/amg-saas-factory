@@ -41,6 +41,35 @@ export async function getAvailableSlots(
     }));
 }
 
+export async function getNextAvailableSlot(tenantId: string): Promise<AvailableSlot | null> {
+  try {
+    const pb = await getPb();
+
+    const today = new Date().toISOString().split('T')[0];
+    const to = new Date();
+    to.setDate(to.getDate() + 14);
+    const toStr = to.toISOString().split('T')[0];
+
+    const res = await pb.collection('availability_slots').getList(1, 50, {
+      filter: `tenant_id = "${tenantId}" && slot_date >= "${today}" && slot_date <= "${toStr}"`,
+      sort: 'slot_date,start_time',
+    });
+
+    const first = res.items.find((r) => (r['capacity'] as number) - (r['booked'] as number) > 0);
+    if (!first) return null;
+
+    return {
+      id: first['id'] as string,
+      slotDate: first['slot_date'] as string,
+      startTime: first['start_time'] as string,
+      endTime: first['end_time'] as string,
+      spotsLeft: (first['capacity'] as number) - (first['booked'] as number),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function bookSlot(slotId: string, tenantId: string): Promise<void> {
   const pb = await getPb();
   const slot = await pb.collection('availability_slots').getOne(slotId);

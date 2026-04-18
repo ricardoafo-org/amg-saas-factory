@@ -1,5 +1,6 @@
 import { Phone, MessageCircle, MapPin, Wrench, Shield, Star } from 'lucide-react';
 import type { LocalBusiness } from '@/core/types/adapter';
+import type { AvailableSlot } from '@/actions/slots';
 
 const STATS = [
   { label: 'Años de experiencia', value: '15+' },
@@ -8,9 +9,15 @@ const STATS = [
   { label: 'Garantía de calidad', value: '100%' },
 ];
 
-export function Hero({ config }: { config: LocalBusiness }) {
+export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: AvailableSlot | null }) {
   const { businessName, tagline, contact, address } = config;
   const waNumber = contact.whatsapp?.replace(/\D/g, '');
+
+  const nextSlotLabel = nextSlot
+    ? new Date(nextSlot.slotDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long' }) +
+      ' a las ' +
+      nextSlot.startTime
+    : null;
 
   return (
     <section className="relative flex min-h-[100svh] flex-col items-center justify-center px-5 py-20 text-center overflow-hidden noise-overlay">
@@ -70,10 +77,7 @@ export function Hero({ config }: { config: LocalBusiness }) {
         <div className="mt-2 flex flex-col w-full gap-3 sm:flex-row sm:justify-center">
           <a
             href={`tel:${contact.phone}`}
-            className="group inline-flex items-center justify-center gap-2 h-14 px-8 rounded-[--radius-lg] bg-primary text-primary-foreground font-semibold text-sm tracking-wide transition-all duration-200 hover:bg-primary/90"
-            style={{ boxShadow: '0 0 0 0 hsl(349 90% 52% / 0.4)' }}
-            onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 0 24px 4px hsl(349 90% 52% / 0.3)')}
-            onMouseLeave={(e) => (e.currentTarget.style.boxShadow = '0 0 0 0 hsl(349 90% 52% / 0.4)')}
+            className="group inline-flex items-center justify-center gap-2 h-14 px-8 rounded-[--radius-lg] bg-primary text-primary-foreground font-semibold text-sm tracking-wide transition-all duration-200 hover:bg-primary/90 hover:shadow-[0_0_24px_4px_hsl(349_90%_52%/0.3)]"
           >
             <Phone className="h-4.5 w-4.5" />
             {contact.phone}
@@ -103,6 +107,14 @@ export function Hero({ config }: { config: LocalBusiness }) {
             </a>
           )}
         </div>
+
+        {/* Availability badge */}
+        {nextSlotLabel && (
+          <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground/70">
+            <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+            Próximo hueco: {nextSlotLabel}
+          </div>
+        )}
 
         {/* Trust badges */}
         <div className="flex items-center gap-4 mt-2 flex-wrap justify-center">
