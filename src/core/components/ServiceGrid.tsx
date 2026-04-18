@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Wrench, Car, Settings, CircleDot, Shield, Cpu, ArrowRight } from 'lucide-react';
+import { Wrench, Car, Settings, CircleDot, Shield, Cpu, ScanLine, ArrowRight } from 'lucide-react';
 import type { Service } from '@/core/types/adapter';
 
 type Props = {
@@ -12,13 +12,16 @@ type Props = {
 };
 
 const SERVICE_ICONS: Record<string, React.ElementType> = {
+  // by slug id
   'cambio-aceite': Wrench,
   'pre-itv': Car,
   'mecanica-general': Settings,
   'cambio-neumaticos': CircleDot,
   'frenos': Shield,
   'diagnostico-electronico': Cpu,
-  'escaner-obd': Cpu,
+  'escaner-obd': ScanLine,
+  // by category (fallback)
+  'electronica': Cpu,
 };
 
 const SERVICE_GRADIENT: Record<string, string> = {
@@ -56,7 +59,7 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service, i) => {
-            const Icon = SERVICE_ICONS[service.id] ?? Wrench;
+            const Icon = SERVICE_ICONS[service.id] ?? (service.category ? SERVICE_ICONS[service.category] : undefined) ?? Wrench;
             const iva = service.basePrice * ivaRate;
             const total = service.basePrice + iva;
             const gradient = SERVICE_GRADIENT[service.id] ?? 'from-primary/10 to-transparent';
