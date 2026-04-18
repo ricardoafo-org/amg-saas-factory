@@ -31,8 +31,8 @@ export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: Av
       {/* Top bar */}
       <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 border-b border-border/50">
         <div className="flex items-center gap-2.5">
-          <img src="/logo.svg" alt="Talleres AMG" className="h-8 w-8" />
-          <span className="font-bold tracking-wider text-sm uppercase text-foreground/80">Talleres AMG</span>
+          <img src="/logo.svg" alt={businessName} className="h-8 w-8" />
+          <span className="font-bold tracking-wider text-sm uppercase text-foreground/80">{businessName}</span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
           <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -54,7 +54,7 @@ export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: Av
         {/* Label */}
         <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/8 text-xs font-mono text-primary tracking-widest uppercase">
           <Wrench className="h-3 w-3" />
-          Taller Mecánico Autorizado · Cartagena
+          Taller Mecánico Autorizado · {address.city}
         </div>
 
         {/* Headline */}
