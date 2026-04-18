@@ -6,7 +6,7 @@
 2. **Availability display** — Live "Próximo hueco: Martes 3pm" badge on Hero + ServiceGrid, fetched from slots
 3. **Calendar slot picker** — Replace free-text `ask_date` chatbot node with visual calendar (react-day-picker); extend slot grid to all booking paths
 4. **Multi-service booking** — appointments.service_id → JSON array; chatbot multi-select; saveAppointment() sums prices + durations; getAvailableSlots() duration-aware
-5. **Presupuesto flow** — New chatbot path + form page; `quotes` PocketBase collection; RD 1457/1986 mandatory quote before work
+5. **Presupuesto flow** — New chatbot path + form page; `quotes` PocketBase collection; **RD 1457/1986: mandatory quote for ALL services** (staffing/scheduling requirement)
 
 ## Sprint 2 — Spain/EU Compliance
 
@@ -68,10 +68,11 @@
 - NLP free-text at every option node; regression corpus for every reported misclassification
 - ITV all three age brackets
 - Multi-service booking flow
-- Presupuesto flow
+- Presupuesto flow (all services require quotes)
 - **Email/SMS templates:** rendering tests (Jest), Mailtrap inbox verification, A/B variants
+- **Network resilience:** Playwright throttling (3G slow/offline), test graceful degradation, retry logic, cached state fallbacks
 - Accessibility: axe-core on all pages (WCAG 2.1 AA)
-- Core Web Vitals: Lighthouse CI, fail build if LCP > 2.5s
+- Core Web Vitals: Lighthouse CI, fail build if LCP > 2.5s (measured on 3G)
 - Contract tests: PocketBase schema vs TypeScript types
 - Visual regression: Playwright screenshots (including email template screenshots)
 
