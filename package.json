@@ -11,6 +11,8 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:unit": "vitest run --exclude='**/*.integration.test.ts'",
+    "test:integration": "vitest run --include='**/*.integration.test.ts'",
     "pb:setup": "bash scripts/setup-pocketbase.sh",
     "pb:serve": "node -e \"require('child_process').spawn(process.platform==='win32'?'pocketbase.exe':'./pocketbase',['serve'],{stdio:'inherit',shell:true})\"",
     "migrations:apply": "node -r dotenv/config scripts/migrations-apply.js",

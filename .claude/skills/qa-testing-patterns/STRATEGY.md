@@ -242,28 +242,28 @@ test.describe('Visual regression', () => {
 
 ## Test Data & Environment
 
-### Seed Data Pattern
+### Data Isolation Strategy
+**Mostly isolated** — each E2E test gets its own tenant + slots to prevent interference.
+
+**Shared scenarios** — when user behavior requires it:
+- Multi-booking same service across days (customer books twice in sequence)
+- Cross-tenant scenarios (test admin sees only their tenant's data)
+- Concurrent booking conflicts (two users try to book last slot)
+
+Use a test fixture registry:
 ```ts
-// e2e/helpers/seed.ts
-export async function seedTestTenant(pb: PocketBase, name: string) {
-  const tenant = await pb.collection('tenants').create({
-    name,
-    slug: `test-${Date.now()}`,
-    plan: 'pro',
-    active: true,
-  });
-
-  const slots = await pb.collection('availability_slots').create({
-    tenant_id: tenant.id,
-    slot_date: tomorrow().toISOString().split('T')[0],
-    start_time: '09:00',
-    end_time: '18:00',
-    capacity: 5,
-    booked: 0,
-  });
-
-  return { tenant, slots };
-}
+// e2e/fixtures/scenarios.fixture.ts
+export const scenarios = {
+  ISOLATED: async (pb) => seedTestTenant(pb, `test-${Date.now()}`),
+  SHARED_MULTIBOOKING: async (pb) => {
+    // Create one shared tenant, multiple bookings in one test
+    return seedTestTenant(pb, 'shared-multibooking-tenant');
+  },
+  SHARED_CONCURRENT: async (pb) => {
+    // Create one shared slot, two test users
+    return seedTestTenant(pb, 'shared-concurrent-tenant');
+  },
+};
 ```
 
 ### Cleanup Pattern
@@ -296,16 +296,17 @@ export async function cleanupTestData(pb: PocketBase, tenantId: string) {
 
 ## Ownership & Maintenance
 
-- **Unit/Integration:** Developer writes before merging (TDD)
-- **E2E:** QA engineer maintains page objects + fixtures
+- **Unit tests** (90% coverage target): Developer writes before merging (TDD)
+- **Integration tests** (100% business logic paths): Developer writes with qa-engineer review
+- **E2E tests** (Page Objects maintained): QA engineer maintains fixtures + regression cases
 - **Network resilience:** Joint (infra + QA)
-- **Visual regression:** Design system owner approves baselines
+- **Visual regression:** Design system owner approves baselines; QA engineer validates and reports unexpected behaviors
 
 ---
 
 ## Metrics
 
-- **Coverage target:** 70% lines, 100% business logic paths
+- **Coverage target:** 90% lines (unit), 100% business logic paths (integration + E2E)
 - **E2E flakiness:** < 2% retry rate
 - **Test suite speed:** < 5 minutes on CI
-- **Feedback loop:** Developers see failures in < 2 min locally
+- **Feedback loop:** Developers see failures in < 2 min locally (pre-commit hook)
