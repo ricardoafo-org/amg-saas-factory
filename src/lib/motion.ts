@@ -28,4 +28,18 @@ export const MOTION = {
     animate:    { opacity: 1 },
     transition: { duration: 0.2 },
   },
+
+  staggerChildren: { staggerChildren: 0.07 },
+
+  slideUp: {
+    initial:    { opacity: 0, y: 24 },
+    animate:    { opacity: 1, y: 0 },
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+  },
+
+  scaleIn: {
+    initial:    { opacity: 0, scale: 0.94 },
+    animate:    { opacity: 1, scale: 1 },
+    transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const },
+  },
 } as const;

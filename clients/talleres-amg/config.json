@@ -3,6 +3,9 @@
   "businessName": "Talleres AMG",
   "industry": "automotive",
   "tagline": "Tu taller de confianza en Cartagena",
+  "foundingYear": 1987,
+  "reviewRating": 4.9,
+  "reviewCount": 124,
   "address": {
     "street": "Polígono Industrial Cabezo Beaza, Calle Zinc 12",
     "city": "Cartagena",

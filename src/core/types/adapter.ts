@@ -29,6 +29,9 @@ export type LocalBusiness = {
   businessName: string;
   industry: Industry;
   tagline?: string;
+  foundingYear?: number;
+  reviewRating?: number;
+  reviewCount?: number;
   address: {
     street: string;
     city: string;
