@@ -1,0 +1,449 @@
+'use client';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Bot, User } from 'lucide-react';
+import type { ChatbotFlow, FlowOption } from '@/lib/chatbot/engine';
+import { saveAppointment } from '@/actions/chatbot';
+import { getAvailableSlots, bookSlot, type AvailableSlot } from '@/actions/slots';
+import { calcOilRecommendation, estimateOilDate } from '@/lib/oil';
+
+type FlowNodeAny = {
+  message?: string;
+  options?: FlowOption[];
+  collect?: string;
+  action?: string;
+  params?: Record<string, string>;
+  next?: string;
+};
+
+type MessageItem = { role: 'bot' | 'user'; text: string; key: string };
+
+type Props = {
+  flow: ChatbotFlow;
+  tenantId: string;
+  policyUrl: string;
+  policyVersion: string;
+  policyHash: string;
+};
+
+let msgCounter = 0;
+function mkKey() { return `msg-${++msgCounter}`; }
+
+export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHash }: Props) {
+  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [currentNodeId, setCurrentNodeId] = useState<string>(flow.start);
+  const [variables, setVariables] = useState<Record<string, string>>({});
+  const [inputValue, setInputValue] = useState('');
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [done, setDone] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [slots, setSlots] = useState<AvailableSlot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
+
+  const currentNode = flow.nodes[currentNodeId] as FlowNodeAny | undefined;
+
+  const addBotMessage = useCallback((text: string, delay = 400) => {
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      setMessages((prev) => [...prev, { role: 'bot', text, key: mkKey() }]);
+    }, delay);
+  }, []);
+
+  function addUserMessage(text: string) {
+    setMessages((prev) => [...prev, { role: 'user', text, key: mkKey() }]);
+  }
+
+  const goToNode = useCallback((nodeId: string, vars: Record<string, string> = variables) => {
+    const node = flow.nodes[nodeId] as FlowNodeAny | undefined;
+    if (!node) { setDone(true); return; }
+
+    if (node.action === 'save_appointment') {
+      handleSave(nodeId, node, vars);
+      return;
+    }
+
+    if (node.action === 'calc_oil_change') {
+      const oilType = vars['oil_ask_fuel'] ?? 'unknown';
+      const kmLast = parseInt(vars['oil_km_last'] ?? '0', 10);
+      const kmNow = parseInt(vars['oil_km_now'] ?? '0', 10);
+      const rec = calcOilRecommendation(oilType, kmLast, kmNow);
+      const newVars = { ...vars, oil_result_message: rec.message, oil_km_left: String(rec.kmLeft) };
+      setVariables(newVars);
+
+      // Show result message then load slots
+      addBotMessage(rec.message, 500);
+      const estimatedDate = estimateOilDate(rec.kmLeft, kmNow, kmLast);
+      const fromDate = new Date();
+      // If already overdue, start from today
+      if (rec.kmLeft <= 0) fromDate.setDate(fromDate.getDate());
+      else fromDate.setTime(Math.min(estimatedDate.getTime(), Date.now() + 7 * 86400000));
+
+      setTimeout(() => {
+        setLoadingSlots(true);
+        getAvailableSlots(tenantId, fromDate.toISOString().split('T')[0], 14)
+          .then((available) => {
+            setSlots(available);
+            setLoadingSlots(false);
+            if (available.length > 0) {
+              addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
+            } else {
+              addBotMessage('No encontramos huecos disponibles en los próximos días. Llámanos y te buscamos una fecha.', 300);
+            }
+            if (node.next) {
+              setCurrentNodeId(node.next);
+            }
+          })
+          .catch(() => {
+            setLoadingSlots(false);
+            if (node.next) setCurrentNodeId(node.next);
+          });
+      }, 900);
+      return;
+    }
+
+    if (node.message) addBotMessage(node.message, 350);
+    setCurrentNodeId(nodeId);
+    if (!node.options && !node.collect && !node.action) setDone(true);
+  }, [variables, flow, tenantId, addBotMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleSave(nodeId: string, node: FlowNodeAny, vars: Record<string, string>) {
+    setSaving(true);
+    const slotId = vars['selected_slot_id'];
+    try {
+      await saveAppointment({
+        tenantId,
+        matricula: vars['matricula'] ?? '',
+        fuelType: vars['fuel'] ?? '',
+        fechaPreferida: vars['fecha_preferida'] ?? vars['selected_slot_date'] ?? '',
+        customerName: vars['customer_name'] ?? '',
+        customerPhone: vars['customer_phone'] ?? '',
+        customerEmail: vars['customer_email'] ?? '',
+        serviceId: vars['service'] ?? '',
+        policyVersion,
+        policyHash,
+        userAgent: navigator.userAgent,
+      });
+      if (slotId) await bookSlot(slotId, tenantId).catch(() => null);
+      if (node.next) goToNode(node.next, vars);
+      else setDone(true);
+    } catch {
+      addBotMessage('Lo sentimos, hubo un error al registrar tu cita. Por favor llámanos directamente.', 200);
+      setDone(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleOptionSelect(option: FlowOption & { value?: string }) {
+    addUserMessage(option.label);
+    const newVars = { ...variables };
+    if (option.value) {
+      if (currentNodeId === 'ask_service') newVars['service'] = option.value;
+      if (currentNodeId === 'ask_fuel') newVars['fuel'] = option.value;
+      if (currentNodeId === 'oil_ask_fuel') newVars['oil_ask_fuel'] = option.value;
+    }
+    setVariables(newVars);
+    setSlots([]);
+    goToNode(option.next, newVars);
+  }
+
+  function handleSlotSelect(slot: AvailableSlot) {
+    const label = `${new Date(slot.slotDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${slot.startTime}`;
+    addUserMessage(label);
+    const newVars = {
+      ...variables,
+      fecha_preferida: slot.slotDate,
+      selected_slot_id: slot.id,
+      selected_slot_date: slot.slotDate,
+    };
+    setVariables(newVars);
+    setSlots([]);
+    // For oil flow: go to ask_name directly
+    const nextNodeId = currentNodeId === 'oil_result' ? 'ask_name' : (currentNode?.next ?? 'ask_name');
+    goToNode(nextNodeId, newVars);
+  }
+
+  function handleTextSubmit() {
+    const val = inputValue.trim();
+    if (!val || !currentNode?.collect) return;
+    addUserMessage(val);
+    const newVars = { ...variables, [currentNode.collect]: val };
+    setVariables(newVars);
+    setInputValue('');
+    if (currentNode.next) goToNode(currentNode.next, newVars);
+  }
+
+  function handleConsentSubmit() {
+    if (!consentChecked) return;
+    addUserMessage('Acepto la política de privacidad');
+    if (currentNode?.next) goToNode(currentNode.next);
+  }
+
+  function start() {
+    setStarted(true);
+    const node = flow.nodes[flow.start] as FlowNodeAny;
+    if (node?.message) {
+      setTimeout(() => {
+        setIsTyping(true);
+        setTimeout(() => {
+          setIsTyping(false);
+          setMessages([{ role: 'bot', text: node.message!, key: mkKey() }]);
+        }, 600);
+      }, 200);
+    }
+    setCurrentNodeId(flow.start);
+  }
+
+  const isLopdNode = currentNode?.action === 'collect_lopd_consent';
+  const showSlots = slots.length > 0 && !loadingSlots;
+  const showOptions = currentNode?.options && !loadingSlots && slots.length === 0;
+
+  return (
+    <div className="flex flex-col rounded-[--radius-xl] overflow-hidden w-full max-w-md mx-auto glass-strong border border-primary/15" style={{ boxShadow: '0 0 40px hsl(349 90% 52% / 0.08)' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-primary/90 to-primary/70 border-b border-primary/30">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary-foreground/20 border border-primary-foreground/30">
+            <Bot className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-primary-foreground leading-none">Asistente AMG</p>
+            <p className="text-[10px] text-primary-foreground/60 mt-0.5 font-mono">
+              {started && !done ? 'En línea' : done ? 'Conversación finalizada' : 'Listo para ayudarte'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 space-y-3 overflow-y-auto p-4 min-h-[320px] max-h-[440px] scroll-smooth">
+        {!started && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center h-full gap-4 py-8"
+          >
+            <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/25 flex items-center justify-center">
+              <Bot className="h-8 w-8 text-primary/70" />
+            </div>
+            <div className="text-center space-y-1">
+              <p className="font-semibold text-sm">Hola, soy el asistente de Talleres AMG</p>
+              <p className="text-xs text-muted-foreground">Puedo ayudarte a reservar cita, calcular el cambio de aceite y mucho más.</p>
+            </div>
+          </motion.div>
+        )}
+
+        <AnimatePresence>
+          {messages.map((msg) => (
+            <motion.div
+              key={msg.key}
+              initial={{ opacity: 0, y: 8, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.2 }}
+              className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              {msg.role === 'bot' && (
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center mb-0.5">
+                  <Bot className="h-3.5 w-3.5 text-primary/80" />
+                </div>
+              )}
+              <div
+                className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-primary text-primary-foreground rounded-br-sm'
+                    : 'glass border border-border/60 text-foreground rounded-bl-sm'
+                }`}
+              >
+                {msg.text}
+              </div>
+              {msg.role === 'user' && (
+                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-secondary border border-border flex items-center justify-center mb-0.5">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              )}
+            </motion.div>
+          ))}
+
+          {isTyping && (
+            <motion.div
+              key="typing"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex items-end gap-2 justify-start"
+            >
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center">
+                <Bot className="h-3.5 w-3.5 text-primary/80" />
+              </div>
+              <div className="glass border border-border/60 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 typing-dot" />
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 typing-dot" />
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 typing-dot" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {done && !isTyping && (
+          <p className="text-center text-[11px] text-muted-foreground/50 py-2 font-mono">— fin de la conversación —</p>
+        )}
+
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input area */}
+      {!started && (
+        <div className="border-t border-border/50 p-4">
+          <button
+            onClick={start}
+            className="w-full h-11 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all duration-200"
+            style={{ boxShadow: '0 0 16px hsl(349 90% 52% / 0.2)' }}
+          >
+            Iniciar conversación
+          </button>
+        </div>
+      )}
+
+      {started && !done && (
+        <AnimatePresence mode="wait">
+          {(saving || loadingSlots) && (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="border-t border-border/50 p-4 text-center"
+            >
+              <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="w-4 h-4 rounded-full border border-transparent border-t-primary animate-spin" />
+                {saving ? 'Guardando tu cita…' : 'Buscando disponibilidad…'}
+              </div>
+            </motion.div>
+          )}
+
+          {!saving && !loadingSlots && currentNode && (
+            <motion.div
+              key="input"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="border-t border-border/50 p-4 space-y-3"
+            >
+              {/* Slot picker */}
+              {showSlots && (
+                <div className="space-y-2">
+                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Fechas disponibles</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {slots.slice(0, 6).map((slot) => {
+                      const d = new Date(slot.slotDate + 'T00:00:00');
+                      return (
+                        <button
+                          key={slot.id}
+                          onClick={() => handleSlotSelect(slot)}
+                          className="group flex flex-col items-start p-2.5 rounded-[--radius-lg] border border-border/60 bg-background/40 hover:border-primary/50 hover:bg-primary/5 transition-all duration-150 text-left"
+                        >
+                          <span className="text-[10px] text-muted-foreground font-mono group-hover:text-primary/70 transition-colors capitalize">
+                            {d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                          </span>
+                          <span className="text-sm font-semibold mt-0.5">{slot.startTime}</span>
+                          <span className="text-[10px] text-muted-foreground/60 mt-0.5">
+                            {slot.spotsLeft} {slot.spotsLeft === 1 ? 'hueco' : 'huecos'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Option buttons */}
+              {showOptions && (
+                <div className="flex flex-wrap gap-2">
+                  {currentNode!.options!.map((opt) => (
+                    <button
+                      key={opt.next + opt.label}
+                      onClick={() => handleOptionSelect(opt as FlowOption & { value?: string })}
+                      className="rounded-full border border-primary/30 bg-primary/5 px-3.5 py-1.5 text-xs font-medium text-primary/90 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-150"
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Text input */}
+              {currentNode?.collect && (
+                <div className="flex gap-2">
+                  <input
+                    autoFocus
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleTextSubmit()}
+                    placeholder="Escribe aquí…"
+                    className="flex-1 h-10 rounded-[--radius-lg] bg-background/60 border border-border px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 placeholder:text-muted-foreground/40"
+                  />
+                  <button
+                    onClick={handleTextSubmit}
+                    disabled={!inputValue.trim()}
+                    className="flex items-center justify-center w-10 h-10 rounded-[--radius-lg] bg-primary text-primary-foreground disabled:opacity-40 hover:bg-primary/90 transition-colors"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* LOPD consent */}
+              {isLopdNode && !currentNode?.collect && !currentNode?.options && (
+                <div className="space-y-3">
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="relative mt-0.5 flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={consentChecked}
+                        onChange={(e) => setConsentChecked(e.target.checked)}
+                        className="peer sr-only"
+                      />
+                      <div className="w-4 h-4 rounded border border-border peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
+                        {consentChecked && (
+                          <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground leading-relaxed">
+                      Acepto el tratamiento de mis datos conforme a la{' '}
+                      <a href={policyUrl} target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                        Política de Privacidad
+                      </a>{' '}
+                      (v{policyVersion}) — LOPDGDD.
+                    </span>
+                  </label>
+                  <button
+                    onClick={handleConsentSubmit}
+                    disabled={!consentChecked}
+                    className="w-full h-10 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40 hover:bg-primary/90 transition-all"
+                  >
+                    Confirmar y continuar
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+    </div>
+  );
+}

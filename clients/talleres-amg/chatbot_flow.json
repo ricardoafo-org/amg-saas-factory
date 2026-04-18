@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "start": "welcome",
+  "nodes": {
+    "welcome": {
+      "message": "Hola, soy el asistente de Talleres AMG. ¿En qué puedo ayudarte hoy?",
+      "options": [
+        { "label": "Reservar cita",         "next": "ask_service" },
+        { "label": "Calcular cambio aceite", "next": "oil_ask_fuel" },
+        { "label": "Consultar precios",      "next": "pricing_info" },
+        { "label": "Horario y ubicación",    "next": "location_info" }
+      ]
+    },
+
+    "ask_service": {
+      "message": "¿Qué servicio necesitas?",
+      "options": [
+        { "label": "Cambio de aceite",  "next": "ask_matricula", "value": "cambio-aceite" },
+        { "label": "Revisión Pre-ITV",  "next": "ask_matricula", "value": "pre-itv" },
+        { "label": "Mecánica general",  "next": "ask_matricula", "value": "mecanica-general" },
+        { "label": "Otro",              "next": "ask_matricula", "value": "otro" }
+      ]
+    },
+    "ask_matricula": {
+      "message": "¿Cuál es la matrícula de tu vehículo?",
+      "collect": "matricula",
+      "next": "ask_fuel"
+    },
+    "ask_fuel": {
+      "message": "¿Tipo de combustible?",
+      "options": [
+        { "label": "Gasolina",          "next": "ask_date", "value": "gasolina" },
+        { "label": "Diésel",            "next": "ask_date", "value": "diesel" },
+        { "label": "Eléctrico/Híbrido", "next": "ask_date", "value": "electrico" }
+      ]
+    },
+    "ask_date": {
+      "message": "¿Qué fecha prefieres para tu cita? (dd/mm/aaaa)",
+      "collect": "fecha_preferida",
+      "next": "ask_name"
+    },
+    "ask_name": {
+      "message": "¿Cuál es tu nombre?",
+      "collect": "customer_name",
+      "next": "ask_phone"
+    },
+    "ask_phone": {
+      "message": "¿Y tu número de teléfono?",
+      "collect": "customer_phone",
+      "next": "ask_email"
+    },
+    "ask_email": {
+      "message": "¿Tu correo electrónico? (para enviarte la confirmación)",
+      "collect": "customer_email",
+      "next": "lopd_consent"
+    },
+    "lopd_consent": {
+      "message": "Para completar tu reserva necesito tu consentimiento explícito para el tratamiento de tus datos personales conforme a la LOPDGDD.",
+      "action": "collect_lopd_consent",
+      "params": {
+        "policy_url": "https://talleresentamg.es/privacidad",
+        "policy_version": "1.0.0"
+      },
+      "next": "save_appointment"
+    },
+    "save_appointment": {
+      "action": "save_appointment",
+      "next": "confirmation"
+    },
+    "confirmation": {
+      "message": "¡Perfecto! Tu cita ha sido registrada. Recibirás un email de confirmación. ¡Hasta pronto!"
+    },
+
+    "oil_ask_fuel": {
+      "message": "¿Qué tipo de aceite usa tu vehículo?",
+      "options": [
+        { "label": "Mineral",    "next": "oil_ask_km_last", "value": "mineral" },
+        { "label": "Semisintético", "next": "oil_ask_km_last", "value": "semi" },
+        { "label": "Sintético",  "next": "oil_ask_km_last", "value": "synthetic" },
+        { "label": "No lo sé",   "next": "oil_ask_km_last", "value": "unknown" }
+      ]
+    },
+    "oil_ask_km_last": {
+      "message": "¿Cuántos km tenía tu vehículo en el último cambio de aceite?",
+      "collect": "oil_km_last",
+      "next": "oil_ask_km_now"
+    },
+    "oil_ask_km_now": {
+      "message": "¿Cuántos km tiene actualmente tu vehículo?",
+      "collect": "oil_km_now",
+      "next": "oil_calc"
+    },
+    "oil_calc": {
+      "action": "calc_oil_change",
+      "next": "oil_result"
+    },
+    "oil_result": {
+      "message": "{{oil_result_message}}",
+      "options": [
+        { "label": "Reservar cambio de aceite", "next": "ask_matricula", "value": "cambio-aceite" },
+        { "label": "Volver al inicio",          "next": "welcome" }
+      ]
+    },
+
+    "pricing_info": {
+      "message": "Puedes ver todos nuestros precios actualizados (con IVA desglosado) en la sección de servicios de nuestra web. ¿Quieres que te reserve cita para algún servicio?",
+      "options": [
+        { "label": "Sí, reservar", "next": "ask_service" },
+        { "label": "No, gracias",  "next": "goodbye" }
+      ]
+    },
+    "location_info": {
+      "message": "Estamos en Pol. Ind. Cabezo Beaza, C/ Zinc 12, Cartagena. Horario: L-V 8:00-18:00, Sábados 9:00-14:00. ¿Quieres reservar cita?",
+      "options": [
+        { "label": "Sí, reservar", "next": "ask_service" },
+        { "label": "No, gracias",  "next": "goodbye" }
+      ]
+    },
+    "goodbye": {
+      "message": "¡Hasta pronto! Recuerda que puedes llamarnos o escribirnos por WhatsApp cuando necesites."
+    }
+  }
+}

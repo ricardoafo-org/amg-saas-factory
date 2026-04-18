@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/rm-guard.js"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const t=JSON.parse(d);const f=(t.tool_input||{}).file_path||'';if(f&&/\\.(ts|tsx)$/.test(f)){const{execSync}=require('child_process');try{execSync('npx prettier --write \"'+f+'\" 2>&1',{stdio:'pipe'});}catch(e){}try{execSync('npx eslint --fix \"'+f+'\" 2>&1',{stdio:'pipe'});}catch(e){}}}catch{}});\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const{execSync}=require('child_process');try{execSync('npm run type-check 2>&1',{stdio:'inherit'});console.log('Type check passed.');process.exit(0);}catch(e){console.error('\\n[Stop Hook] TYPE CHECK FAILED — do not consider this task complete. Fix the TypeScript errors above before finishing.');process.exit(1);}\""
+          }
+        ]
+      }
+    ]
+  }
+}

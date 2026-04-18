@@ -1,0 +1,194 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Brand primitives ── */
+  --color-brand-dark:    hsl(226 40% 4%);
+  --color-brand-red:     hsl(349 90% 52%);
+  --color-brand-orange:  hsl(22 100% 55%);
+  --color-brand-surface: hsl(226 35% 7%);
+  --color-brand-muted:   hsl(226 30% 11%);
+
+  /* ── Semantic tokens (dark — canonical) ── */
+  --color-background:             hsl(226 40% 4%);
+  --color-foreground:             hsl(210 20% 96%);
+  --color-card:                   hsl(226 35% 7%);
+  --color-card-foreground:        hsl(210 20% 96%);
+  --color-primary:                hsl(349 90% 52%);
+  --color-primary-foreground:     hsl(0 0% 100%);
+  --color-secondary:              hsl(226 30% 11%);
+  --color-secondary-foreground:   hsl(210 15% 80%);
+  --color-muted:                  hsl(226 28% 9%);
+  --color-muted-foreground:       hsl(210 10% 50%);
+  --color-border:                 hsl(226 25% 14%);
+  --color-destructive:            hsl(0 84% 52%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-accent:                 hsl(22 100% 55%);
+  --color-accent-foreground:      hsl(226 40% 4%);
+
+  /* ── Typography ── */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* ── Shape ── */
+  --radius-sm: 0.25rem;
+  --radius:    0.5rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
+
+  /* ── Shadows & glows ── */
+  --shadow-card:    0 2px 16px hsl(226 40% 2% / 0.8);
+  --shadow-dialog:  0 24px 64px hsl(226 40% 2% / 0.9);
+  --glow-primary:   0 0 24px hsl(349 90% 52% / 0.3);
+  --glow-accent:    0 0 24px hsl(22 100% 55% / 0.25);
+  --glow-sm:        0 0 12px hsl(349 90% 52% / 0.2);
+}
+
+/* ── Light theme override ── */
+[data-theme='light'] {
+  --color-background:             hsl(210 20% 98%);
+  --color-foreground:             hsl(226 40% 8%);
+  --color-card:                   hsl(0 0% 100%);
+  --color-card-foreground:        hsl(226 40% 8%);
+  --color-primary:                hsl(349 90% 46%);
+  --color-primary-foreground:     hsl(0 0% 100%);
+  --color-secondary:              hsl(210 14% 92%);
+  --color-secondary-foreground:   hsl(226 30% 20%);
+  --color-muted:                  hsl(210 14% 94%);
+  --color-muted-foreground:       hsl(226 15% 45%);
+  --color-border:                 hsl(226 14% 84%);
+  --color-destructive:            hsl(0 84% 44%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-accent:                 hsl(22 100% 50%);
+  --color-accent-foreground:      hsl(0 0% 100%);
+}
+
+/* ── Animations ── */
+@keyframes itv-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(0 84% 52% / 0.7); }
+  50%       { box-shadow: 0 0 0 10px hsl(0 84% 52% / 0); }
+}
+
+@keyframes scan-line {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30%           { opacity: 1; transform: translateY(-3px); }
+}
+
+@layer base {
+  * { border-color: var(--color-border); box-sizing: border-box; }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: hsl(349 90% 52% / 0.3);
+    color: hsl(0 0% 100%);
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(349 90% 52%);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+/* ── Utility classes ── */
+@layer utilities {
+  .glass {
+    background: hsl(226 35% 7% / 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid hsl(226 25% 20% / 0.6);
+  }
+
+  .glass-strong {
+    background: hsl(226 35% 8% / 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(349 90% 52% / 0.15);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 20px hsl(349 90% 52% / 0.6);
+  }
+
+  .glow-border {
+    box-shadow: 0 0 0 1px hsl(349 90% 52% / 0.3), 0 0 20px hsl(349 90% 52% / 0.1);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(349 90% 65%) 0%, hsl(22 100% 60%) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(hsl(226 25% 14% / 0.4) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(226 25% 14% / 0.4) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .noise-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .card-gradient-border {
+    position: relative;
+    background: var(--color-card);
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .card-gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, hsl(349 90% 52% / 0.25), hsl(226 25% 20% / 0.5), hsl(22 100% 55% / 0.1));
+    z-index: -1;
+  }
+
+  .typing-dot {
+    animation: typing 1.2s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+}

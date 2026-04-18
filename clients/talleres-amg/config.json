@@ -1,0 +1,86 @@
+{
+  "tenantId": "talleres-amg",
+  "businessName": "Talleres AMG",
+  "industry": "automotive",
+  "tagline": "Tu taller de confianza en Cartagena",
+  "address": {
+    "street": "Polígono Industrial Cabezo Beaza, Calle Zinc 12",
+    "city": "Cartagena",
+    "postalCode": "30353",
+    "region": "Región de Murcia",
+    "country": "ES",
+    "geo": { "lat": 37.5731, "lng": -0.9945 }
+  },
+  "contact": {
+    "phone": "+34 968 000 000",
+    "email": "info@talleresentamg.es",
+    "whatsapp": "+34 604273678",
+    "googleMapsUrl": "https://maps.google.com/?q=Talleres+AMG+Cartagena"
+  },
+  "branding": {
+    "primaryColor": "#1a1a2e",
+    "secondaryColor": "#e94560",
+    "accentColor": "#f5a623",
+    "fontFamily": "Inter, sans-serif",
+    "logoUrl": "/clients/talleres-amg/logo.png"
+  },
+  "services": [
+    {
+      "id": "cambio-aceite",
+      "name": "Cambio de Aceite",
+      "description": "Cambio de aceite y filtro con revisión de niveles",
+      "basePrice": 39.99,
+      "duration": 45,
+      "category": "mantenimiento"
+    },
+    {
+      "id": "pre-itv",
+      "name": "Revisión Pre-ITV",
+      "description": "Inspección completa antes de pasar la ITV",
+      "basePrice": 49.99,
+      "duration": 60,
+      "category": "inspeccion"
+    },
+    {
+      "id": "mecanica-general",
+      "name": "Mecánica General",
+      "description": "Diagnóstico y reparación de averías",
+      "basePrice": 65.00,
+      "duration": 90,
+      "category": "reparacion"
+    },
+    {
+      "id": "cambio-neumaticos",
+      "name": "Cambio de Neumáticos",
+      "description": "Montaje, equilibrado y alineación",
+      "basePrice": 15.00,
+      "duration": 30,
+      "category": "neumaticos"
+    },
+    {
+      "id": "frenos",
+      "name": "Revisión de Frenos",
+      "description": "Inspección y sustitución de pastillas y discos",
+      "basePrice": 79.99,
+      "duration": 75,
+      "category": "seguridad"
+    }
+  ],
+  "operatingHours": [
+    { "day": "monday",    "open": "08:00", "close": "18:00" },
+    { "day": "tuesday",   "open": "08:00", "close": "18:00" },
+    { "day": "wednesday", "open": "08:00", "close": "18:00" },
+    { "day": "thursday",  "open": "08:00", "close": "18:00" },
+    { "day": "friday",    "open": "08:00", "close": "18:00" },
+    { "day": "saturday",  "open": "09:00", "close": "14:00" },
+    { "day": "sunday",    "open": "00:00", "close": "00:00", "closed": true }
+  ],
+  "privacyPolicy": {
+    "url": "https://talleresentamg.es/privacidad",
+    "version": "1.0.0",
+    "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "ivaRate": 0.21,
+  "locale": "es-ES",
+  "currency": "EUR"
+}

@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm info *)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const p=JSON.parse\\(d\\); console.log\\('ENV VARS expected:', JSON.stringify\\(Object.keys\\(p.bin || {}\\)\\)\\)\")",
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Read(//c/Users/rafon/AppData/Local/Temp/claude/C--claude-projects-amg-talleres/1569ff99-c469-4ca8-826b-a54846062416/tasks/**)",
+      "Bash(kill %1)",
+      "Bash(wait)",
+      "Bash(npx tsc *)",
+      "Bash(timeout 15 npx next build)",
+      "Bash(npx next *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://127.0.0.1:8090/api/health)",
+      "Bash(/c/Windows/System32/tar.exe --version)",
+      "Bash(node *)",
+      "Bash(curl -s http://127.0.0.1:8090/api/admins/auth-with-password -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"identity\\\\\":\\\\\"r.afonsomontero@gmail.com\\\\\",\\\\\"password\\\\\":\\\\\"Coky26081960#@#\\\\\"}\")",
+      "Bash(curl -s http://127.0.0.1:8090/api/superusers/auth-with-password -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"identity\\\\\":\\\\\"r.afonsomontero@gmail.com\\\\\",\\\\\"password\\\\\":\\\\\"Coky26081960#@#\\\\\"}\")",
+      "Bash(curl -s http://127.0.0.1:8090/api/)",
+      "Bash(curl -sv http://127.0.0.1:8090/api/collections)",
+      "Bash(curl -s \"http://127.0.0.1:8090/api/collections?perPage=1\" echo \"---\")",
+      "Bash(curl *)",
+      "Read(//tmp/**)",
+      "Bash(npm test *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)"
+    ]
+  }
+}

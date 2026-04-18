@@ -1,0 +1,21 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+
+# PocketBase data
+pb_data/
+pb_migrations/
+
+# Build
+dist/
+out/
+
+# Unrelated library
+pixel-agents/
