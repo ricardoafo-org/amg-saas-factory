@@ -36,6 +36,7 @@ export default async function Home() {
           <ChatEngine
             flow={flow}
             tenantId={config.tenantId}
+            phone={config.contact.phone}
             policyUrl={config.privacyPolicy.url}
             policyVersion={config.privacyPolicy.version}
             policyHash={config.privacyPolicy.hash}

@@ -31,14 +31,13 @@
     "ask_fuel": {
       "message": "¿Tipo de combustible?",
       "options": [
-        { "label": "Gasolina",          "next": "ask_date", "value": "gasolina" },
-        { "label": "Diésel",            "next": "ask_date", "value": "diesel" },
-        { "label": "Eléctrico/Híbrido", "next": "ask_date", "value": "electrico" }
+        { "label": "Gasolina",          "next": "load_slots", "value": "gasolina" },
+        { "label": "Diésel",            "next": "load_slots", "value": "diesel" },
+        { "label": "Eléctrico/Híbrido", "next": "load_slots", "value": "electrico" }
       ]
     },
-    "ask_date": {
-      "message": "¿Qué fecha prefieres para tu cita? (dd/mm/aaaa)",
-      "collect": "fecha_preferida",
+    "load_slots": {
+      "action": "load_slots",
       "next": "ask_name"
     },
     "ask_name": {

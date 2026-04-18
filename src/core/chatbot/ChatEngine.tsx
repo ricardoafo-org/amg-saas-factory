@@ -24,6 +24,7 @@ type MessageItem = { role: 'bot' | 'user'; text: string; key: string };
 type Props = {
   flow: ChatbotFlow;
   tenantId: string;
+  phone: string;
   policyUrl: string;
   policyVersion: string;
   policyHash: string;
@@ -32,7 +33,7 @@ type Props = {
 let msgCounter = 0;
 function mkKey() { return `msg-${++msgCounter}`; }
 
-export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHash }: Props) {
+export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, policyHash }: Props) {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<string>(flow.start);
   const [variables, setVariables] = useState<Record<string, string>>({});
@@ -99,7 +100,7 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
             if (available.length > 0) {
               addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
             } else {
-              addBotMessage('No encontramos huecos disponibles en los próximos días. Llámanos y te buscamos una fecha.', 300);
+              addBotMessage(`No hay huecos disponibles — llámanos al ${phone}`, 300);
             }
             if (node.next) {
               setCurrentNodeId(node.next);
@@ -110,6 +111,28 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
             if (node.next) setCurrentNodeId(node.next);
           });
       }, 900);
+      return;
+    }
+
+    if (node.action === 'load_slots') {
+      const today = new Date().toISOString().split('T')[0];
+      setLoadingSlots(true);
+      setCurrentNodeId(nodeId);
+      getAvailableSlots(tenantId, today, 14)
+        .then((available) => {
+          setSlots(available);
+          setLoadingSlots(false);
+          if (available.length > 0) {
+            addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
+          } else {
+            addBotMessage(`No hay huecos disponibles — llámanos al ${phone}`, 300);
+            if (node.next) setCurrentNodeId(node.next);
+          }
+        })
+        .catch(() => {
+          setLoadingSlots(false);
+          if (node.next) setCurrentNodeId(node.next);
+        });
       return;
     }
 
@@ -170,8 +193,7 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
     };
     setVariables(newVars);
     setSlots([]);
-    // For oil flow: go to ask_name directly
-    const nextNodeId = currentNodeId === 'oil_result' ? 'ask_name' : (currentNode?.next ?? 'ask_name');
+    const nextNodeId = currentNode?.next ?? 'ask_name';
     goToNode(nextNodeId, newVars);
   }
 
@@ -386,7 +408,7 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
                         <button
                           key={slot.id}
                           onClick={() => handleSlotSelect(slot)}
-                          className="group flex flex-col items-start p-2.5 rounded-[--radius-lg] border border-border/60 bg-background/40 hover:border-primary/50 hover:bg-primary/5 transition-all duration-150 text-left"
+                          className="group flex flex-col items-start p-2.5 rounded-[--radius-lg] border border-border/60 bg-background/40 hover:border-primary/50 hover:bg-primary/5 transition-all duration-150 text-left min-h-[44px]"
                         >
                           <span className="text-[10px] text-muted-foreground font-mono group-hover:text-primary/70 transition-colors capitalize">
                             {d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
