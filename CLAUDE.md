@@ -19,7 +19,7 @@ You are the orchestrator. You communicate with the user, break tasks into specs,
 | `architect` | Schema design, API contracts, service boundaries. Returns structured analysis only. | Read, Glob, Grep | New collection, tenant model change, API surface |
 | `compliance-reviewer` | Deterministic grep checks. Files path+line violations. No style opinions. | Read, Glob, Grep | Any modified `.ts`/`.tsx` before merge |
 | `security-auditor` | LOPDGDD, PII, auth guards, IDOR. Returns pass/fail checklist. | Read, Glob, Grep | New forms, server actions, PocketBase queries |
-| `qa-engineer` | Runs tests, files bugs, writes QA reports. Never writes app code. | Read, Glob, Grep, Bash | Before every merge to main |
+| `qa-engineer` | Runs tests, files bugs, writes QA reports. **Follows Sprint 4 testing patterns** (`.claude/skills/qa-testing-patterns/STRATEGY.md`). Never writes app code. | Read, Glob, Grep, Bash | Before every merge to main |
 
 **Orchestrator rule**: for targeted single-file fixes you may edit directly. For anything touching 2+ files or requiring domain expertise, always delegate.
 
@@ -91,6 +91,7 @@ File bugs using `docs/bugs/_TEMPLATE.md`. File ADRs using `docs/adr/_TEMPLATE.md
 | IVA, LOPDGDD, ITV, SEO | `.claude/skills/es-compliance/SKILL.md` |
 | Collections, chatbot engine, JSON Schema sync | `.claude/skills/monolith-engine/SKILL.md` |
 | Design system, motion, glass effects | `.claude/skills/design-system/SKILL.md` |
+| QA patterns (unit/integration/E2E/contract/visual) | `.claude/skills/qa-testing-patterns/STRATEGY.md` |
 | Playwright, web test patterns | `.claude/skills/qa-web/SKILL.md` |
 | Chatbot flow validation, LOPD checks | `.claude/skills/qa-chatbot/SKILL.md` |
 
