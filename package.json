@@ -21,6 +21,8 @@
     "e2e:install": "playwright install chromium"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@radix-ui/react-checkbox": "^1.3.3",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",

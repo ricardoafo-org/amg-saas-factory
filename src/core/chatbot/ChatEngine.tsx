@@ -7,6 +7,8 @@ import type { ChatbotFlow, FlowOption } from '@/lib/chatbot/engine';
 import { saveAppointment } from '@/actions/chatbot';
 import { getAvailableSlots, bookSlot, type AvailableSlot } from '@/actions/slots';
 import { calcOilRecommendation, estimateOilDate } from '@/lib/oil';
+import { matchOptionByNlp, classifyIntent } from '@/lib/nlp/classifier';
+import { resolveWithClaude } from '@/actions/nlp';
 
 type FlowNodeAny = {
   message?: string;
@@ -42,6 +44,7 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [nlpInput, setNlpInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -186,6 +189,37 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
     if (!consentChecked) return;
     addUserMessage('Acepto la política de privacidad');
     if (currentNode?.next) goToNode(currentNode.next);
+  }
+
+  async function handleNlpSubmit() {
+    const val = nlpInput.trim();
+    if (!val || !currentNode?.options) return;
+    const options = currentNode.options as Array<FlowOption & { value?: string }>;
+    addUserMessage(val);
+    setNlpInput('');
+
+    // Meta-questions: user is asking what the bot can do
+    const { intent } = classifyIntent(val);
+    if (intent === 'help') {
+      addBotMessage('Puedo ayudarte con cualquiera de las opciones que ves abajo. ¿Cuál te interesa?', 300);
+      return;
+    }
+
+    const local = matchOptionByNlp(val, options);
+    if (local) {
+      handleOptionSelect(local.option as FlowOption & { value?: string });
+      return;
+    }
+
+    // Tier-2: Claude fallback — silent degradation on rate limit / no key
+    setIsTyping(true);
+    const remote = await resolveWithClaude(val, options, currentNodeId);
+    setIsTyping(false);
+    if (remote) {
+      handleOptionSelect(options[remote.index] as FlowOption & { value?: string });
+    } else {
+      addBotMessage('No te he entendido. Por favor, elige una de las opciones.', 200);
+    }
   }
 
   function start() {
@@ -368,18 +402,36 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
                 </div>
               )}
 
-              {/* Option buttons */}
+              {/* Option buttons + NLP free-text */}
               {showOptions && (
-                <div className="flex flex-wrap gap-2">
-                  {currentNode!.options!.map((opt) => (
+                <div className="space-y-2.5">
+                  <div className="flex flex-wrap gap-2">
+                    {currentNode!.options!.map((opt) => (
+                      <button
+                        key={opt.next + opt.label}
+                        onClick={() => handleOptionSelect(opt as FlowOption & { value?: string })}
+                        className="rounded-full border border-primary/30 bg-primary/5 px-3.5 py-1.5 text-xs font-medium text-primary/90 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-150"
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      value={nlpInput}
+                      onChange={(e) => setNlpInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleNlpSubmit()}
+                      placeholder="O escribe tu mensaje…"
+                      className="flex-1 h-9 rounded-[--radius-lg] bg-background/60 border border-border/60 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 placeholder:text-muted-foreground/30"
+                    />
                     <button
-                      key={opt.next + opt.label}
-                      onClick={() => handleOptionSelect(opt as FlowOption & { value?: string })}
-                      className="rounded-full border border-primary/30 bg-primary/5 px-3.5 py-1.5 text-xs font-medium text-primary/90 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-150"
+                      onClick={handleNlpSubmit}
+                      disabled={!nlpInput.trim()}
+                      className="flex items-center justify-center w-9 h-9 rounded-[--radius-lg] bg-primary/10 text-primary border border-primary/25 disabled:opacity-30 hover:bg-primary hover:text-primary-foreground transition-colors"
                     >
-                      {opt.label}
+                      <Send className="h-3.5 w-3.5" />
                     </button>
-                  ))}
+                  </div>
                 </div>
               )}
 

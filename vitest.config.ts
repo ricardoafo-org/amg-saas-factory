@@ -8,7 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['pixel-agents/**', 'e2e/**', 'node_modules/**'],
+    exclude: ['e2e/**', 'node_modules/**'],
   },
   resolve: {
     alias: { '@': resolve(__dirname, './src') },

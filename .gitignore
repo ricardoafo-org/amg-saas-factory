@@ -16,6 +16,3 @@ pb_migrations/
 # Build
 dist/
 out/
-
-# Unrelated library
-pixel-agents/

@@ -8,6 +8,13 @@ export const metadata: Metadata = {
   title: 'Talleres AMG',
   description: 'Tu taller de confianza en Cartagena — Mecánica, ITV, Cambios de Aceite',
   icons: { icon: '/favicon.svg', shortcut: '/favicon.svg' },
+  manifest: '/manifest.webmanifest',
+  themeColor: '#e11d48',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Talleres AMG',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
