@@ -6,7 +6,7 @@
 const TENANTED_COLLECTIONS = ['appointments', 'consent_log', 'config', 'bookings'];
 
 // Inject tenant_id filter on every list request
-onRecordBeforeListRequest((e) => {
+onRecordsListRequest((e) => {
   const auth = e.requestInfo.authRecord;
   if (!auth) return;
 
@@ -20,7 +20,7 @@ onRecordBeforeListRequest((e) => {
 }, ...TENANTED_COLLECTIONS);
 
 // Inject tenant_id filter on single-record view
-onRecordBeforeViewRequest((e) => {
+onRecordViewRequest((e) => {
   const auth = e.requestInfo.authRecord;
   if (!auth) return;
 
@@ -34,7 +34,7 @@ onRecordBeforeViewRequest((e) => {
 }, ...TENANTED_COLLECTIONS);
 
 // Block cross-tenant updates
-onRecordBeforeUpdateRequest((e) => {
+onRecordUpdateRequest((e) => {
   const auth = e.requestInfo.authRecord;
   if (!auth) return;
 
@@ -47,7 +47,7 @@ onRecordBeforeUpdateRequest((e) => {
 }, ...TENANTED_COLLECTIONS);
 
 // Block cross-tenant deletes
-onRecordBeforeDeleteRequest((e) => {
+onRecordDeleteRequest((e) => {
   const auth = e.requestInfo.authRecord;
   if (!auth) return;
 
@@ -60,7 +60,7 @@ onRecordBeforeDeleteRequest((e) => {
 }, ...TENANTED_COLLECTIONS);
 
 // Auto-stamp tenant_id on create so clients can't spoof it
-onRecordBeforeCreateRequest((e) => {
+onRecordCreateRequest((e) => {
   const auth = e.requestInfo.authRecord;
   if (!auth) return;
 
