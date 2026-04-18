@@ -30,14 +30,15 @@ type Props = {
   policyUrl: string;
   policyVersion: string;
   policyHash: string;
+  businessName: string;
   services?: Service[];
-  ivaRate?: number;
+  ivaRate: number;
 };
 
 let msgCounter = 0;
 function mkKey() { return `msg-${++msgCounter}`; }
 
-export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, policyHash, services = [], ivaRate = 0.21 }: Props) {
+export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, policyVersion, policyHash, services = [], ivaRate }: Props) {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<string>(flow.start);
   const [variables, setVariables] = useState<Record<string, string>>({});
@@ -392,7 +393,7 @@ export function ChatEngine({ flow, tenantId, phone, policyUrl, policyVersion, po
               <Bot className="h-8 w-8 text-primary/70" />
             </div>
             <div className="text-center space-y-1">
-              <p className="font-semibold text-sm">Hola, soy el asistente de Talleres AMG</p>
+              <p className="font-semibold text-sm">Hola, soy el asistente de {businessName}</p>
               <p className="text-xs text-muted-foreground">Puedo ayudarte a reservar cita, calcular el cambio de aceite y mucho más.</p>
             </div>
           </motion.div>

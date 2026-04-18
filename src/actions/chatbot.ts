@@ -1,7 +1,11 @@
 'use server';
 
 import { getPb } from '@/lib/pb';
+import { loadClientConfig } from '@/lib/config';
 import { Resend } from 'resend';
+
+const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
+const clientConfig = loadClientConfig(TENANT_ID);
 
 type AppointmentPayload = {
   tenantId: string;
@@ -40,7 +44,7 @@ export async function saveAppointment(payload: AppointmentPayload) {
   const businessNameConfig = await pb.collection('config').getFirstListItem(
     `tenant_id = "${payload.tenantId}" && key = "business_name"`,
   ).catch(() => null);
-  const businessName = businessNameConfig ? String(businessNameConfig['value']) : 'Talleres AMG';
+  const businessName = businessNameConfig ? String(businessNameConfig['value']) : clientConfig.businessName;
 
   // Fetch service prices to compute total_amount
   let baseAmount = 0;
@@ -183,7 +187,7 @@ export async function saveQuoteRequest(payload: QuotePayload) {
   const businessNameConfig = await pb.collection('config').getFirstListItem(
     `tenant_id = "${payload.tenantId}" && key = "business_name"`,
   ).catch(() => null);
-  const businessName = businessNameConfig ? String(businessNameConfig['value']) : 'Talleres AMG';
+  const businessName = businessNameConfig ? String(businessNameConfig['value']) : clientConfig.businessName;
 
   // RD 1457/1986: valid_until = today + 12 business days
   const validUntil = addBusinessDays(new Date(), 12);

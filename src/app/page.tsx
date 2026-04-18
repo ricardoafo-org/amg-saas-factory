@@ -37,6 +37,7 @@ export default async function Home() {
             flow={flow}
             tenantId={config.tenantId}
             phone={config.contact.phone}
+            businessName={config.businessName}
             policyUrl={config.privacyPolicy.url}
             policyVersion={config.privacyPolicy.version}
             policyHash={config.privacyPolicy.hash}
