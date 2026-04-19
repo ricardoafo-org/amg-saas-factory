@@ -171,7 +171,7 @@
       "next": "quote_confirmation"
     },
     "quote_confirmation": {
-      "message": "Hemos recibido tu solicitud. Te contactaremos en 24h con el presupuesto. ¡Gracias!"
+      "message": "Hemos recibido tu solicitud. Te contactaremos en 24h con el presupuesto. Este presupuesto es orientativo y sin compromiso, válido 12 días hábiles. El precio indicado es pre-IVA. ¡Gracias!"
     }
   }
 }

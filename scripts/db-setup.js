@@ -284,7 +284,7 @@ const SCHEMAS = {
     field('total', 'number'),
     field('status', 'select', {
       required: true,
-      options: { maxSelect: 1, values: ['pending', 'sent', 'approved', 'rejected', 'invoiced'] },
+      options: { maxSelect: 1, values: ['pending', 'sent', 'accepted', 'rejected'] },
     }),
     field('valid_until', 'date'),
     field('notes', 'text'),
