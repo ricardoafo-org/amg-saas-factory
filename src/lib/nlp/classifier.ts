@@ -41,13 +41,14 @@ const PATTERNS: Array<{ intent: Intent; patterns: RegExp[]; confidence: number }
       /\bpedir\s+hora\b/,
       /\bturno\b/,
       /\bagendar\b/,
+      /\ben\s+cola\b/,
     ],
   },
   {
     intent: 'oil_change',
     confidence: 0.9,
     patterns: [
-      /\bac[ei]te\b/,
+      /\ba[sc]eite\b/,
       /\bcambio\s+(de\s+)?aceite\b/,
       /\bcambio\b/,
       /\blubric/,
@@ -80,9 +81,11 @@ const PATTERNS: Array<{ intent: Intent; patterns: RegExp[]; confidence: number }
     patterns: [
       /\bhorario/,
       /\bhoras?\s+de\s+(apertura|trabajo)\b/,
-      /\babierto\b/,
-      /\bcierre\b/,
+      /\babiertos?\b/,
+      /\bcierre?\b/,
       /cuando\s+abr/,
+      /a\s+que\s+hora\b/,
+      /\bcierran?\b/,
     ],
   },
   {
@@ -118,7 +121,7 @@ const PATTERNS: Array<{ intent: Intent; patterns: RegExp[]; confidence: number }
   {
     intent: 'yes',
     confidence: 0.85,
-    patterns: [/^(si|yes|claro|por\s+supuesto|vale|ok|perfecto|adelante|correcto|exacto)\b/],
+    patterns: [/^(si|yes|claro|por\s+supuesto|vale|ok|perfecto|adelante|correcto|exacto|de\s+acuerdo)\b/],
   },
   {
     intent: 'no',
