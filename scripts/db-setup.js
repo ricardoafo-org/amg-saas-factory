@@ -97,8 +97,52 @@ function request(method, urlPath, body = null, token = null) {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Collection helper
+// 4. Collection helpers
 // ---------------------------------------------------------------------------
+/**
+ * Create an auth-type collection (PocketBase built-in auth: email+password, JWT, etc.)
+ * @param {string} name
+ * @param {object[]} schema  — additional custom fields beyond built-in auth fields
+ * @param {string} token
+ */
+async function createAuthCollection(name, schema, token) {
+  const res = await request('POST', '/api/collections', {
+    name,
+    type: 'auth',
+    schema,
+    listRule: null,
+    viewRule: null,
+    createRule: null,
+    updateRule: null,
+    deleteRule: null,
+    // Auth-specific options
+    options: {
+      manageRule: null,
+      allowOAuth2Auth: false,
+      allowUsernameAuth: false,
+      allowEmailAuth: true,
+      requireEmail: true,
+      exceptEmailDomains: [],
+      onlyEmailDomains: [],
+      minPasswordLength: 8,
+    },
+  }, token);
+
+  if (res.status === 200 || res.status === 201) {
+    console.log(`  ✓ Auth collection '${name}' created`);
+    collectionsCreated++;
+    return res.body;
+  } else if (res.status === 400) {
+    const msg = res.body?.message || '';
+    console.log(`  SKIP Auth collection '${name}' (${msg || '400'})`);
+    const existing = await request('GET', `/api/collections/${name}`, null, token);
+    return existing.body;
+  } else {
+    console.log(`  ✗ Auth collection '${name}' failed (${res.status}): ${JSON.stringify(res.body)}`);
+    return null;
+  }
+}
+
 /**
  * @param {string} name
  * @param {object[]} schema  — array of PocketBase field descriptors
@@ -315,6 +359,65 @@ const SCHEMAS = {
     field('consented_at', 'text'),
     field('user_agent', 'text'),
   ],
+
+  customers: [
+    field('tenant_id', 'text', { required: true }),
+    field('name', 'text', { required: true }),
+    field('email', 'email', { required: true }),
+    field('phone', 'text'),
+    field('notes', 'text'),
+    field('first_seen', 'date'),
+    field('last_seen', 'date'),
+    field('total_visits', 'number'),
+    field('total_spent', 'number'),
+    field('preferred_contact', 'select', {
+      options: { maxSelect: 1, values: ['sms', 'email', 'whatsapp'] },
+    }),
+    field('marketing_consent', 'bool'),
+  ],
+
+  vehicles: [
+    field('tenant_id', 'text', { required: true }),
+    field('customer_id', 'text'),
+    field('plate', 'text', { required: true }),
+    field('brand', 'text'),
+    field('model', 'text'),
+    field('year', 'number'),
+    field('fuel_type', 'select', {
+      options: { maxSelect: 1, values: ['gasolina', 'diesel', 'electrico', 'hibrido'] },
+    }),
+    field('engine_cc', 'number'),
+    field('last_km', 'number'),
+    field('itv_expiry', 'date'),
+    field('notes', 'text'),
+  ],
+
+  work_orders: [
+    field('tenant_id', 'text', { required: true }),
+    field('appointment_id', 'text'),
+    field('customer_id', 'text'),
+    field('vehicle_id', 'text'),
+    field('status', 'select', {
+      required: true,
+      options: { maxSelect: 1, values: ['intake', 'diagnosis', 'repair', 'quality_check', 'ready', 'delivered'] },
+    }),
+    field('tech_notes', 'text'),
+    field('estimated_ready', 'date'),
+    field('actual_cost', 'number'),
+    field('labor_minutes', 'number'),
+  ],
+
+  sms_log: [
+    field('tenant_id', 'text', { required: true }),
+    field('to_phone', 'text', { required: true }),
+    field('message', 'text', { required: true }),
+    field('status', 'select', {
+      required: true,
+      options: { maxSelect: 1, values: ['sent', 'delivered', 'failed'] },
+    }),
+    field('provider_id', 'text'),
+    field('appointment_id', 'text'),
+  ],
 };
 
 // ---------------------------------------------------------------------------
@@ -338,7 +441,22 @@ async function main() {
   const token = authRes.body.token;
   console.log('✓ Authenticated\n');
 
-  // --- Create collections ---
+  // --- Create staff auth collection ---
+  console.log('--- Auth collections ---');
+  const STAFF_SCHEMA = [
+    field('tenant_id', 'text', { required: true }),
+    field('role', 'select', {
+      required: true,
+      options: { maxSelect: 1, values: ['owner', 'technician', 'admin'] },
+    }),
+    field('display_name', 'text'),
+    field('phone', 'text'),
+    field('active', 'bool'),
+  ];
+  await createAuthCollection('staff', STAFF_SCHEMA, token);
+  console.log('');
+
+  // --- Create base collections ---
   console.log('--- Collections ---');
   const collectionRefs = {};
   for (const [name, schema] of Object.entries(SCHEMAS)) {
@@ -485,6 +603,30 @@ async function main() {
       }
     }
     console.log(`  ✓ ${slotCount} availability slots created`);
+  }
+
+  // --- Seed: Staff (initial owner account) ---
+  console.log('\n--- Seed: staff ---');
+  const staffEmail = process.env.STAFF_OWNER_EMAIL || process.env.POCKETBASE_ADMIN_EMAIL || 'owner@talleramg.es';
+  const staffPassword = process.env.STAFF_OWNER_PASSWORD || process.env.POCKETBASE_ADMIN_PASSWORD || 'ChangeMe1234!';
+
+  const staffCount = await getCount('staff', `tenant_id='${tenantId}'`, token);
+  if (staffCount > 0) {
+    console.log(`  SKIP Staff already seeded for tenant ${tenantId}`);
+  } else {
+    const staffRec = await seedRecord('staff', {
+      tenant_id: tenantId,
+      role: 'owner',
+      display_name: 'Propietario',
+      phone: '',
+      active: true,
+      email: staffEmail,
+      password: staffPassword,
+      passwordConfirm: staffPassword,
+    }, token);
+    if (staffRec) {
+      console.log(`  ✓ Owner staff account created (email: ${staffEmail})`);
+    }
   }
 
   // --- Summary ---
