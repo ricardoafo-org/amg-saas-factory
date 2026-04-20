@@ -1,7 +1,7 @@
 # Definition of Ready (DOR) and Definition of Done (DOD)
 
 Canonical reference for all feature work in AMG SaaS Factory.
-Last updated: 2026-04-20
+Last updated: 2026-04-21
 
 ---
 
@@ -11,6 +11,7 @@ A task is **Ready** to be picked up when ALL of the following are true.
 
 ### Checklist
 
+- [ ] **Feature branch created and checked out** (`git checkout -b feature/<slug>`) — no implementation work starts on `main`, ever
 - [ ] Spec file exists in `docs/specs/FEAT-XXX-*.md`
 - [ ] Spec contains at least one Mermaid diagram (flow, sequence, or architecture)
 - [ ] Acceptance criteria are written as testable checklist items (`- [ ] ...`)
@@ -32,7 +33,10 @@ Every spec must include at least one of:
 
 ```mermaid
 flowchart TD
-    A[Spec file created] --> B{Has Mermaid diagram?}
+    A[Spec file created] --> AA{Branch created?\nfeature/slug}
+    AA -- No --> AB[Create branch — DOR blocked\ngit checkout -b feature/slug]
+    AB --> AA
+    AA -- Yes --> B{Has Mermaid diagram?}
     B -- No --> C[Add diagram — DOR blocked]
     B -- Yes --> D{All ACs testable?}
     D -- No --> E[Rewrite ACs — DOR blocked]
