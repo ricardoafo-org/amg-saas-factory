@@ -2,17 +2,46 @@
 
 ## Intent
 
-Implement all Spain/EU compliance UI elements required for Sprint 2: IVA breakdown on all service prices, the RD 1457/1986 warranty badge, and an enriched legal footer with consumer rights disclosure. These elements build trust and are legally required.
+Implement all Spain/EU compliance UI elements on the public-facing site: IVA breakdown on service prices (EU Right to Repair Directive 2024/1799), the RD 1457/1986 warranty badge, presupuesto disclosure, and an enriched legal footer. Canonical spec — supersedes FEAT-007.
+
+## Data flow
+
+```mermaid
+sequenceDiagram
+    participant Server as Server Component
+    participant Config as PocketBase config
+    participant SC as ServiceGrid / Footer
+    participant CB as ChatEngine
+
+    Server->>Config: fetch ivaRate, legal.cif, legal.registrationNumber
+    Config-->>Server: { ivaRate: 0.21, cif: "B-XXX", registrationNumber: "MU-XXX" }
+    Server->>SC: <ServiceGrid ivaRate={0.21} ... />
+    Server->>SC: <Footer cif="B-XXX" registrationNumber="MU-XXX" />
+    Server->>CB: ivaRate injected into chatbot booking summary node
+    SC-->>Browser: IVA breakdown + warranty badge rendered
+    CB-->>Browser: Presupuesto disclosure shown before LOPD checkbox
+```
 
 ## Acceptance Criteria
 
-1. [ ] All service cards in `ServiceGrid` show: base price + "IVA (21%)" line + **total** in bold
-2. [ ] IVA rate fetched from config — never hardcoded as 0.21 anywhere in display code
-3. [ ] RD 1457/1986 warranty badge: "✓ 3 meses o 2.000 km de garantía en reparaciones" visible on each service card
-4. [ ] Presupuesto disclosure in booking flow summary: "Todo trabajo está sujeto a presupuesto previo según RD 1457/1986"
-5. [ ] Footer enriched with: consumer rights link (OCU), taller registration number, ITV authority link, cancellation policy summary
-6. [ ] Legal footer line: "© {year} {businessName} — CIF: {cif} — Inscrito en el Registro de Talleres de la Región de Murcia n.º {registrationNumber}"
-7. [ ] `npm run type-check` → zero exit
+### Service cards (ServiceGrid)
+1. [ ] Every service card shows: base price + "IVA (21%)" line + **total** in bold
+2. [ ] IVA rate fetched from `config` collection — never hardcoded as `0.21` in display components
+3. [ ] Warranty badge on each card: "✓ Garantía 3 meses o 2.000 km — RD 1457/1986"
+4. [ ] Section header or CTA includes: "Siempre recibirás presupuesto escrito antes de cualquier trabajo (RD 1457/1986)"
+
+### Chatbot booking flow
+5. [ ] Presupuesto disclosure shown in booking summary step before LOPD consent: "Todo trabajo está sujeto a presupuesto previo según el RD 1457/1986"
+
+### Footer (legal line)
+6. [ ] Footer includes: `© {year} {businessName} — CIF: {cif} — Inscrito en el Registro de Talleres de la Región de Murcia n.º {registrationNumber}`
+7. [ ] Footer includes: "Garantía de reparación: 3 meses o 2.000 km (lo primero que ocurra) · RD 1457/1986"
+8. [ ] Footer includes: "Precios orientativos sin IVA, sujetos a presupuesto previo"
+9. [ ] OCU (consumer rights) link in footer: `https://www.ocu.org/`
+
+### General
+10. [ ] All prices readable on mobile 375px — no truncation
+11. [ ] `npm run type-check` → zero exit
 
 ## IVA display pattern
 
@@ -24,28 +53,41 @@ IVA (21%): 8,33 €
 Total: 48,00 €
 ```
 
+Note: "precios orientativos" — exact amounts depend on diagnosis.
+
 ## Warranty badge content (RD 1457/1986 Art. 16)
 
-- "3 meses o 2.000 km de garantía en reparaciones" (minimum legal guarantee)
-- Badge shown per service card and in appointment confirmation email
+Must say **both conditions** — either-or, whichever comes first:
+> "3 meses o 2.000 km de garantía en reparaciones (lo primero que ocurra)"
 
-## Constraints
+## Config fields required
 
-- **IVA rate**: always from `config.iva_rate` — never `0.21` literal in display components
-- **Registration number**: from `config.legal.registrationNumber` in config.json
-- **RD 1457/1986**: Art. 14 requires presupuesto; Art. 16 requires 3-month/2000km guarantee
-- **No financial advice**: prices are estimates; "precios orientativos, sujetos a revisión"
+```json
+"legal": {
+  "cif": "B-XXXXXXXX",
+  "registrationNumber": "MU-XXXX"
+}
+```
 
-## Out of Scope
-
-- IVA invoice PDF generation (Sprint 6 owner dashboard)
-- EU Right to Repair 2024/1799 full compliance (effective July 2026 — deferred)
-- Digital signatures on presupuestos
+Both values flow from config — never hardcoded.
 
 ## Files to Touch
 
-- `src/core/components/ServiceGrid.tsx` — add IVA breakdown + warranty badge per card
-- `src/core/components/Footer.tsx` — legal footer line with CIF + registration
-- `src/core/chatbot/ChatEngine.tsx` — presupuesto disclosure in booking summary step
-- `clients/talleres-amg/config.json` — add `legal.cif`, `legal.registrationNumber`
-- `src/actions/chatbot.ts` — include warranty info in confirmation email
+- `src/core/components/ServiceGrid.tsx` — IVA breakdown + warranty badge per card + presupuesto CTA
+- `src/core/components/Footer.tsx` — legal footer line with CIF, registration, warranty, OCU link
+- `src/core/chatbot/ChatEngine.tsx` — presupuesto disclosure in booking summary node
+- `clients/talleres-amg/config.json` — add `legal.cif`, `legal.registrationNumber` if not present
+
+## Constraints
+
+- **IVA always dynamic**: `ivaRate` passed as prop from server-side config fetch — never `0.21` literal in components
+- **RD 1457/1986**: both time and km conditions MUST appear — "o" not "y"
+- **Design**: use existing glass card and gradient-text tokens — no new design patterns
+- **Tenant**: all legal identifiers per-tenant from config
+
+## Out of Scope
+
+- IVA invoice PDF generation (deferred)
+- EU Right to Repair 2024/1799 full compliance (effective July 2026 — monitor)
+- Price comparison table
+- Digital signatures on presupuestos
