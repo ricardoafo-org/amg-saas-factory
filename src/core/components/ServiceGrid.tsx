@@ -59,6 +59,9 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
           <p className="mt-3 text-muted-foreground text-sm max-w-md mx-auto">
             Precios transparentes, sin sorpresas. IVA desglosado para tu comodidad.
           </p>
+          <p className="mt-2 text-xs text-muted-foreground/60 max-w-sm mx-auto">
+            Siempre recibirás presupuesto escrito antes de cualquier trabajo — RD 1457/1986
+          </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -136,7 +139,7 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
                   {/* Warranty badge — RD 1457/1986 Art. 16 */}
                   <div className="mb-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-success/8 border border-success/20 w-fit text-[10px] font-medium text-success">
                     <BadgeCheck className="h-3 w-3 shrink-0" aria-hidden />
-                    <span>3 meses / 2.000 km</span>
+                    <span>3 meses o 2.000 km (lo primero que ocurra)</span>
                   </div>
 
                   {/* Reservar CTA */}

@@ -6,7 +6,7 @@ export const sendConfirmation: ActionHandler = async (params, session, pb, tenan
   const name = session.variables['customer_name'];
 
   // TODO: integrate email provider (Resend, Postmark, etc.)
-  console.log(`[sendConfirmation] tenant=${tenantId} to=${email} name=${name}`);
+  console.log(`[sendConfirmation] tenant=${tenantId}`);
 
   return { message: `Confirmación enviada a ${email ?? 'tu correo'}.` };
 };

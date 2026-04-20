@@ -171,6 +171,10 @@ export function Footer({ config }: { config: LocalBusiness }) {
             : ''}
           {' '}· RD 920/2017 · LOPDGDD · IVA incluido
         </p>
+        <p className="text-[10px] text-muted-foreground/30 font-mono text-center sm:text-left mt-0.5">
+          Garantía de reparación: 3 meses o 2.000 km (lo primero que ocurra) · RD 1457/1986 ·{' '}
+          Precios orientativos sin IVA, sujetos a presupuesto previo
+        </p>
         <nav className="flex items-center gap-3 flex-wrap justify-center" aria-label="Vínculos legales">
           <a href="/politica-de-privacidad" className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
             Privacidad

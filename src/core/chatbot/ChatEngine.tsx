@@ -693,6 +693,9 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
               {/* LOPD consent */}
               {isLopdNode && !currentNode?.collect && !currentNode?.options && (
                 <div className="space-y-3">
+                  <p className="text-[11px] text-muted-foreground/70 leading-relaxed mb-2">
+                    Todo trabajo está sujeto a presupuesto previo según el RD 1457/1986.
+                  </p>
                   <label className="flex items-start gap-3 cursor-pointer group">
                     <div className="relative mt-0.5 flex-shrink-0">
                       <input
