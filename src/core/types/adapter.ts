@@ -29,6 +29,9 @@ export type LocalBusiness = {
   businessName: string;
   industry: Industry;
   tagline?: string;
+  foundingYear?: number;
+  reviewRating?: number;
+  reviewCount?: number;
   address: {
     street: string;
     city: string;
@@ -54,4 +57,9 @@ export type LocalBusiness = {
   ivaRate: number;   // 0.21 — fetched from config, never hardcoded in components
   locale: string;    // 'es-ES'
   currency: string;  // 'EUR'
+  legal?: {
+    cif: string;
+    registrationNumber: string;
+    dpoEmail: string;
+  };
 };

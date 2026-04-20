@@ -41,6 +41,27 @@
   --glow-primary:   0 0 24px hsl(349 90% 52% / 0.3);
   --glow-accent:    0 0 24px hsl(22 100% 55% / 0.25);
   --glow-sm:        0 0 12px hsl(349 90% 52% / 0.2);
+  --shadow-glow:    0 0 24px -4px hsl(349 90% 52% / 0.35);
+
+  /* ── Brand status palette ── */
+  --color-success:            oklch(0.72 0.17 142);
+  --color-success-foreground: oklch(0.98 0 0);
+  --color-warning:            oklch(0.78 0.15 65);
+  --color-warning-foreground: oklch(0.15 0 0);
+  --color-info:               oklch(0.65 0.15 250);
+  --color-info-foreground:    oklch(0.98 0 0);
+
+  /* ── Appointment status ── */
+  --status-pending:     oklch(0.78 0.15 65);
+  --status-confirmed:   oklch(0.65 0.15 250);
+  --status-in-progress: oklch(0.62 0.19 295);
+  --status-ready:       oklch(0.72 0.17 142);
+  --status-completed:   oklch(0.55 0.02 250);
+  --status-cancelled:   oklch(0.62 0.2 25);
+
+  /* ── Radius additions ── */
+  --radius-xl:  calc(var(--radius) * 2);
+  --radius-2xl: calc(var(--radius) * 3);
 }
 
 /* ── Light theme override ── */
@@ -191,4 +212,49 @@
   }
   .typing-dot:nth-child(2) { animation-delay: 0.2s; }
   .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  /* ── New brand utilities ── */
+  .shadow-glow  { box-shadow: var(--shadow-glow); }
+  .shadow-card  { box-shadow: var(--shadow-card); }
+  .text-success { color: var(--color-success); }
+  .bg-success   { background-color: var(--color-success); }
+  .text-warning { color: var(--color-warning); }
+  .bg-warning   { background-color: var(--color-warning); }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  /* ── Availability pulse (Server Component safe — pure CSS) ── */
+  @keyframes avail-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 oklch(0.72 0.17 142 / 0.7); }
+    50%       { opacity: 0.75; box-shadow: 0 0 0 6px oklch(0.72 0.17 142 / 0); }
+  }
+  .dot-available {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background-color: var(--color-success);
+    animation: avail-pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes dot-amber {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.5; }
+  }
+  .dot-warning {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background-color: var(--color-warning);
+    animation: dot-amber 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+  }
 }

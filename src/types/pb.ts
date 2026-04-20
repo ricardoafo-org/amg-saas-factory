@@ -51,3 +51,74 @@ export type Booking = PbRecord & {
   base_amount: number;
   iva_rate: number;
 };
+
+export type StaffRole = 'owner' | 'technician' | 'admin';
+
+export type Staff = PbRecord & {
+  tenant_id: string;
+  role: StaffRole;
+  display_name: string;
+  phone: string;
+  active: boolean;
+  email: string;
+};
+
+export type StaffContext = {
+  pb: PocketBase;
+  tenantId: string;
+  staffId: string;
+  role: StaffRole;
+};
+
+export type Customer = PbRecord & {
+  tenant_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  notes: string;
+  first_seen: string;
+  last_seen: string;
+  total_visits: number;
+  total_spent: number;
+  preferred_contact: 'sms' | 'email' | 'whatsapp';
+  marketing_consent: boolean;
+};
+
+export type Vehicle = PbRecord & {
+  tenant_id: string;
+  customer_id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  year: number;
+  fuel_type: 'gasolina' | 'diesel' | 'electrico' | 'hibrido';
+  engine_cc: number;
+  last_km: number;
+  itv_expiry: string;
+  notes: string;
+};
+
+export type WorkOrderStatus = 'intake' | 'diagnosis' | 'repair' | 'quality_check' | 'ready' | 'delivered';
+
+export type WorkOrder = PbRecord & {
+  tenant_id: string;
+  appointment_id: string;
+  customer_id: string;
+  vehicle_id: string;
+  status: WorkOrderStatus;
+  tech_notes: string;
+  estimated_ready: string;
+  actual_cost: number;
+  labor_minutes: number;
+};
+
+export type SmsLogStatus = 'sent' | 'delivered' | 'failed';
+
+export type SmsLog = PbRecord & {
+  tenant_id: string;
+  to_phone: string;
+  message: string;
+  status: SmsLogStatus;
+  provider_id: string;
+  appointment_id: string;
+};

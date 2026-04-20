@@ -8,6 +8,10 @@ export default defineConfig({
   workers: process.env['CI'] ? 1 : undefined,
   reporter: 'html',
 
+  snapshotPathTemplate: '{testDir}/__snapshots__/{testFilePath}/{arg}{ext}',
+
+  globalSetup: './e2e/global-setup.ts',
+
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -15,14 +19,30 @@ export default defineConfig({
   },
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'Mobile Chrome', use: { ...devices['Pixel 5'] } },
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'Mobile Chrome',
+      use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'Mobile Safari',
+      use: { ...devices['iPhone 13'] },
+    },
+    {
+      // Network resilience tests use CDP — Chromium only
+      name: 'network-resilience',
+      testMatch: '**/network-resilience.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
 
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env['CI'],
-    timeout: 120000,
+    timeout: 120_000,
   },
 });

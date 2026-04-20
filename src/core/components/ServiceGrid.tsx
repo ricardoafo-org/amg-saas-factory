@@ -1,8 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Wrench, Car, Settings, CircleDot, Shield, ArrowRight } from 'lucide-react';
+import { Wrench, Car, Settings, CircleDot, Shield, Cpu, ScanLine, BadgeCheck, Clock } from 'lucide-react';
 import type { Service } from '@/core/types/adapter';
+import { cn } from '@/lib/cn';
 
 type Props = {
   services: Service[];
@@ -12,31 +13,41 @@ type Props = {
 };
 
 const SERVICE_ICONS: Record<string, React.ElementType> = {
-  'cambio-aceite': Wrench,
-  'pre-itv': Car,
-  'mecanica-general': Settings,
-  'cambio-neumaticos': CircleDot,
-  'frenos': Shield,
+  'cambio-aceite':           Wrench,
+  'pre-itv':                 Car,
+  'mecanica-general':        Settings,
+  'cambio-neumaticos':       CircleDot,
+  'frenos':                  Shield,
+  'diagnostico-electronico': Cpu,
+  'escaner-obd':             ScanLine,
+  'electronica':             Cpu,
 };
 
 const SERVICE_GRADIENT: Record<string, string> = {
-  'cambio-aceite':    'from-amber-500/20 to-transparent',
-  'pre-itv':          'from-blue-500/20 to-transparent',
-  'mecanica-general': 'from-primary/20 to-transparent',
-  'cambio-neumaticos':'from-slate-500/20 to-transparent',
-  'frenos':           'from-rose-500/20 to-transparent',
+  'cambio-aceite':           'from-amber-500/20 to-transparent',
+  'pre-itv':                 'from-blue-500/20 to-transparent',
+  'mecanica-general':        'from-primary/20 to-transparent',
+  'cambio-neumaticos':       'from-slate-500/20 to-transparent',
+  'frenos':                  'from-rose-500/20 to-transparent',
+  'diagnostico-electronico': 'from-cyan-500/20 to-transparent',
+  'escaner-obd':             'from-cyan-500/20 to-transparent',
 };
 
 function formatCurrency(amount: number, locale: string, currency: string) {
   return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
 }
 
+function openChatWithService(serviceId: string) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('amg:open-chat', { detail: { serviceId } }));
+  }
+}
+
 export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'EUR' }: Props) {
   const fmt = (n: number) => formatCurrency(n, locale, currency);
 
   return (
-    <section className="relative px-5 py-20 overflow-hidden">
-      {/* Section grid background */}
+    <section id="servicios" className="relative px-5 py-20 overflow-hidden">
       <div className="absolute inset-0 grid-bg opacity-30" aria-hidden />
 
       <div className="relative z-10 mx-auto max-w-6xl">
@@ -52,7 +63,7 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service, i) => {
-            const Icon = SERVICE_ICONS[service.id] ?? Wrench;
+            const Icon = SERVICE_ICONS[service.id] ?? (service.category ? SERVICE_ICONS[service.category] : undefined) ?? Wrench;
             const iva = service.basePrice * ivaRate;
             const total = service.basePrice + iva;
             const gradient = SERVICE_GRADIENT[service.id] ?? 'from-primary/10 to-transparent';
@@ -64,23 +75,21 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
-                whileHover={{ y: -4 }}
-                className="group relative rounded-[--radius-lg] overflow-hidden cursor-default"
+                whileHover={{ y: -2 }}
+                className="group relative rounded-[--radius-lg] overflow-hidden cursor-default hover:shadow-glow transition-shadow duration-300"
               >
-                {/* Gradient border effect */}
-                <div className="absolute inset-0 rounded-[--radius-lg] bg-gradient-to-br from-primary/20 via-border/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-px" aria-hidden />
-
                 <div className="relative h-full glass-strong rounded-[--radius-lg] p-6 flex flex-col transition-colors duration-300">
                   {/* Top gradient splash */}
-                  <div className={`absolute top-0 left-0 right-0 h-24 bg-gradient-to-b ${gradient} rounded-t-[--radius-lg] pointer-events-none`} aria-hidden />
+                  <div className={cn('absolute top-0 left-0 right-0 h-24 bg-gradient-to-b rounded-t-[--radius-lg] pointer-events-none', gradient)} aria-hidden />
 
-                  {/* Index + icon */}
+                  {/* Icon + duration badge */}
                   <div className="relative flex items-start justify-between mb-4">
                     <div className="flex items-center justify-center w-11 h-11 rounded-[--radius] bg-background/60 border border-border group-hover:border-primary/40 group-hover:bg-primary/5 transition-colors duration-300">
-                      <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
+                      <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors duration-300" aria-hidden />
                     </div>
-                    <span className="font-mono text-xs text-muted-foreground/40 select-none">
-                      {String(i + 1).padStart(2, '0')}
+                    <span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground/50 border border-border/40 rounded-full px-2 py-0.5 bg-background/30">
+                      <Clock className="h-2.5 w-2.5" aria-hidden />
+                      ~{service.duration}min
                     </span>
                   </div>
 
@@ -94,29 +103,51 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
                     </p>
                   )}
 
-                  {/* Price breakdown */}
-                  <div className="mt-auto space-y-1 border-t border-border/50 pt-4 text-xs">
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Base imponible</span>
-                      <span>{fmt(service.basePrice)}</span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>IVA ({(ivaRate * 100).toFixed(0)}%)</span>
-                      <span>{fmt(iva)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-sm text-foreground border-t border-border/50 pt-2 mt-2">
-                      <span>Total</span>
-                      <span className="gradient-text">{fmt(total)}</span>
-                    </div>
+                  {/* Price — at a glance */}
+                  <div className="mt-auto mb-3">
+                    <p className="text-sm font-bold text-foreground">
+                      Desde <span className="gradient-text">{fmt(total)}</span>{' '}
+                      <span className="text-xs font-normal text-muted-foreground">con IVA</span>
+                    </p>
                   </div>
 
-                  {/* Duration + CTA hint */}
-                  <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground/60">
-                    <span className="font-mono">{service.duration} min</span>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-primary text-[10px] font-medium tracking-wide">
-                      Reservar <ArrowRight className="h-3 w-3" />
+                  {/* IVA breakdown */}
+                  <details className="group/details mb-3">
+                    <summary className="cursor-pointer text-[10px] text-muted-foreground/50 font-mono hover:text-muted-foreground transition-colors select-none list-none flex items-center gap-1">
+                      <span className="group-open/details:hidden">▶ Ver desglose IVA</span>
+                      <span className="hidden group-open/details:inline">▼ Ocultar desglose</span>
+                    </summary>
+                    <div className="mt-2 space-y-1 border border-border/40 rounded-[--radius] p-3 bg-background/30 text-xs">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Base imponible</span>
+                        <span className="font-mono">{fmt(service.basePrice)}</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>IVA ({(ivaRate * 100).toFixed(0)}%)</span>
+                        <span className="font-mono">{fmt(iva)}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-foreground border-t border-border/40 pt-1.5 mt-1">
+                        <span>Total</span>
+                        <span className="font-mono gradient-text">{fmt(total)}</span>
+                      </div>
                     </div>
+                  </details>
+
+                  {/* Warranty badge — RD 1457/1986 Art. 16 */}
+                  <div className="mb-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-success/8 border border-success/20 w-fit text-[10px] font-medium text-success">
+                    <BadgeCheck className="h-3 w-3 shrink-0" aria-hidden />
+                    <span>3 meses / 2.000 km</span>
                   </div>
+
+                  {/* Reservar CTA */}
+                  <button
+                    type="button"
+                    onClick={() => openChatWithService(service.id)}
+                    aria-label={`Reservar ${service.name}`}
+                    className="w-full h-10 rounded-[--radius-lg] border border-primary/30 bg-primary/5 text-primary text-xs font-semibold hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 mt-1"
+                  >
+                    Reservar
+                  </button>
                 </div>
               </motion.article>
             );

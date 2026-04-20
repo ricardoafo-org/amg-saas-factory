@@ -1,7 +1,24 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { getPb } from '@/lib/pb';
+import { loadClientConfig } from '@/lib/config';
 import { Resend } from 'resend';
+import { render } from '@react-email/render';
+import { AppointmentConfirmation } from '@/emails/AppointmentConfirmation';
+import { QuoteRequest } from '@/emails/QuoteRequest';
+
+async function getClientIp(): Promise<string> {
+  try {
+    const h = await headers();
+    return h.get('x-forwarded-for')?.split(',')[0]?.trim()
+      ?? h.get('x-real-ip')
+      ?? 'unknown';
+  } catch { return 'unknown'; }
+}
+
+const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
+const clientConfig = loadClientConfig(TENANT_ID);
 
 type AppointmentPayload = {
   tenantId: string;
@@ -11,7 +28,7 @@ type AppointmentPayload = {
   customerName: string;
   customerPhone: string;
   customerEmail: string;
-  serviceId: string;
+  serviceIds: string[];
   policyVersion: string;
   policyHash: string;
   userAgent: string;
@@ -19,6 +36,7 @@ type AppointmentPayload = {
 
 export async function saveAppointment(payload: AppointmentPayload) {
   const pb = await getPb();
+  const ip = await getClientIp();
 
   await pb.collection('consent_log').create({
     tenant_id: payload.tenantId,
@@ -27,7 +45,7 @@ export async function saveAppointment(payload: AppointmentPayload) {
     policy_hash: payload.policyHash,
     consented: true,
     consented_at: new Date().toISOString(),
-    ip_address: '',
+    ip_address: ip,
     user_agent: payload.userAgent,
     form_context: 'chatbot_booking',
   });
@@ -40,26 +58,42 @@ export async function saveAppointment(payload: AppointmentPayload) {
   const businessNameConfig = await pb.collection('config').getFirstListItem(
     `tenant_id = "${payload.tenantId}" && key = "business_name"`,
   ).catch(() => null);
-  const businessName = businessNameConfig ? String(businessNameConfig['value']) : 'Talleres AMG';
+  const businessName = businessNameConfig ? String(businessNameConfig['value']) : clientConfig.businessName;
+
+  // Fetch service prices to compute total_amount
+  let baseAmount = 0;
+  const serviceNames: string[] = [];
+  if (payload.serviceIds.length > 0) {
+    const filter = `tenant_id = "${payload.tenantId}" && (${payload.serviceIds.map((id) => `id = "${id}"`).join(' || ')})`;
+    const serviceRecords = await pb.collection('services').getList(1, 20, { filter }).catch(() => null);
+    if (serviceRecords) {
+      for (const rec of serviceRecords.items) {
+        baseAmount += Number(rec['base_price']) || 0;
+        serviceNames.push(String(rec['name']));
+      }
+    }
+  }
+  const totalAmount = baseAmount * (1 + ivaRate);
 
   await pb.collection('appointments').create({
     tenant_id: payload.tenantId,
     customer_name: payload.customerName,
     customer_phone: payload.customerPhone,
     customer_email: payload.customerEmail,
-    service_type: payload.serviceId,
+    service_ids: payload.serviceIds,
     scheduled_at: payload.fechaPreferida,
     notes: `Matrícula: ${payload.matricula} · Combustible: ${payload.fuelType}`,
     status: 'pending',
-    base_amount: 0,
+    base_amount: baseAmount,
     iva_rate: ivaRate,
+    total_amount: totalAmount,
   });
 
   if (payload.customerEmail) {
     await sendBookingConfirmation({
       to: payload.customerEmail,
       name: payload.customerName,
-      service: payload.serviceId,
+      serviceNames: serviceNames.length > 0 ? serviceNames : payload.serviceIds,
       date: payload.fechaPreferida,
       matricula: payload.matricula,
       businessName,
@@ -70,7 +104,7 @@ export async function saveAppointment(payload: AppointmentPayload) {
 async function sendBookingConfirmation(opts: {
   to: string;
   name: string;
-  service: string;
+  serviceNames: string[];
   date: string;
   matricula: string;
   businessName: string;
@@ -80,35 +114,152 @@ async function sendBookingConfirmation(opts: {
 
   const resend = new Resend(apiKey);
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
+  const baseUrl = process.env['NEXT_PUBLIC_BASE_URL'] ?? 'http://localhost:3000';
 
-  const serviceLabel: Record<string, string> = {
-    'cambio-aceite': 'Cambio de Aceite',
-    'pre-itv': 'Revisión Pre-ITV',
-    'mecanica-general': 'Mecánica General',
-    'otro': 'Consulta General',
-  };
+  const html = await render(
+    AppointmentConfirmation({
+      customerName: opts.name,
+      serviceName: opts.serviceNames.join(', '),
+      scheduledAt: opts.date,
+      plate: opts.matricula,
+      businessName: opts.businessName,
+      businessPhone: clientConfig.contact.phone,
+      businessAddress: `${clientConfig.address.street}, ${clientConfig.address.city}`,
+      warrantyNote: 'Garantía de reparación: 3 meses o 2.000 km (RD 1457/1986)',
+      cancelLink: `${baseUrl}/cancelar`,
+      baseUrl,
+      primaryColor: clientConfig.branding.primaryColor,
+    }),
+  );
 
   await resend.emails.send({
     from: fromEmail,
     to: opts.to,
     subject: `Confirmación de cita — ${opts.businessName}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#111">
-        <h2 style="color:#dc2626">✅ Cita recibida</h2>
-        <p>Hola <strong>${opts.name}</strong>,</p>
-        <p>Hemos recibido tu solicitud de cita en <strong>${opts.businessName}</strong>.</p>
-        <table style="width:100%;border-collapse:collapse;margin:16px 0">
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#555">Servicio</td>
-              <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600">${serviceLabel[opts.service] ?? opts.service}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#555">Matrícula</td>
-              <td style="padding:8px;border-bottom:1px solid #eee;font-weight:600">${opts.matricula}</td></tr>
-          <tr><td style="padding:8px;color:#555">Fecha preferida</td>
-              <td style="padding:8px;font-weight:600">${opts.date}</td></tr>
-        </table>
-        <p style="color:#555;font-size:14px">Te llamaremos al número facilitado para confirmar la hora exacta.</p>
-        <p style="margin-top:24px;color:#888;font-size:12px">— ${opts.businessName}</p>
-      </div>
-    `,
+    html,
+  });
+}
+
+type QuotePayload = {
+  tenantId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  vehicleDescription: string;
+  problemDescription: string;
+  serviceType: string;
+  policyVersion: string;
+  policyHash: string;
+  userAgent: string;
+};
+
+/**
+ * Add N business days (Mon–Fri) to a date.
+ * RD 1457/1986 requires quote validity of at least 12 business days.
+ */
+function addBusinessDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  let added = 0;
+  while (added < days) {
+    result.setDate(result.getDate() + 1);
+    const dow = result.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return result;
+}
+
+export async function saveQuoteRequest(payload: QuotePayload) {
+  const pb = await getPb();
+  const ip = await getClientIp();
+
+  // LOPDGDD: consent MUST be logged first — throw if this fails
+  await pb.collection('consent_log').create({
+    tenant_id: payload.tenantId,
+    subject_email: payload.customerEmail,
+    policy_version: payload.policyVersion,
+    policy_hash: payload.policyHash,
+    consented: true,
+    consented_at: new Date().toISOString(),
+    ip_address: ip,
+    user_agent: payload.userAgent,
+    form_context: 'chatbot_quote',
+  });
+
+  const ivaConfig = await pb.collection('config').getFirstListItem(
+    `tenant_id = "${payload.tenantId}" && key = "iva_rate"`,
+  );
+  const ivaRate = parseFloat(ivaConfig['value']);
+
+  const businessNameConfig = await pb.collection('config').getFirstListItem(
+    `tenant_id = "${payload.tenantId}" && key = "business_name"`,
+  ).catch(() => null);
+  const businessName = businessNameConfig ? String(businessNameConfig['value']) : clientConfig.businessName;
+
+  // RD 1457/1986: valid_until = today + 12 business days
+  const validUntil = addBusinessDays(new Date(), 12);
+  const validUntilStr = validUntil.toISOString().split('T')[0] + ' 00:00:00.000Z';
+
+  await pb.collection('quotes').create({
+    tenant_id: payload.tenantId,
+    customer_name: payload.customerName,
+    customer_email: payload.customerEmail,
+    customer_phone: payload.customerPhone,
+    vehicle_description: payload.vehicleDescription,
+    problem_description: payload.problemDescription,
+    service_type: payload.serviceType,
+    items: [],
+    subtotal: 0,
+    iva_rate: ivaRate,
+    total: 0,
+    status: 'pending',
+    valid_until: validUntilStr,
+    source: 'chatbot',
+    notes: '',
+  });
+
+  if (payload.customerEmail) {
+    await sendQuoteConfirmation({
+      to: payload.customerEmail,
+      name: payload.customerName,
+      serviceType: payload.serviceType,
+      validUntil: validUntil.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+      businessName,
+    });
+  }
+}
+
+async function sendQuoteConfirmation(opts: {
+  to: string;
+  name: string;
+  serviceType: string;
+  validUntil: string;
+  businessName: string;
+}) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+
+  const resend = new Resend(apiKey);
+  const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev';
+  const baseUrl = process.env['NEXT_PUBLIC_BASE_URL'] ?? 'http://localhost:3000';
+
+  const html = await render(
+    QuoteRequest({
+      customerName: opts.name,
+      serviceType: opts.serviceType,
+      vehicleDescription: '',
+      businessName: opts.businessName,
+      businessPhone: clientConfig.contact.phone,
+      validUntilStr: opts.validUntil,
+      baseUrl,
+      primaryColor: clientConfig.branding.primaryColor,
+    }),
+  );
+
+  await resend.emails.send({
+    from: fromEmail,
+    to: opts.to,
+    subject: `Solicitud de presupuesto recibida — ${opts.businessName}`,
+    html,
   });
 }
 

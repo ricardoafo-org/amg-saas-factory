@@ -2,15 +2,20 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, Check } from 'lucide-react';
 import type { ChatbotFlow, FlowOption } from '@/lib/chatbot/engine';
-import { saveAppointment } from '@/actions/chatbot';
+import type { Service } from '@/core/types/adapter';
+import { saveAppointment, saveQuoteRequest } from '@/actions/chatbot';
 import { getAvailableSlots, bookSlot, type AvailableSlot } from '@/actions/slots';
 import { calcOilRecommendation, estimateOilDate } from '@/lib/oil';
+import { matchOptionByNlp, classifyIntent } from '@/lib/nlp/classifier';
+import { resolveWithClaude } from '@/actions/nlp';
+import { readSlotCache, writeSlotCache, clearSlotCache } from '@/core/chatbot/slot-cache';
 
 type FlowNodeAny = {
   message?: string;
   options?: FlowOption[];
+  multi_select?: boolean;
   collect?: string;
   action?: string;
   params?: Record<string, string>;
@@ -22,15 +27,24 @@ type MessageItem = { role: 'bot' | 'user'; text: string; key: string };
 type Props = {
   flow: ChatbotFlow;
   tenantId: string;
+  phone: string;
   policyUrl: string;
   policyVersion: string;
   policyHash: string;
+  businessName: string;
+  services?: Service[];
+  ivaRate: number;
+  /** Pre-select a service when the chatbot opens (from ServiceGrid CTA) */
+  initialService?: string;
+  /** Callback fired when booking step advances (0-based index) */
+  onStepChange?: (step: number) => void;
 };
 
 let msgCounter = 0;
 function mkKey() { return `msg-${++msgCounter}`; }
 
-export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHash }: Props) {
+
+export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, policyVersion, policyHash, services = [], ivaRate, onStepChange }: Props) {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<string>(flow.start);
   const [variables, setVariables] = useState<Record<string, string>>({});
@@ -42,6 +56,11 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [nlpInput, setNlpInput] = useState('');
+  const [slotCacheBanner, setSlotCacheBanner] = useState<string | null>(null);
+  // Multi-select service state
+  const [selectedServiceValues, setSelectedServiceValues] = useState<string[]>([]);
+  const [showServiceSummary, setShowServiceSummary] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,6 +90,11 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
       return;
     }
 
+    if (node.action === 'save_quote') {
+      handleSaveQuote(nodeId, node, vars);
+      return;
+    }
+
     if (node.action === 'calc_oil_change') {
       const oilType = vars['oil_ask_fuel'] ?? 'unknown';
       const kmLast = parseInt(vars['oil_km_last'] ?? '0', 10);
@@ -96,7 +120,7 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
             if (available.length > 0) {
               addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
             } else {
-              addBotMessage('No encontramos huecos disponibles en los próximos días. Llámanos y te buscamos una fecha.', 300);
+              addBotMessage(`No hay huecos disponibles — llámanos al ${phone}`, 300);
             }
             if (node.next) {
               setCurrentNodeId(node.next);
@@ -110,6 +134,39 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
       return;
     }
 
+    if (node.action === 'load_slots') {
+      const today = new Date().toISOString().split('T')[0];
+      setLoadingSlots(true);
+      setCurrentNodeId(nodeId);
+      getAvailableSlots(tenantId, today, 14)
+        .then((available) => {
+          writeSlotCache(tenantId, available);
+          setSlots(available);
+          setSlotCacheBanner(null);
+          setLoadingSlots(false);
+          if (available.length > 0) {
+            addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
+          } else {
+            addBotMessage(`No hay huecos disponibles — llámanos al ${phone}`, 300);
+            if (node.next) setCurrentNodeId(node.next);
+          }
+        })
+        .catch(() => {
+          setLoadingSlots(false);
+          // Try localStorage cache on network error
+          const cached = readSlotCache(tenantId);
+          if (cached && cached.length > 0) {
+            setSlots(cached);
+            setSlotCacheBanner('Mostrando disponibilidad guardada · puede no reflejar cambios recientes');
+            addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
+          } else {
+            addBotMessage(`Sin conexión — llámanos al ${phone}`, 300);
+            if (node.next) setCurrentNodeId(node.next);
+          }
+        });
+      return;
+    }
+
     if (node.message) addBotMessage(node.message, 350);
     setCurrentNodeId(nodeId);
     if (!node.options && !node.collect && !node.action) setDone(true);
@@ -118,6 +175,13 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
   async function handleSave(nodeId: string, node: FlowNodeAny, vars: Record<string, string>) {
     setSaving(true);
     const slotId = vars['selected_slot_id'];
+    // service_ids stored as JSON array in vars; fallback to single 'service' for backwards compat
+    const rawServiceIds = vars['service_ids'];
+    const serviceIds: string[] = rawServiceIds
+      ? (JSON.parse(rawServiceIds) as string[])
+      : vars['service']
+        ? [vars['service']]
+        : [];
     try {
       await saveAppointment({
         tenantId,
@@ -127,12 +191,13 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
         customerName: vars['customer_name'] ?? '',
         customerPhone: vars['customer_phone'] ?? '',
         customerEmail: vars['customer_email'] ?? '',
-        serviceId: vars['service'] ?? '',
+        serviceIds,
         policyVersion,
         policyHash,
         userAgent: navigator.userAgent,
       });
       if (slotId) await bookSlot(slotId, tenantId).catch(() => null);
+      onStepChange?.(3); // step 3 = Confirmado
       if (node.next) goToNode(node.next, vars);
       else setDone(true);
     } catch {
@@ -147,13 +212,79 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
     addUserMessage(option.label);
     const newVars = { ...variables };
     if (option.value) {
-      if (currentNodeId === 'ask_service') newVars['service'] = option.value;
       if (currentNodeId === 'ask_fuel') newVars['fuel'] = option.value;
       if (currentNodeId === 'oil_ask_fuel') newVars['oil_ask_fuel'] = option.value;
+      if (currentNodeId === 'quote_ask_service_type') newVars['quote_service_type'] = option.value;
     }
     setVariables(newVars);
     setSlots([]);
     goToNode(option.next, newVars);
+  }
+
+  async function handleSaveQuote(nodeId: string, node: FlowNodeAny, vars: Record<string, string>) {
+    setSaving(true);
+    try {
+      await saveQuoteRequest({
+        tenantId,
+        customerName: vars['quote_customer_name'] ?? '',
+        customerPhone: vars['quote_customer_phone'] ?? '',
+        customerEmail: vars['quote_customer_email'] ?? '',
+        vehicleDescription: vars['quote_vehicle'] ?? '',
+        problemDescription: vars['quote_problem'] ?? '',
+        serviceType: vars['quote_service_type'] ?? vars['quote_service'] ?? '',
+        policyVersion,
+        policyHash,
+        userAgent: navigator.userAgent,
+      });
+      if (node.next) goToNode(node.next, vars);
+      else setDone(true);
+    } catch {
+      addBotMessage('Lo sentimos, hubo un error al registrar tu solicitud. Por favor llámanos directamente.', 200);
+      setDone(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleServiceCheckboxToggle(value: string) {
+    setSelectedServiceValues((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
+  }
+
+  function handleConfirmServiceSelection() {
+    if (selectedServiceValues.length === 0) return;
+    const node = flow.nodes['ask_service'] as FlowNodeAny | undefined;
+    if (!node?.options) return;
+
+    // Build labels for display
+    const selectedOptions = (node.options as Array<FlowOption & { value?: string }>).filter(
+      (o) => o.value && selectedServiceValues.includes(o.value),
+    );
+    const labels = selectedOptions.map((o) => o.label).join(', ');
+    addUserMessage(labels);
+
+    // Determine the next node from first option's next (all point to ask_matricula)
+    const nextNodeId = selectedOptions[0]?.next ?? node.next ?? 'ask_matricula';
+
+    // Store service IDs as JSON array in variables; also keep legacy 'service' for single-service compat
+    const newVars: Record<string, string> = {
+      ...variables,
+      service_ids: JSON.stringify(selectedServiceValues),
+      service: selectedServiceValues[0] ?? '',
+      _service_summary_next: nextNodeId,
+    };
+    setVariables(newVars);
+    setSelectedServiceValues([]);
+    setShowServiceSummary(true);
+    // keep currentNodeId at ask_service so summary renders
+    setCurrentNodeId('ask_service');
+  }
+
+  function handleServiceSummaryConfirm() {
+    setShowServiceSummary(false);
+    const nextNodeId = variables['_service_summary_next'] ?? 'ask_matricula';
+    goToNode(nextNodeId, variables);
   }
 
   function handleSlotSelect(slot: AvailableSlot) {
@@ -167,8 +298,9 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
     };
     setVariables(newVars);
     setSlots([]);
-    // For oil flow: go to ask_name directly
-    const nextNodeId = currentNodeId === 'oil_result' ? 'ask_name' : (currentNode?.next ?? 'ask_name');
+    setSlotCacheBanner(null);
+    clearSlotCache(tenantId);
+    const nextNodeId = currentNode?.next ?? 'ask_name';
     goToNode(nextNodeId, newVars);
   }
 
@@ -188,6 +320,37 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
     if (currentNode?.next) goToNode(currentNode.next);
   }
 
+  async function handleNlpSubmit() {
+    const val = nlpInput.trim();
+    if (!val || !currentNode?.options) return;
+    const options = currentNode.options as Array<FlowOption & { value?: string }>;
+    addUserMessage(val);
+    setNlpInput('');
+
+    // Meta-questions: user is asking what the bot can do
+    const { intent } = classifyIntent(val);
+    if (intent === 'help') {
+      addBotMessage('Puedo ayudarte con cualquiera de las opciones que ves abajo. ¿Cuál te interesa?', 300);
+      return;
+    }
+
+    const local = matchOptionByNlp(val, options);
+    if (local) {
+      handleOptionSelect(local.option as FlowOption & { value?: string });
+      return;
+    }
+
+    // Tier-2: Claude fallback — silent degradation on rate limit / no key
+    setIsTyping(true);
+    const remote = await resolveWithClaude(val, options, currentNodeId);
+    setIsTyping(false);
+    if (remote) {
+      handleOptionSelect(options[remote.index] as FlowOption & { value?: string });
+    } else {
+      addBotMessage('No te he entendido. Por favor, elige una de las opciones.', 200);
+    }
+  }
+
   function start() {
     setStarted(true);
     const node = flow.nodes[flow.start] as FlowNodeAny;
@@ -205,7 +368,19 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
 
   const isLopdNode = currentNode?.action === 'collect_lopd_consent';
   const showSlots = slots.length > 0 && !loadingSlots;
-  const showOptions = currentNode?.options && !loadingSlots && slots.length === 0;
+  const isMultiSelectNode = !!(currentNode?.options && currentNode?.multi_select);
+  const showMultiSelect = isMultiSelectNode && !loadingSlots && slots.length === 0 && !showServiceSummary;
+  const showOptions = !!(currentNode?.options && !currentNode?.multi_select && !loadingSlots && slots.length === 0);
+
+  // For summary after confirmation (when showServiceSummary is true)
+  const confirmedServiceIds: string[] = (() => {
+    try { return JSON.parse(variables['service_ids'] ?? '[]') as string[]; }
+    catch { return []; }
+  })();
+  const confirmedServicesData = services.filter((s) => confirmedServiceIds.includes(s.id));
+  const confirmedBaseTotal = confirmedServicesData.reduce((acc, s) => acc + s.basePrice, 0);
+  const confirmedIva = confirmedBaseTotal * ivaRate;
+  const confirmedTotal = confirmedBaseTotal + confirmedIva;
 
   return (
     <div className="flex flex-col rounded-[--radius-xl] overflow-hidden w-full max-w-md mx-auto glass-strong border border-primary/15" style={{ boxShadow: '0 0 40px hsl(349 90% 52% / 0.08)' }}>
@@ -239,7 +414,7 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
               <Bot className="h-8 w-8 text-primary/70" />
             </div>
             <div className="text-center space-y-1">
-              <p className="font-semibold text-sm">Hola, soy el asistente de Talleres AMG</p>
+              <p className="font-semibold text-sm">Hola, soy el asistente de {businessName}</p>
               <p className="text-xs text-muted-foreground">Puedo ayudarte a reservar cita, calcular el cambio de aceite y mucho más.</p>
             </div>
           </motion.div>
@@ -345,6 +520,11 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
               {showSlots && (
                 <div className="space-y-2">
                   <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Fechas disponibles</p>
+                  {slotCacheBanner && (
+                    <p className="text-[10px] text-warning font-mono px-2 py-1 rounded bg-warning/10 border border-warning/20">
+                      ⚠ {slotCacheBanner}
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-2">
                     {slots.slice(0, 6).map((slot) => {
                       const d = new Date(slot.slotDate + 'T00:00:00');
@@ -352,7 +532,7 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
                         <button
                           key={slot.id}
                           onClick={() => handleSlotSelect(slot)}
-                          className="group flex flex-col items-start p-2.5 rounded-[--radius-lg] border border-border/60 bg-background/40 hover:border-primary/50 hover:bg-primary/5 transition-all duration-150 text-left"
+                          className="group flex flex-col items-start p-2.5 rounded-[--radius-lg] border border-border/60 bg-background/40 hover:border-primary/50 hover:bg-primary/5 transition-all duration-150 text-left min-h-[44px]"
                         >
                           <span className="text-[10px] text-muted-foreground font-mono group-hover:text-primary/70 transition-colors capitalize">
                             {d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
@@ -368,18 +548,124 @@ export function ChatEngine({ flow, tenantId, policyUrl, policyVersion, policyHas
                 </div>
               )}
 
-              {/* Option buttons */}
-              {showOptions && (
-                <div className="flex flex-wrap gap-2">
-                  {currentNode!.options!.map((opt) => (
+              {/* Multi-select service checkboxes */}
+              {showMultiSelect && (
+                <div className="space-y-2.5">
+                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Selecciona uno o más servicios</p>
+                  <div className="space-y-1.5">
+                    {(currentNode!.options as Array<FlowOption & { value?: string }>).map((opt) => {
+                      const isChecked = opt.value ? selectedServiceValues.includes(opt.value) : false;
+                      return (
+                        <button
+                          key={opt.next + opt.label}
+                          onClick={() => opt.value && handleServiceCheckboxToggle(opt.value)}
+                          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-[--radius-lg] border text-xs font-medium text-left transition-all duration-150 ${
+                            isChecked
+                              ? 'border-primary/60 bg-primary/10 text-primary'
+                              : 'border-border/60 bg-background/40 text-foreground hover:border-primary/30 hover:bg-primary/5'
+                          }`}
+                        >
+                          <div className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                            isChecked ? 'bg-primary border-primary' : 'border-border'
+                          }`}>
+                            {isChecked && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+                          </div>
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedServiceValues.length === 0 && (
+                    <p className="text-[10px] text-muted-foreground/60">Selecciona al menos un servicio para continuar</p>
+                  )}
+                  {selectedServiceValues.length > 0 && (
                     <button
-                      key={opt.next + opt.label}
-                      onClick={() => handleOptionSelect(opt as FlowOption & { value?: string })}
-                      className="rounded-full border border-primary/30 bg-primary/5 px-3.5 py-1.5 text-xs font-medium text-primary/90 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-150"
+                      onClick={handleConfirmServiceSelection}
+                      className="w-full h-10 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all"
                     >
-                      {opt.label}
+                      Confirmar selección ({selectedServiceValues.length})
                     </button>
-                  ))}
+                  )}
+                </div>
+              )}
+
+              {/* Service booking summary (shown after multi-select confirmation) */}
+              {showServiceSummary && currentNodeId === 'ask_service' && (
+                <div className="space-y-3">
+                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Resumen de servicios</p>
+                  <div className="rounded-[--radius-lg] border border-border/60 bg-background/40 overflow-hidden">
+                    {confirmedServicesData.length > 0 ? (
+                      <div className="divide-y divide-border/40">
+                        {confirmedServicesData.map((s) => (
+                          <div key={s.id} className="flex justify-between items-center px-3.5 py-2 text-xs">
+                            <span className="text-foreground">{s.name}</span>
+                            <span className="text-muted-foreground font-mono">{s.basePrice.toFixed(2)} €</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-3.5 py-2 text-xs text-muted-foreground">Servicios seleccionados</div>
+                    )}
+                    <div className="border-t border-border/60 px-3.5 py-2 space-y-1 text-xs bg-background/20">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Base imponible</span>
+                        <span className="font-mono">{confirmedBaseTotal.toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>IVA ({(ivaRate * 100).toFixed(0)}%)</span>
+                        <span className="font-mono">{confirmedIva.toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-foreground pt-1 border-t border-border/40">
+                        <span>Total estimado</span>
+                        <span className="font-mono gradient-text">{confirmedTotal.toFixed(2)} €</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/60">
+                    Precio orientativo. IVA incluido. El presupuesto definitivo puede variar según el diagnóstico.
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/50 border-t border-border/30 pt-2 mt-1">
+                    Todo trabajo está sujeto a presupuesto previo según RD 1457/1986.
+                  </p>
+                  <button
+                    onClick={handleServiceSummaryConfirm}
+                    className="w-full h-10 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all"
+                  >
+                    Continuar con la reserva
+                  </button>
+                </div>
+              )}
+
+              {/* Option buttons + NLP free-text */}
+              {showOptions && (
+                <div className="space-y-2.5">
+                  <div className="flex flex-wrap gap-2">
+                    {currentNode!.options!.map((opt) => (
+                      <button
+                        key={opt.next + opt.label}
+                        onClick={() => handleOptionSelect(opt as FlowOption & { value?: string })}
+                        className="rounded-full border border-primary/30 bg-primary/5 px-3.5 py-1.5 text-xs font-medium text-primary/90 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-150"
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      value={nlpInput}
+                      onChange={(e) => setNlpInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleNlpSubmit()}
+                      placeholder="O escribe tu mensaje…"
+                      className="flex-1 h-9 rounded-[--radius-lg] bg-background/60 border border-border/60 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 placeholder:text-muted-foreground/30"
+                    />
+                    <button
+                      onClick={handleNlpSubmit}
+                      disabled={!nlpInput.trim()}
+                      className="flex items-center justify-center w-9 h-9 rounded-[--radius-lg] bg-primary/10 text-primary border border-primary/25 disabled:opacity-30 hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               )}
 

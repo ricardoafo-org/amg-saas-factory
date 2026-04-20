@@ -1,0 +1,23 @@
+# <type>(<scope>): <description>  [72 char max ↑]
+#
+# Types: feat | fix | chore | docs | test | refactor | style | ci
+# Scope (optional): chatbot | slots | ui | compliance | nlp | api | db
+#
+# Examples:
+#   feat(chatbot): add calendar slot picker to booking flow
+#   fix(slots): prevent cross-tenant slot booking IDOR
+#   chore: remove pixel-agents library
+#   docs: update AIDLC with Anthropic Academy findings
+#   test(nlp): add regression corpus for oil intent typos
+#
+# Body (optional — explain WHY, not what):
+#
+#
+# Footer:
+# Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+#
+# Rules:
+#   - Imperative present tense ("add" not "added" or "adds")
+#   - No period at end of description
+#   - Reference bug ID if applicable: "fix(slots): ... closes BUG-003"
+#   - Never commit .env, pb_data/, node_modules/

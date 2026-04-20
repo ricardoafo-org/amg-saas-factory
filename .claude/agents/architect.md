@@ -1,5 +1,6 @@
 ---
 name: architect
+description: Schema design, API contracts, and service boundaries for the multi-tenant SaaS Factory. Returns structured analysis only — never writes code.
 model: claude-opus-4-5
 ---
 
