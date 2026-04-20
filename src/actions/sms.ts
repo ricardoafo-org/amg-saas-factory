@@ -1,8 +1,23 @@
 'use server';
 
+import twilio from 'twilio';
 import { z } from 'zod';
 import { getStaffCtx } from '@/lib/auth';
 import type { SmsLog, Customer } from '@/types/pb';
+
+// ---------------------------------------------------------------------------
+// Twilio client (lazy-initialised — null if credentials not configured)
+// ---------------------------------------------------------------------------
+
+let twilioClient: ReturnType<typeof twilio> | null = null;
+
+function getTwilioClient(): ReturnType<typeof twilio> | null {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !token) return null;
+  if (!twilioClient) twilioClient = twilio(sid, token);
+  return twilioClient;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -87,13 +102,36 @@ export async function sendSms(input: SendSmsInput): Promise<SendSmsResult> {
   // Log to console — no PII (masked only)
   console.log(`[SMS] tenant=${ctx.tenantId} to=${masked} chars=${message.length}`);
 
+  const client = getTwilioClient();
+  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+
+  let providerId = '';
+  let status: 'sent' | 'failed' = 'sent';
+
+  if (client && fromNumber) {
+    try {
+      const msg = await client.messages.create({
+        body: message,
+        from: fromNumber,
+        to: toPhone,
+      });
+      providerId = msg.sid;
+      status = 'sent';
+    } catch (err) {
+      console.error('[SMS] Twilio error', err instanceof Error ? err.message : 'unknown');
+      return { ok: false, error: 'Error al enviar el SMS. Comprueba las credenciales de Twilio.' };
+    }
+  } else {
+    console.warn('[SMS] TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER not set — SMS not delivered');
+  }
+
   try {
     const logData: Record<string, string> = {
       tenant_id: ctx.tenantId,
       to_phone: toPhone,
       message,
-      status: 'sent',
-      provider_id: '',
+      status,
+      provider_id: providerId,
     };
     if (appointmentId) logData['appointment_id'] = appointmentId;
     if (customerId) logData['customer_id'] = customerId;
@@ -212,12 +250,25 @@ export async function sendBulkSms(input: z.infer<typeof SendBulkSmsSchema>): Pro
       const masked = maskPhone(customer.phone);
       console.log(`[SMS Bulk] tenant=${ctx.tenantId} to=${masked} chars=${message.length}`);
 
+      const bulkClient = getTwilioClient();
+      const bulkFrom = process.env.TWILIO_FROM_NUMBER;
+      let bulkProviderId = '';
+
+      if (bulkClient && bulkFrom) {
+        const msg = await bulkClient.messages.create({
+          body: message,
+          from: bulkFrom,
+          to: customer.phone,
+        });
+        bulkProviderId = msg.sid;
+      }
+
       await ctx.pb.collection('sms_log').create({
         tenant_id: ctx.tenantId,
         to_phone: customer.phone,
         message,
         status: 'sent',
-        provider_id: '',
+        provider_id: bulkProviderId,
         customer_id: customerId,
       });
 
