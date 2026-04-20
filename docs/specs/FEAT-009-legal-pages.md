@@ -4,6 +4,29 @@
 
 Add `/politica-de-privacidad` and `/politica-de-cookies` pages required by LOPDGDD and LSSI-CE. Every Spanish commercial website collecting personal data must have these pages. Content is tenant-configurable (business name, CIF, address, contact). Pages must be static Server Components for SEO.
 
+## Page structure
+
+```mermaid
+graph TD
+    Footer["Footer.tsx\n(all pages)"] --> PP["/politica-de-privacidad\nServer Component"]
+    Footer --> PC["/politica-de-cookies\nServer Component"]
+    Banner["CookieBanner.tsx"] --> PC
+
+    PP --> CFG["config collection\n(businessName, CIF, address, email)"]
+    PC --> CFG
+
+    subgraph LOPDGDD Art. 13 sections
+        PP --> S1[Responsable]
+        PP --> S2[Finalidades]
+        PP --> S3[Datos recogidos]
+        PP --> S4[Destinatarios]
+        PP --> S5[Transferencias internacionales]
+        PP --> S6[Plazos conservación]
+        PP --> S7[Derechos ARCO+PL]
+        PP --> S8[Reclamación AEPD]
+    end
+```
+
 ## Acceptance Criteria
 
 1. [ ] `/politica-de-privacidad` page exists with full LOPDGDD Art. 13 compliant content

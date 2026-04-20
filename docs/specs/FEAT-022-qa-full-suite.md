@@ -6,6 +6,63 @@ Establish and execute a complete QA strategy for the AMG SaaS Factory MVP. Cover
 
 Sprint 4 gate: this spec is the entry point for Sprint 4. Before any new feature work, QA framework must be verified and the full suite created, run, and passing.
 
+## QA pipeline flow
+
+```mermaid
+flowchart TD
+    PR[Pull Request opened] --> TC[Type check]
+    TC --> UT[Unit tests — Vitest]
+    UT --> SMOKE[Smoke E2E — Chromium]
+    SMOKE --> ALLURE[Allure Report generated]
+    ALLURE --> PAGES[Published to GitHub Pages]
+    PAGES --> HUMAN[Human reviews report]
+
+    HUMAN --> FULL{Full suite needed?}
+    FULL -- Sprint release --> REG[Regression + cross-browser + a11y]
+    FULL -- Hotfix --> MERGE[Merge to main]
+    REG --> DAST[DAST — ZAP staging scan]
+    DAST --> MERGE
+```
+
+## Test layer overview
+
+```mermaid
+graph TD
+    subgraph Automated
+        UNIT[Unit — Vitest\nsrc/**/__tests__/]
+        API[API contract — Playwright\ntests/api/]
+        SMOKE2[Smoke — Playwright\ntests/e2e/specs/smoke/]
+        SANITY[Sanity — Playwright\ntests/e2e/specs/sanity/]
+        REG2[Regression — Playwright\ntests/e2e/specs/regression/]
+        CROSS[Cross-browser — Playwright\ntests/e2e/specs/cross-browser/]
+        NET[Network resilience\ntests/e2e/specs/network/]
+        A11Y[Accessibility — axe-core\ntests/e2e/specs/accessibility/]
+        PERF[Performance — Lighthouse\ntests/performance/]
+        VIS[Visual regression\nPlaywright snapshots]
+    end
+    subgraph Manual
+        MTC[10 manual TCs\nGitHub Issues — label: manual-tc]
+    end
+    UNIT --> ALLURE2[Allure Report\nGitHub Pages]
+    API --> ALLURE2
+    SMOKE2 --> ALLURE2
+    REG2 --> ALLURE2
+    A11Y --> ALLURE2
+    MTC --> ALLURE2
+```
+
+## Tooling decisions
+
+| Need | Tool | Cost | CI integration |
+|---|---|---|---|
+| E2E test runner | Playwright | Free | GitHub Actions |
+| Unit test runner | Vitest | Free | GitHub Actions |
+| Test reporting | Allure Report + `allure-playwright` + `allure-vitest` | Free | GitHub Pages |
+| Accessibility | `@axe-core/playwright` | Free | GitHub Actions |
+| Performance | Lighthouse + `chrome-launcher` | Free | GitHub Actions |
+| CI/CD | GitHub Actions (2000 min/month free) | Free | Native |
+| Manual TC tracking | GitHub Issues — label `manual-tc` | Free | Linked in Allure |
+
 ## Acceptance Criteria
 
 ### Phase 1 — Framework verification
@@ -130,24 +187,69 @@ The following require human judgement or cannot be automated reliably:
 | MTC-009 | Admin reports | Download CSV, open in Excel/Sheets | Valid data, UTF-8, correct headers |
 | MTC-010 | Legal pages | Read `/politica-de-privacidad` and `/politica-de-cookies` | All LOPDGDD Art. 13 sections present, AEPD link works |
 
+## Folder structure (industry standard)
+
+The current `e2e/` root folder is replaced by `tests/` following the industry-standard layout for a Next.js + Playwright + Vitest project:
+
+```
+tests/
+  e2e/
+    pages/                  ← POM base classes (BasePage, HomePage, ChatbotPage…)
+    fixtures/               ← typed test data (booking.fixture.ts, admin.fixture.ts)
+    helpers/                ← shared utilities (date helpers, PB seed/teardown)
+    specs/
+      smoke/
+        homepage.spec.ts
+        health.spec.ts
+      sanity/
+        service-cards.spec.ts
+        cookie-banner.spec.ts
+        admin-dashboard.spec.ts
+      regression/
+        chatbot.spec.ts
+        itv.spec.ts
+        cookie-consent.spec.ts
+        admin.spec.ts
+      cross-browser/
+        booking-firefox.spec.ts
+        booking-mobile.spec.ts
+      network/
+        resilience.spec.ts      ← CDP throttle/offline (Chromium only)
+      accessibility/
+        public.spec.ts
+        admin.spec.ts
+  api/
+    appointments.spec.ts        ← API contract tests
+    consent.spec.ts
+  performance/
+    lighthouse.spec.ts
+  reports/                      ← Allure output (gitignored)
+```
+
+`playwright.config.ts` `testDir` updated to `tests/e2e/specs`.
+`vitest.config.ts` `include` stays at `src/**/__tests__/**`.
+
 ## Files to Create/Touch
 
-- `e2e/smoke.spec.ts` — AC #6–11
-- `e2e/sanity.spec.ts` — AC #12–18
-- `e2e/regression/chatbot.spec.ts` — AC #19–24
-- `e2e/regression/itv.spec.ts` — AC #25–28
-- `e2e/regression/cookie-consent.spec.ts` — AC #29–33
-- `e2e/regression/admin.spec.ts` — AC #34–40
-- `e2e/cross-browser.spec.ts` — AC #41–45
-- `e2e/network-resilience.spec.ts` — AC #46–48 (already partially exists)
+- `tests/e2e/pages/` — POM base classes (migrated from `e2e/pages/`)
+- `tests/e2e/fixtures/` — test data (migrated from `e2e/fixtures/`)
+- `tests/e2e/specs/smoke/` — AC #6–11
+- `tests/e2e/specs/sanity/` — AC #12–18
+- `tests/e2e/specs/regression/chatbot.spec.ts` — AC #19–24
+- `tests/e2e/specs/regression/itv.spec.ts` — AC #25–28
+- `tests/e2e/specs/regression/cookie-consent.spec.ts` — AC #29–33
+- `tests/e2e/specs/regression/admin.spec.ts` — AC #34–40
+- `tests/e2e/specs/cross-browser/` — AC #41–45
+- `tests/e2e/specs/network/resilience.spec.ts` — AC #46–48
+- `tests/api/` — AC #49–54
 - `src/actions/admin/__tests__/appointments.test.ts` — AC #55
 - `src/actions/admin/__tests__/customers.test.ts` — AC #56–57
 - `src/actions/admin/__tests__/quotes.test.ts` — AC #58–60
 - `src/actions/admin/__tests__/vehicles.test.ts` — AC #61
-- `e2e/accessibility.spec.ts` — AC #65–70 (axe-core via `@axe-core/playwright`)
-- `lighthouse.config.json` — AC #61–64
-- `.github/workflows/qa.yml` — CI gate (type-check + unit + smoke E2E)
-- `docs/qa-reports/` — QA run summaries per session
+- `tests/e2e/specs/accessibility/` — AC #65–70 (`@axe-core/playwright`)
+- `tests/performance/lighthouse.spec.ts` — AC #61–64
+- `.github/workflows/qa.yml` — CI: type-check + unit + smoke E2E + Allure publish
+- `docs/qa-reports/manual-tc-checklist.md` — manual TC tracking (GitHub Issues labels)
 
 ## Dependencies
 

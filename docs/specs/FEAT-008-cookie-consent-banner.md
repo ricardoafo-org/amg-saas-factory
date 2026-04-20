@@ -4,6 +4,31 @@
 
 Add a LSSI-CE and AEPD 2023 compliant cookie consent banner to the public site. Canonical spec — supersedes FEAT-006. Consent is logged server-side (PocketBase) for AEPD audit trail and client-side (localStorage) to avoid re-showing the banner on revisit. No analytics or marketing scripts load before consent.
 
+## Consent flow
+
+```mermaid
+flowchart TD
+    VISIT[User visits site] --> CHECK{localStorage\namg_cookie_consent?}
+    CHECK -- exists --> HIDE[Banner hidden]
+    CHECK -- missing --> SHOW[Show banner at bottom]
+
+    SHOW --> A[Aceptar todo]
+    SHOW --> B[Solo necesarias]
+    SHOW --> C[Gestionar preferencias]
+
+    A --> LOG_A[analytics=true, marketing=true]
+    B --> LOG_B[analytics=false, marketing=false]
+    C --> PANEL[Open modal — per-category toggles]
+    PANEL --> SAVE[User saves preferences]
+    SAVE --> LOG_C[analytics=?, marketing=?]
+
+    LOG_A --> LS[Write localStorage\namg_cookie_consent]
+    LOG_B --> LS
+    LOG_C --> LS
+    LS --> PB[POST server action\n→ cookie_consents collection]
+    PB --> DONE[Banner dismissed]
+```
+
 ## Acceptance Criteria
 
 1. [ ] Banner appears at bottom of page on first visit (no prior consent in localStorage)

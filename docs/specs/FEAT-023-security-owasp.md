@@ -4,6 +4,27 @@
 
 Harden the AMG SaaS Factory against the OWASP Top 10 (2021) for the Next.js 15 + PocketBase stack. Establish SAST in CI and DAST as a pre-release gate. All findings rated Critical or High must be resolved before MVP goes to production.
 
+## Security pipeline
+
+```mermaid
+flowchart LR
+    CODE[Code change] --> SAST
+    subgraph SAST [SAST — every PR]
+        S1[eslint-plugin-security]
+        S2[npm audit]
+        S3[semgrep OWASP ruleset]
+    end
+    SAST --> BUILD[Docker build]
+    BUILD --> TRIVY[Trivy — image scan]
+    TRIVY --> STAGING[Deploy to staging]
+    STAGING --> DAST
+    subgraph DAST [DAST — pre-release]
+        D1[ZAP baseline — public site]
+        D2[ZAP full scan — admin authenticated]
+    end
+    DAST --> PROD[Production deploy]
+```
+
 ## OWASP Top 10 — Stack-Specific Assessment
 
 ### A01 — Broken Access Control
@@ -105,14 +126,16 @@ Mitigations required:
 | Tool | Purpose | Integration |
 |---|---|---|
 | `eslint-plugin-security` | JS/TS security patterns (injection, regex DoS, unsafe refs) | `npm run lint` — already in ESLint pipeline |
-| `npm audit` | Known vulnerable packages | CI step, fail on high/critical |
+| `npm audit` | Known vulnerable packages (npm ecosystem) | CI step, fail on high/critical |
 | `semgrep` | Deep pattern matching (secrets, OWASP rules) | CI step, OSS ruleset `p/owasp-top-ten` |
+| `Trivy` | Docker image OS + package CVE scan | CI step after `docker build`, fail on HIGH/CRITICAL |
 
 ### SAST acceptance criteria
 - [ ] `eslint-plugin-security` added to `.eslintrc` — zero new warnings in `src/`
 - [ ] `npm audit --audit-level=high` → exit 0 in CI
 - [ ] `semgrep --config p/owasp-top-ten src/` → zero HIGH/CRITICAL findings
-- [ ] CI pipeline (`qa.yml`) runs all three SAST steps before E2E
+- [ ] `trivy image --severity HIGH,CRITICAL amg-talleres:latest` → zero findings
+- [ ] CI pipeline (`qa.yml`) runs all four SAST steps before E2E
 
 ## DAST — Dynamic Analysis
 

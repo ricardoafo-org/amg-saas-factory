@@ -4,6 +4,24 @@
 
 Implement all Spain/EU compliance UI elements on the public-facing site: IVA breakdown on service prices (EU Right to Repair Directive 2024/1799), the RD 1457/1986 warranty badge, presupuesto disclosure, and an enriched legal footer. Canonical spec — supersedes FEAT-007.
 
+## Data flow
+
+```mermaid
+sequenceDiagram
+    participant Server as Server Component
+    participant Config as PocketBase config
+    participant SC as ServiceGrid / Footer
+    participant CB as ChatEngine
+
+    Server->>Config: fetch ivaRate, legal.cif, legal.registrationNumber
+    Config-->>Server: { ivaRate: 0.21, cif: "B-XXX", registrationNumber: "MU-XXX" }
+    Server->>SC: <ServiceGrid ivaRate={0.21} ... />
+    Server->>SC: <Footer cif="B-XXX" registrationNumber="MU-XXX" />
+    Server->>CB: ivaRate injected into chatbot booking summary node
+    SC-->>Browser: IVA breakdown + warranty badge rendered
+    CB-->>Browser: Presupuesto disclosure shown before LOPD checkbox
+```
+
 ## Acceptance Criteria
 
 ### Service cards (ServiceGrid)
