@@ -1,0 +1,29 @@
+name: Chore / Tooling
+description: Deps, CI, config, refactor, or infra work — no user-facing change
+title: "[CHORE] "
+labels: ["type:chore", "status:needs-review"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: What needs to be done?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Motivation. "Because it's cleaner" is not enough — what pain does this solve?
+    validations:
+      required: true
+  - type: checkboxes
+    id: risk
+    attributes:
+      label: Risk surface
+      options:
+        - label: Touches CI/CD pipeline
+        - label: Touches dependencies (package.json / lockfile)
+        - label: Touches infra (Docker, Caddy, VPS)
+        - label: Touches secrets / auth
+        - label: Touches database schema

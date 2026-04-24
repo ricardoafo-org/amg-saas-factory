@@ -39,6 +39,6 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "claude-statusline"
+    "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const i=JSON.parse(d);const{execSync}=require('child_process');const dir=(i.workspace&&i.workspace.current_dir||'').replace(process.env.HOME||'',['~'][0]);const model=(i.model&&i.model.display_name)||'';const used=i.context_window&&i.context_window.used_percentage;const ctx=used!=null?' ctx:'+Math.round(used)+'%':'';let branch='';try{branch=execSync('git symbolic-ref --short HEAD 2>/dev/null',{cwd:i.workspace&&i.workspace.current_dir,stdio:['pipe','pipe','ignore']}).toString().trim();}catch{}const b=branch?' ('+branch+')':'';process.stdout.write(dir+b+'  '+model+ctx);}catch{}});\""
   }
 }

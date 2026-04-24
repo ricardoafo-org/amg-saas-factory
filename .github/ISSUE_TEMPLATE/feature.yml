@@ -1,0 +1,59 @@
+name: Feature request
+description: Propose a new capability or enhancement
+title: "[FEAT] "
+labels: ["type:feat", "status:needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Non-trivial features require a spec in `docs/specs/` before implementation. This issue tracks the work; the spec file holds the detail.
+  - type: input
+    id: feat-id
+    attributes:
+      label: Feature ID
+      description: Next sequential FEAT-XXX (check docs/specs/ for the last one used).
+      placeholder: FEAT-025
+    validations:
+      required: true
+  - type: textarea
+    id: intent
+    attributes:
+      label: Intent (one paragraph)
+      description: What are we building and why?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria (bullet list)
+      description: What must be true for this to ship?
+    validations:
+      required: true
+  - type: input
+    id: spec-link
+    attributes:
+      label: Spec file
+      description: Path to the detailed spec. Create after the issue is accepted.
+      placeholder: docs/specs/FEAT-025-name.md
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: Sprint / Milestone
+      options:
+        - Sprint 4 — QA Industry Standards
+        - Sprint 5 — Observability
+        - Sprint 6 — Owner Dashboard + SMS
+        - Sprint 7 — SaaS Packaging
+        - DevOps & Infrastructure
+        - Unscheduled
+    validations:
+      required: true
+  - type: checkboxes
+    id: compliance-hooks
+    attributes:
+      label: Compliance hooks (check all that apply)
+      options:
+        - label: Collects personal data → requires LOPDGDD consent gate
+        - label: Shows pricing → must include IVA breakdown + guarantee disclosure (RD 1457/1986)
+        - label: Loads third-party scripts → must respect LSSI-CE cookie consent
+        - label: Cross-tenant data path → needs IDOR review

@@ -1,5 +1,6 @@
 import { Phone, MessageCircle, MapPin, Mail, ExternalLink, Clock } from 'lucide-react';
 import type { LocalBusiness } from '@/core/types/adapter';
+import { CommitSha } from '@/core/components/CommitSha';
 
 const DAY_LABELS: Record<string, string> = {
   monday:    'Lunes',
@@ -192,6 +193,7 @@ export function Footer({ config }: { config: LocalBusiness }) {
             </>
           )}
         </nav>
+        <CommitSha />
       </div>
     </footer>
   );

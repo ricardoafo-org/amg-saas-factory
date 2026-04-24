@@ -4,6 +4,7 @@ import withPWA from '@ducanh2912/next-pwa';
 const nextConfig: NextConfig = {
   // Enable typedRoutes once all app routes exist
   // experimental: { typedRoutes: true },
+  output: 'standalone',
 };
 
 export default withPWA({

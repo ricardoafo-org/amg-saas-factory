@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "node -r dotenv/config scripts/schemas-sync.js && next build",
+    "build:docker": "next build",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",

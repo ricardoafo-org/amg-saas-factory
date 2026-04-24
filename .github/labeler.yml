@@ -1,0 +1,93 @@
+# Auto-apply area: labels based on changed file paths.
+# Used by .github/workflows/labeler.yml
+
+"area:chatbot":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/core/chatbot/**"
+          - "clients/**/chatbot_flow.json"
+
+"area:nlp":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/core/nlp/**"
+
+"area:ui":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/core/components/**"
+          - "src/app/**/page.tsx"
+          - "src/app/**/layout.tsx"
+          - "src/**/*.css"
+
+"area:infra":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "infra/**"
+          - "Dockerfile"
+          - ".dockerignore"
+          - "scripts/bootstrap-vps.sh"
+          - "scripts/deploy-tst.sh"
+
+"area:devops":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/dependabot.yml"
+          - ".github/labeler.yml"
+
+"area:compliance":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/**/consent*"
+          - "src/**/cookie*"
+          - "src/**/privacy*"
+          - ".claude/skills/es-compliance/**"
+
+"area:schema":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/schemas/**"
+          - "pb_migrations/**"
+
+"area:auth":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/**/auth/**"
+          - "src/middleware.ts"
+
+"area:tenant":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "clients/**"
+
+"area:email":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/**/email/**"
+          - "src/**/resend*"
+
+"area:sms":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/**/sms/**"
+          - "src/**/twilio*"
+
+"type:docs":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"
+          - "**/*.mdx"
+
+"type:test":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "e2e/**"
+          - "**/*.test.ts"
+          - "**/*.spec.ts"
+
+"type:ci":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"

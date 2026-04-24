@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  type-check:
+    name: Type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run type-check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --run
+
+  flows-validate:
+    name: Validate chatbot flows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run flows:validate
+
+  npm-audit:
+    name: npm audit (critical)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Audit production dependencies (fail on critical)
+        run: npm audit --omit=dev --audit-level=critical
+      - name: Report high-severity findings (informational)
+        if: always()
+        run: npm audit --omit=dev --audit-level=high || true
+
+  e2e:
+    name: E2E (Playwright, shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    # DISABLED — E2E suite needs PocketBase seed + local-green before enabling in CI.
+    # Re-enable by removing the `if: false` once `npm run e2e` passes locally against seeded PB.
+    if: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      TENANT_ID: talleres-amg
+      POCKETBASE_URL: http://127.0.0.1:8090
+      NEXT_PUBLIC_BASE_URL: http://localhost:3000
+      NEXT_PUBLIC_COMMIT_SHA: ci-${{ github.sha }}
+      RESEND_API_KEY: ci-dummy
+      TWILIO_ACCOUNT_SID: ci-dummy
+      TWILIO_AUTH_TOKEN: ci-dummy
+      TWILIO_FROM_NUMBER: "+10000000000"
+      ANTHROPIC_API_KEY: ci-dummy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Download PocketBase
+        run: bash scripts/setup-pocketbase.sh
+        continue-on-error: true
+
+      - name: Start PocketBase
+        run: |
+          if [ -x ./pocketbase ]; then
+            ./pocketbase serve --http=127.0.0.1:8090 &
+            echo $! > pb.pid
+            for i in {1..30}; do
+              if curl -sf http://127.0.0.1:8090/api/health > /dev/null; then
+                echo "PocketBase up"; break
+              fi
+              sleep 1
+            done
+          else
+            echo "::warning::PocketBase binary not found — E2E tests that need PB will fail"
+          fi
+
+      - name: Apply migrations
+        run: npm run migrations:apply
+        continue-on-error: true
+
+      - name: Run E2E tests (shard ${{ matrix.shard }}/4)
+        run: npx playwright test --shard=${{ matrix.shard }}/4
+
+      - name: Stop PocketBase
+        if: always()
+        run: |
+          if [ -f pb.pid ]; then kill "$(cat pb.pid)" || true; fi
+
+      - name: Upload Playwright report (shard ${{ matrix.shard }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-shard-${{ matrix.shard }}
+          path: playwright-report/
+          retention-days: 14

@@ -1,0 +1,55 @@
+version: 2
+updates:
+  # npm — security + weekly minor/patch
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Madrid
+    open-pull-requests-limit: 5
+    labels:
+      - "type:chore"
+      - "area:devops"
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
+    groups:
+      # Group non-breaking updates into one PR per ecosystem slice
+      production-minor-patch:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      dev-minor-patch:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Major bumps — review manually via separate PRs (Dependabot still opens them individually)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions — security + weekly
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Madrid
+    open-pull-requests-limit: 5
+    labels:
+      - "type:chore"
+      - "area:devops"
+      - "type:ci"
+    commit-message:
+      prefix: "chore(ci)"
+      include: scope
+    groups:
+      actions-minor-patch:
+        update-types:
+          - minor
+          - patch
