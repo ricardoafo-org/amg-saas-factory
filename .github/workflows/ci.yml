@@ -74,9 +74,13 @@ jobs:
         run: npm audit --omit=dev --audit-level=high || true
 
   e2e:
-    name: E2E (Playwright)
+    name: E2E (Playwright, shard ${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     env:
       TENANT_ID: talleres-amg
       POCKETBASE_URL: http://127.0.0.1:8090
@@ -136,18 +140,18 @@ jobs:
         run: npm run migrations:apply
         continue-on-error: true
 
-      - name: Run E2E tests
-        run: npm run e2e
+      - name: Run E2E tests (shard ${{ matrix.shard }}/4)
+        run: npx playwright test --shard=${{ matrix.shard }}/4
 
       - name: Stop PocketBase
         if: always()
         run: |
           if [ -f pb.pid ]; then kill "$(cat pb.pid)" || true; fi
 
-      - name: Upload Playwright report
+      - name: Upload Playwright report (shard ${{ matrix.shard }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-shard-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 14
