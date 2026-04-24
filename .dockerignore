@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+
+# PocketBase data and migrations (PB runs in its own container)
+pb_data
+pb_migrations
+
+# Test artifacts
+playwright-report
+test-results
+
+# Environment files — never bake secrets into the image
+.env
+.env.*
+!.env.example
+
+# Documentation and non-runtime files
+docs
+.git
+.github
+README.md
+CLAUDE.md
+
+# IDE / editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

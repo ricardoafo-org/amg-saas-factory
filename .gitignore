@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Infra runtime secrets — template (.env.tst.example) is committed; the real file is not
+infra/.env.tst
+
 # Dependencies
 node_modules/
 
@@ -16,3 +19,8 @@ pb_migrations/
 # Build
 dist/
 out/
+*.tsbuildinfo
+
+# Test artifacts
+playwright-report/
+test-results/

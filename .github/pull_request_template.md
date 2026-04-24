@@ -39,6 +39,10 @@
 - [ ] IVA fetched from config — not hardcoded
 - [ ] Guarantee disclosure present if service pricing shown (RD 1457/1986)
 
+## Deployment
+
+- [ ] Verified on tst after merge
+
 ## Test plan
 
 <!-- How did you verify this works? What to click/do to validate manually -->

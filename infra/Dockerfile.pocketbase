@@ -1,0 +1,27 @@
+FROM alpine:3.19
+
+ARG PB_VERSION=0.28.1
+
+RUN apk add --no-cache \
+    ca-certificates \
+    wget \
+    unzip
+
+RUN wget -q "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip" \
+    -O /tmp/pocketbase.zip \
+ && unzip /tmp/pocketbase.zip -d /pb \
+ && rm /tmp/pocketbase.zip \
+ && chmod +x /pb/pocketbase
+
+RUN addgroup -g 1001 -S pocketbase \
+ && adduser -u 1001 -S pocketbase -G pocketbase \
+ && mkdir -p /pb/pb_data \
+ && chown -R pocketbase:pocketbase /pb
+
+USER pocketbase
+
+VOLUME /pb/pb_data
+
+EXPOSE 8090
+
+CMD ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090", "--dir=/pb/pb_data"]

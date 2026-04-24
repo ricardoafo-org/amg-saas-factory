@@ -1,0 +1,25 @@
+{$TST_DOMAIN} {
+    encode zstd gzip
+
+    # PocketBase admin UI is NOT publicly reachable
+    @pb_admin path /pb/_/* /pb/_/
+    respond @pb_admin 404
+
+    # Proxy /pb/* to PocketBase (for client-side API calls only)
+    handle_path /pb/* {
+        reverse_proxy pocketbase:8090
+    }
+
+    # Everything else to Next.js
+    reverse_proxy app:3000 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+    }
+
+    # Access logging — method + path + status only, no bodies, no headers
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+}
