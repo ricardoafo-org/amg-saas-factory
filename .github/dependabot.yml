@@ -47,3 +47,9 @@ updates:
       - "type:ci"
     commit-message:
       prefix: "chore(ci)"
+      include: scope
+    groups:
+      actions-minor-patch:
+        update-types:
+          - minor
+          - patch
