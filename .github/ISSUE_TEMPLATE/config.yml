@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Spec-driven feature (new)
+    url: https://github.com/ricardoafo-org/amg-saas-factory/blob/main/docs/specs/
+    about: Non-trivial features ship via a spec file in docs/specs/. Open a feature issue to track, then link the spec.
+  - name: ADR / Architecture decision
+    url: https://github.com/ricardoafo-org/amg-saas-factory/blob/main/docs/adr/
+    about: Architectural decisions live as ADRs in docs/adr/ — not as GitHub Issues.

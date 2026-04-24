@@ -2,20 +2,89 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
-  check:
-    name: Type-check · Test · Lint · Validate flows
+  type-check:
+    name: Type-check
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run type-check
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test -- --run
+
+  flows-validate:
+    name: Validate chatbot flows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run flows:validate
+
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@3b139cfc5fae8b618d3eae3675e383bb1769c019 # v4.5.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TENANT_ID: talleres-amg
+      POCKETBASE_URL: http://127.0.0.1:8090
+      NEXT_PUBLIC_BASE_URL: http://localhost:3000
+      NEXT_PUBLIC_COMMIT_SHA: ci-${{ github.sha }}
+      RESEND_API_KEY: ci-dummy
+      TWILIO_ACCOUNT_SID: ci-dummy
+      TWILIO_AUTH_TOKEN: ci-dummy
+      TWILIO_FROM_NUMBER: "+10000000000"
+      ANTHROPIC_API_KEY: ci-dummy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
@@ -23,14 +92,56 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check
-        run: npm run type-check
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      - name: Lint
-        run: npm run lint
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
 
-      - name: Unit tests
-        run: npm test -- --run
+      - name: Install Playwright system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
-      - name: Validate chatbot flows
-        run: npm run flows:validate
+      - name: Download PocketBase
+        run: bash scripts/setup-pocketbase.sh
+        continue-on-error: true
+
+      - name: Start PocketBase
+        run: |
+          if [ -x ./pocketbase ]; then
+            ./pocketbase serve --http=127.0.0.1:8090 &
+            echo $! > pb.pid
+            for i in {1..30}; do
+              if curl -sf http://127.0.0.1:8090/api/health > /dev/null; then
+                echo "PocketBase up"; break
+              fi
+              sleep 1
+            done
+          else
+            echo "::warning::PocketBase binary not found — E2E tests that need PB will fail"
+          fi
+
+      - name: Apply migrations
+        run: npm run migrations:apply
+        continue-on-error: true
+
+      - name: Run E2E tests
+        run: npm run e2e
+
+      - name: Stop PocketBase
+        if: always()
+        run: |
+          if [ -f pb.pid ]; then kill "$(cat pb.pid)" || true; fi
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

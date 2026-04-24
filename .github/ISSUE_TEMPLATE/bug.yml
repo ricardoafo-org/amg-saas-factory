@@ -1,0 +1,66 @@
+name: Bug report
+description: Something is broken, wrong, or leaking
+title: "[BUG] "
+labels: ["type:fix", "status:needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Filing a bug? Include enough to reproduce. Vague reports get closed.
+  - type: input
+    id: bug-id
+    attributes:
+      label: Bug ID
+      description: If you already filed it in `docs/bugs/`, put the BUG-XXX id here.
+      placeholder: BUG-012
+  - type: textarea
+    id: what-happens
+    attributes:
+      label: What happens
+      description: Actual observed behaviour.
+    validations:
+      required: true
+  - type: textarea
+    id: what-expected
+    attributes:
+      label: What should happen
+      description: Expected behaviour.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered list. Include URL, inputs, tenant if relevant.
+      placeholder: |
+        1. Go to /chatbot on tenant talleres-amg
+        2. Type "cita martes"
+        3. Observe 500 error
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - dev (local)
+        - tst
+        - pro
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - p0 — blocker (site down, data loss, compliance breach)
+        - p1 — high (main flow broken for many users)
+        - p2 — medium (edge case or workaround exists)
+        - p3 — low (cosmetic, nice-to-have)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste relevant console output, Caddy logs, or screenshots. NO PII — redact emails, phones, tenant data.

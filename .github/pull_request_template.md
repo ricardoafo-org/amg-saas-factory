@@ -4,19 +4,24 @@
 -
 -
 
+## Closes
+
+<!-- Link the issue(s) this PR closes. Required for GitHub to auto-close + show in Development sidebar -->
+Closes #
+
 ## Spec
 
 <!-- Link to the spec file this implements -->
 `docs/specs/FEAT-XXX-name.md`
 
-## Type of change
+## Metadata checklist
 
-- [ ] `feat` — new feature
-- [ ] `fix` — bug fix (reference bug ID: BUG-XXX)
-- [ ] `chore` — tooling / config / deps
-- [ ] `docs` — documentation only
-- [ ] `test` — tests only
-- [ ] `refactor` — no behaviour change
+- [ ] Assigned correct **type:** label (feat / fix / chore / docs / test / refactor / ci / security)
+- [ ] Assigned correct **area:** label (chatbot / ui / infra / compliance / schema / auth / tenant / devops / nlp / email / sms)
+- [ ] Assigned **priority:** label
+- [ ] Assigned **size:** label
+- [ ] Assigned to a milestone (current sprint or "DevOps & Infrastructure")
+- [ ] Added to the project board
 
 ## Quality gates
 
@@ -24,6 +29,7 @@
 - [ ] `npm test` → all pass
 - [ ] `npm run lint` → zero errors
 - [ ] `npm run flows:validate` → valid (if chatbot flow changed)
+- [ ] `npm run e2e` → all pass (if UI / routes changed)
 
 ## Validator sign-off
 
@@ -52,6 +58,3 @@
 ## Screenshots (UI changes only)
 
 <!-- Before / After -->
-
----
-🤖 Implemented with [Claude Code](https://claude.ai/code)
