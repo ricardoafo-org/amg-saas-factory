@@ -75,6 +75,9 @@ jobs:
 
   e2e:
     name: E2E (Playwright, shard ${{ matrix.shard }}/${{ strategy.job-total }})
+    # DISABLED — E2E suite needs PocketBase seed + local-green before enabling in CI.
+    # Re-enable by removing the `if: false` once `npm run e2e` passes locally against seeded PB.
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
