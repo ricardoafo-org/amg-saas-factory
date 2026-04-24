@@ -12,7 +12,7 @@ flowchart LR
     PR[Pull Request]
     MAIN[main branch]
     GHA[GitHub Actions]
-    GHCR[GHCR<br/>ghcr.io/ricardoafo/amg-saas-factory]
+    GHCR[GHCR<br/>ghcr.io/ricardoafo-org/amg-saas-factory]
     VPS[Hetzner CX21<br/>tst.amg-talleres.com]
 
     DEV -- push feature/* --> PR

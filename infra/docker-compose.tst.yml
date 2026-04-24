@@ -15,7 +15,7 @@ services:
       - app
 
   app:
-    image: ghcr.io/ricardoafo/amg-saas-factory:${IMAGE_TAG:-tst}
+    image: ghcr.io/ricardoafo-org/amg-saas-factory:${IMAGE_TAG:-tst}
     restart: unless-stopped
     env_file: .env.tst
     expose:

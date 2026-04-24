@@ -34,6 +34,6 @@ Go to **Settings → Branches → Add branch protection rule** for pattern `main
 
 ## GHCR package visibility
 
-The Docker image is pushed to `ghcr.io/ricardoafo/amg-saas-factory`. Because this repository is private, the package will also default to private — this is fine. GitHub Actions can pull private packages within the same organization/account using `GITHUB_TOKEN`.
+The Docker image is pushed to `ghcr.io/ricardoafo-org/amg-saas-factory`. Because this repository is private, the package will also default to private — this is fine. GitHub Actions can pull private packages within the same organization/account using `GITHUB_TOKEN`.
 
 If you need to pull the image from the VPS without a PAT (e.g., for manual recovery), make the package public in **Settings → Packages → amg-saas-factory → Package settings → Change visibility**. For the automated SSH deploy flow this is not required.

@@ -60,8 +60,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/ricardoafo/amg-saas-factory:tst
-            ghcr.io/ricardoafo/amg-saas-factory:sha-${{ github.sha }}
+            ghcr.io/ricardoafo-org/amg-saas-factory:tst
+            ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}
           build-args: |
             NEXT_PUBLIC_COMMIT_SHA=${{ github.sha }}
           cache-from: type=gha
