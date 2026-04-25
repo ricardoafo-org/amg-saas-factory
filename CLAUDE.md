@@ -20,6 +20,7 @@ You are the orchestrator. You communicate with the user, break tasks into specs,
 | `compliance-reviewer` | Deterministic grep checks. Files path+line violations. No style opinions. | Read, Glob, Grep | Any modified `.ts`/`.tsx` before merge |
 | `security-auditor` | LOPDGDD, PII, auth guards, IDOR. Returns pass/fail checklist. | Read, Glob, Grep | New forms, server actions, PocketBase queries |
 | `qa-engineer` | Runs tests, files bugs, writes QA reports. **Follows Sprint 4 testing patterns** (`.claude/skills/qa-testing-patterns/STRATEGY.md`). Never writes app code. | Read, Glob, Grep, Bash | Before every merge to main |
+| `bug-triager` | Investigates open bugs: reads report, searches codebase, checks `git log`, assigns severity per `.claude/rules/severity-rubric.md`, writes `wip-BUG-XXX.md`. **Proposes; never writes code.** Runs on Sonnet; escalates to Opus for SEV-1. | Read, Glob, Grep, Bash | When a new `open-BUG-XXX.md` is filed and before implementer picks it up |
 
 **Orchestrator rule**: for targeted single-file fixes you may edit directly. For anything touching 2+ files or requiring domain expertise, always delegate.
 
