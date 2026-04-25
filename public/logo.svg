@@ -1,31 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48" fill="currentColor">
-  <!-- Car silhouette icon (side profile, 44px wide) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" fill="none">
   <g>
-    <!-- Car body lower -->
-    <path d="M4 31 L4 27 L7 21 L14 17 L28 17 L34 21 L41 21 L43 25 L43 31 Z"/>
-    <!-- Car cabin/roof -->
-    <path d="M14 17 L17 11 L29 11 L32 17 Z"/>
-    <!-- Front wheel arch cutout -->
-    <circle cx="12" cy="31" r="5" fill="none" stroke="currentColor" strokeWidth="0"/>
-    <path d="M4 31 Q4 36 12 36 Q20 36 20 31 L4 31" style="fill: oklch(0.04 0.04 255)"/>
-    <!-- Rear wheel arch cutout -->
-    <path d="M27 31 Q27 36 35 36 Q43 36 43 31 L27 31" style="fill: oklch(0.04 0.04 255)"/>
-    <!-- Front wheel -->
-    <circle cx="12" cy="31" r="4.2" fill="none" stroke="currentColor" strokeWidth="2"/>
-    <circle cx="12" cy="31" r="1.5"/>
-    <!-- Rear wheel -->
-    <circle cx="35" cy="31" r="4.2" fill="none" stroke="currentColor" strokeWidth="2"/>
-    <circle cx="35" cy="31" r="1.5"/>
-    <!-- Windshield accent line -->
-    <line x1="17" y1="17" x2="19" y2="12" stroke="currentColor" strokeWidth="1" opacity="0.4"/>
-    <line x1="30" y1="17" x2="28" y2="12" stroke="currentColor" strokeWidth="1" opacity="0.4"/>
-    <!-- Headlight -->
-    <rect x="41" y="23" width="3" height="3" rx="1" opacity="0.7"/>
+    <rect x="0" y="4" width="56" height="56" rx="10" fill="oklch(0.18 0.01 60)"></rect>
+
+    <g>
+      <rect x="8" y="48" width="12" height="4" rx="1" fill="oklch(0.72 0.12 230)"></rect>
+      <rect x="22" y="48" width="12" height="4" rx="1" fill="oklch(0.42 0.16 265)"></rect>
+      <rect x="36" y="48" width="12" height="4" rx="1" fill="oklch(0.56 0.20 25)"></rect>
+    </g>
+    <text x="28" y="36" text-anchor="middle" font-family="'Archivo Black','Anton','Geist',ui-sans-serif,sans-serif" font-weight="900" font-size="22" letter-spacing="0.5" fill="oklch(0.97 0.006 85)">AMG</text>
   </g>
-  <!-- Divider -->
-  <line x1="52" y1="8" x2="52" y2="40" stroke="currentColor" strokeWidth="1" opacity="0.2"/>
-  <!-- AMG wordmark -->
-  <text x="60" y="28" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="20" font-weight="800" letter-spacing="1">AMG</text>
-  <!-- TALLERES sub-label -->
-  <text x="61" y="40" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="400" letter-spacing="2.5" opacity="0.6">TALLERES</text>
+  <g font-family="'Geist',ui-sans-serif,system-ui,sans-serif">
+    <text x="72" y="32" font-size="22" font-weight="600" letter-spacing="-0.01em" fill="oklch(0.18 0.01 60)">Talleres</text>
+    <text x="72" y="50" font-family="'Geist Mono',ui-monospace,monospace" font-size="10" font-weight="500" letter-spacing="0.14em" fill="oklch(0.52 0.01 60)">CARTAGENA · DESDE 1987</text>
+  </g>
 </svg>
