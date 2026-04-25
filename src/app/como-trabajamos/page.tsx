@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { loadClientConfig } from '@/lib/config';
 
 export const metadata = {
@@ -74,13 +75,13 @@ export default function ComoTrabajamosPage() {
           <h2 className="text-lg font-semibold text-foreground">¿Listo para empezar?</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             Pide cita por{' '}
-            <a className="underline" href="/#servicios">
+            <Link className="underline" href="/#servicios">
               uno de nuestros servicios
-            </a>{' '}
+            </Link>{' '}
             o{' '}
-            <a className="underline" href="/#visitanos">
+            <Link className="underline" href="/#visitanos">
               ven a visitarnos
-            </a>
+            </Link>
             . Si tienes dudas, escríbenos por WhatsApp y te respondemos en 15 minutos en
             horario laboral.
           </p>

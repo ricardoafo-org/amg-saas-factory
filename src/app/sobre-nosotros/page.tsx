@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { loadClientConfig } from '@/lib/config';
 
 export const metadata = {
@@ -61,13 +62,13 @@ export default function SobreNosotrosPage() {
           </p>
           <p className="text-sm text-muted-foreground">
             ¿Quieres saber más?{' '}
-            <a className="underline" href="/#visitanos">
+            <Link className="underline" href="/#visitanos">
               Visítanos
-            </a>{' '}
+            </Link>{' '}
             o consulta{' '}
-            <a className="underline" href="/como-trabajamos">
+            <Link className="underline" href="/como-trabajamos">
               cómo trabajamos
-            </a>
+            </Link>
             .
           </p>
         </section>
