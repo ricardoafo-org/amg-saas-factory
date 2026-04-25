@@ -44,7 +44,7 @@ let msgCounter = 0;
 function mkKey() { return `msg-${++msgCounter}`; }
 
 
-export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, policyVersion, policyHash, services = [], ivaRate, onStepChange }: Props) {
+export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, policyVersion, policyHash, services = [], ivaRate, initialService, onStepChange }: Props) {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<string>(flow.start);
   const [variables, setVariables] = useState<Record<string, string>>({});
@@ -365,6 +365,30 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
     }
     setCurrentNodeId(flow.start);
   }
+
+  // When the chat opens with a preselected service (Reservar CTA on a service card),
+  // skip the welcome menu and jump straight to ask_service with the service pre-checked.
+  useEffect(() => {
+    if (!initialService || started) return;
+    const askService = flow.nodes['ask_service'] as FlowNodeAny | undefined;
+    const matchedOption = (askService?.options as Array<FlowOption & { value?: string }> | undefined)
+      ?.find((o) => o.value === initialService);
+    if (!matchedOption) return;
+
+    const matchedService = services.find((s) => s.id === initialService);
+    const serviceLabel = matchedService?.name ?? matchedOption.label;
+
+    setStarted(true);
+    setSelectedServiceValues([initialService]);
+    setCurrentNodeId('ask_service');
+    setMessages([
+      {
+        role: 'bot',
+        text: `¡Perfecto! Vas a reservar “${serviceLabel}”. ¿Quieres añadir algún servicio más, o seguimos?`,
+        key: mkKey(),
+      },
+    ]);
+  }, [initialService, started, flow.nodes, services]);
 
   const isLopdNode = currentNode?.action === 'collect_lopd_consent';
   const showSlots = slots.length > 0 && !loadingSlots;
