@@ -41,46 +41,47 @@ export function Testimonials() {
   const t = TESTIMONIALS[active];
 
   return (
-    <section id="testimonios" className="relative px-5 py-20 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-card/30 to-background" aria-hidden />
+    <section id="testimonios" className="relative px-5 py-20 sm:py-24 bg-background">
+      <div className="relative mx-auto max-w-2xl">
+        <div className="mb-10 flex flex-col items-center text-center gap-3">
+          <span className="amg-stripes" aria-hidden>
+            <span /><span /><span />
+          </span>
+          <p className="eyebrow">Opiniones</p>
+          <h2 className="h2">Quien viene, vuelve.</h2>
+        </div>
 
-      <div className="relative z-10 mx-auto max-w-2xl text-center">
-        <p className="mb-2 text-xs font-mono text-primary tracking-[0.2em] uppercase">Opiniones</p>
-        <h2 className="text-3xl font-bold tracking-tight mb-10">
-          Lo que dicen <span className="gradient-text">nuestros clientes</span>
-        </h2>
-
-        {/* Testimonial card */}
-        <div className="relative min-h-[200px] flex items-center justify-center">
+        <div className="relative min-h-[220px] flex items-center justify-center">
           <AnimatePresence mode="wait">
             <motion.div
               key={active}
               {...MOTION.slideUp}
-              exit={{ opacity: 0, y: -16 }}
-              className="glass-strong rounded-[--radius-xl] p-8 border border-border/50 w-full"
+              exit={{ opacity: 0, y: -12 }}
+              className="ticket relative overflow-hidden p-8 w-full"
             >
-              <Quote className="h-6 w-6 text-primary/40 mx-auto mb-4" aria-hidden />
+              <div className="amg-edge" aria-hidden />
+              <div className="pl-3">
+                <Quote className="h-6 w-6 text-primary mx-auto mb-3" aria-hidden />
 
-              {/* Stars */}
-              <div className="flex justify-center gap-0.5 mb-4" aria-label={`Valoración: ${t.rating} de 5 estrellas`}>
-                {Array.from({ length: t.rating }).map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden />
-                ))}
-              </div>
+                <div className="flex justify-center gap-0.5 mb-4" aria-label={`Valoración: ${t.rating} de 5 estrellas`}>
+                  {Array.from({ length: t.rating }).map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-[--brand-amber] text-[--brand-amber]" aria-hidden />
+                  ))}
+                </div>
 
-              <blockquote className="text-base text-foreground/90 leading-relaxed mb-6">
-                &ldquo;{t.text}&rdquo;
-              </blockquote>
+                <blockquote className="text-base text-foreground leading-relaxed mb-6 text-center">
+                  &ldquo;{t.text}&rdquo;
+                </blockquote>
 
-              <div className="flex flex-col items-center gap-1">
-                <p className="font-semibold text-sm">{t.name}</p>
-                <p className="text-xs text-muted-foreground font-mono">{t.service}</p>
+                <div className="flex flex-col items-center gap-1">
+                  <p className="font-semibold text-sm">{t.name}</p>
+                  <p className="meta">{t.service}</p>
+                </div>
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* Dot navigation */}
         <div className="flex justify-center gap-2 mt-6" role="tablist" aria-label="Testimonios">
           {TESTIMONIALS.map((_, i) => (
             <button
@@ -90,10 +91,10 @@ export function Testimonials() {
               aria-selected={i === active}
               aria-label={`Testimonio ${i + 1}`}
               onClick={() => setActive(i)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              className={`h-2 rounded-full transition-all duration-300 ${
                 i === active
-                  ? 'bg-primary w-5'
-                  : 'bg-border/60 hover:bg-muted-foreground/40'
+                  ? 'bg-primary w-6'
+                  : 'bg-border hover:bg-[--border-strong] w-2'
               }`}
             />
           ))}

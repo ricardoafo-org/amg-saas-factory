@@ -12,11 +12,14 @@ import { bookingFixture } from './fixtures/booking.fixture';
  * the test handles both branches gracefully.
  */
 test.describe('Chatbot — oil change booking golden path', () => {
-  test('oil change booking reaches LOPD consent step', async ({ page }) => {
+  test('oil change booking reaches LOPD consent step', async ({ page, context }) => {
     const home = new HomePage(page);
     const chatbot = new ChatbotPage(page);
     const fix = bookingFixture.oilChange;
 
+    await context.addInitScript(() => {
+      try { localStorage.setItem('amg_cookie_consent', JSON.stringify({ analytics: false, marketing: false })); } catch {}
+    });
     await home.open();
 
     // Open chatbot via FAB
@@ -27,17 +30,19 @@ test.describe('Chatbot — oil change booking golden path', () => {
     // Welcome message
     await expect(page.getByText(/Hola, soy el asistente/i)).toBeVisible({ timeout: 5000 });
 
+    const dialog = page.getByRole('dialog', { name: /Asistente de reservas/i });
+
     // Step 1: Start booking
-    await page.getByRole('button', { name: /Reservar cita/i }).click();
+    await dialog.getByRole('button', { name: /Reservar cita/i }).click();
     await expect(page.getByText(/servicios necesitas/i)).toBeVisible({ timeout: 5000 });
 
     // Step 2: Select service (multi-select)
-    await page.getByRole('button', { name: fix.service }).click();
-    await page.getByRole('button', { name: /Confirmar selección/i }).click();
+    await dialog.getByRole('button', { name: fix.service }).click();
+    await dialog.getByRole('button', { name: /Confirmar selección/i }).click();
 
     // Step 3: Service summary → continue
-    await expect(page.getByRole('button', { name: /Continuar con la reserva/i })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: /Continuar con la reserva/i }).click();
+    await expect(dialog.getByRole('button', { name: /Continuar con la reserva/i })).toBeVisible({ timeout: 5000 });
+    await dialog.getByRole('button', { name: /Continuar con la reserva/i }).click();
 
     // Step 4: Enter plate
     await expect(page.getByPlaceholder(/Escribe aquí/i)).toBeVisible({ timeout: 5000 });
@@ -99,8 +104,8 @@ test.describe('Chatbot — oil change booking golden path', () => {
     const checkbox = page.locator('input[type="checkbox"]').first();
     await expect(checkbox).not.toBeChecked();
 
-    // After checking → confirm button becomes enabled
-    await checkbox.check();
+    // After checking → confirm button becomes enabled (sr-only input — click label)
+    await page.locator('label').filter({ hasText: /Acepto el tratamiento/i }).click();
     await expect(confirmBtn).toBeEnabled();
   });
 });

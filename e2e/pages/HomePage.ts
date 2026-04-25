@@ -30,10 +30,10 @@ export class HomePage extends BasePage {
   }
 
   getWhatsappLink(): Locator {
-    return this.page.getByRole('link', { name: /WhatsApp/i });
+    return this.page.getByRole('link', { name: /WhatsApp/i }).first();
   }
 
   getPhoneLink(): Locator {
-    return this.page.getByRole('link', { name: /968/ });
+    return this.page.getByRole('link', { name: /968/ }).first();
   }
 }

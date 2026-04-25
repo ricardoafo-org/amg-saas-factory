@@ -21,7 +21,7 @@ test.describe('ITV Countdown widget', () => {
 
   test('shows guidance card with registration date hint', async ({ page }) => {
     await itv.openWidget();
-    await expect(page.getByText(/primera matriculación/i)).toBeVisible({ timeout: 4000 });
+    await expect(page.getByText(/primera matriculación/i).first()).toBeVisible({ timeout: 4000 });
   });
 
   test('calculate button is disabled when no date entered', async ({ page }) => {

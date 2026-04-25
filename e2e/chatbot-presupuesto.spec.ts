@@ -12,7 +12,10 @@ import { bookingFixture } from './fixtures/booking.fixture';
  * Tests stop before save_quote to avoid real PocketBase mutations.
  */
 test.describe('Chatbot — presupuesto flow', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, context }) => {
+    await context.addInitScript(() => {
+      try { localStorage.setItem('amg_cookie_consent', JSON.stringify({ analytics: false, marketing: false })); } catch {}
+    });
     await page.goto('/');
     // Open FAB
     await page.getByRole('button', { name: /Abrir asistente de reservas/i }).click();
@@ -28,19 +31,21 @@ test.describe('Chatbot — presupuesto flow', () => {
   });
 
   test('selecting presupuesto shows service type options', async ({ page }) => {
-    await page.getByRole('button', { name: /Solicitar presupuesto/i }).click();
+    const dialog = page.getByRole('dialog', { name: /Asistente de reservas/i });
+    await dialog.getByRole('button', { name: /Solicitar presupuesto/i }).click();
     await expect(page.getByText(/tipo de servicio/i)).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('button', { name: /Mecánica/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Electrónica/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Carrocería/i })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Mecánica', exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Electrónica', exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Carrocería', exact: true })).toBeVisible();
   });
 
   test('presupuesto flow collects vehicle description', async ({ page }) => {
     const fix = bookingFixture.presupuesto;
+    const dialog = page.getByRole('dialog', { name: /Asistente de reservas/i });
 
-    await page.getByRole('button', { name: /Solicitar presupuesto/i }).click();
-    await expect(page.getByRole('button', { name: fix.serviceType })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: fix.serviceType }).click();
+    await dialog.getByRole('button', { name: /Solicitar presupuesto/i }).click();
+    await expect(dialog.getByRole('button', { name: fix.serviceType, exact: true })).toBeVisible({ timeout: 5000 });
+    await dialog.getByRole('button', { name: fix.serviceType, exact: true }).click();
 
     // Vehicle description prompt
     await expect(page.getByText(/marca, modelo y año/i)).toBeVisible({ timeout: 5000 });
@@ -53,12 +58,13 @@ test.describe('Chatbot — presupuesto flow', () => {
 
   test('presupuesto flow reaches LOPD consent with unchecked checkbox', async ({ page }) => {
     const fix = bookingFixture.presupuesto;
+    const dialog = page.getByRole('dialog', { name: /Asistente de reservas/i });
 
     // Navigate through the full presupuesto flow
-    await page.getByRole('button', { name: /Solicitar presupuesto/i }).click();
+    await dialog.getByRole('button', { name: /Solicitar presupuesto/i }).click();
 
-    await expect(page.getByRole('button', { name: fix.serviceType })).toBeVisible({ timeout: 5000 });
-    await page.getByRole('button', { name: fix.serviceType }).click();
+    await expect(dialog.getByRole('button', { name: fix.serviceType, exact: true })).toBeVisible({ timeout: 5000 });
+    await dialog.getByRole('button', { name: fix.serviceType, exact: true }).click();
 
     // Vehicle
     await expect(page.getByPlaceholder(/Escribe aquí/i)).toBeVisible({ timeout: 5000 });
@@ -95,8 +101,8 @@ test.describe('Chatbot — presupuesto flow', () => {
     const checkbox = page.locator('input[type="checkbox"]').first();
     await expect(checkbox).not.toBeChecked();
 
-    // Check the box → confirm becomes enabled
-    await checkbox.check();
+    // Check the box (sr-only input — click label) → confirm becomes enabled
+    await page.locator('label').filter({ hasText: /Acepto el tratamiento/i }).click();
     await expect(confirmBtn).toBeEnabled();
   });
 });
