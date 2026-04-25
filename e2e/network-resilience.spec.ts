@@ -103,4 +103,117 @@ test.describe('Network resilience', () => {
     expect(heroText).toBeTruthy();
     expect(heroText).not.toMatch(/undefined|null|error/i);
   });
+
+  test('saveAppointment 500 → "hubo un error" message renders in chat', async ({ page }) => {
+    // Pre-dismiss cookie banner so it doesn't interfere
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem(
+          'amg_cookie_consent',
+          JSON.stringify({ analytics: false, marketing: false }),
+        );
+      } catch {}
+    });
+
+    // Intercept Next.js server action calls and return 500 for saveAppointment
+    await page.route('**/_next/static/chunks/**', (route) => route.continue());
+    await page.route('**', (route) => {
+      const req = route.request();
+      const postData = req.postData() ?? '';
+      // Server actions are POSTed to the page URL; detect saveAppointment via body content
+      if (
+        req.method() === 'POST' &&
+        (postData.includes('saveAppointment') || postData.includes('fechaPreferida'))
+      ) {
+        return route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Internal Server Error' }),
+        });
+      }
+      return route.continue();
+    });
+
+    await page.goto('/');
+
+    // Open chatbot
+    await page.getByRole('button', { name: /Abrir asistente de reservas/i }).click();
+    await page.getByRole('button', { name: /Iniciar conversación/i }).waitFor({ timeout: 5000 });
+    await page.getByRole('button', { name: /Iniciar conversación/i }).click();
+
+    const dialog = page.getByRole('dialog', { name: /Asistente de reservas/i });
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    // Navigate to the booking path
+    await dialog.getByRole('button', { name: /Reservar cita/i }).click();
+    await expect(page.getByText(/servicios necesitas/i)).toBeVisible({ timeout: 5000 });
+
+    // Select a service
+    await dialog.getByRole('button', { name: /Cambio de aceite/i }).click();
+    await dialog.getByRole('button', { name: /Confirmar selección/i }).click();
+
+    // Continue past service summary
+    await expect(dialog.getByRole('button', { name: /Continuar con la reserva/i })).toBeVisible({
+      timeout: 5000,
+    });
+    await dialog.getByRole('button', { name: /Continuar con la reserva/i }).click();
+
+    // Enter plate
+    await page.getByPlaceholder(/Escribe aquí/i).waitFor({ timeout: 5000 });
+    await page.getByPlaceholder(/Escribe aquí/i).fill('1234ABC');
+    await page.keyboard.press('Enter');
+
+    // Select fuel
+    await expect(page.getByRole('button', { name: /Gasolina/i })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: /Gasolina/i }).click();
+
+    // Wait for slots or phone fallback
+    const hasNameInput = await page
+      .getByPlaceholder(/Escribe aquí/i)
+      .isVisible()
+      .catch(() => false);
+    const hasPhoneFallback = await page
+      .getByText(/llámanos/i)
+      .isVisible()
+      .catch(() => false);
+
+    if (hasPhoneFallback) {
+      // PB unavailable — can't reach consent step; skip
+      test.info().annotations.push({
+        type: 'warning',
+        description: 'PocketBase unavailable — slot step skipped in network-resilience test',
+      });
+      return;
+    }
+
+    // If slots showed, pick the first one; otherwise go straight to name
+    const slotButtons = page.locator('button').filter({ hasText: /^\d{2}:\d{2}/ });
+    if ((await slotButtons.count()) > 0) {
+      await slotButtons.first().click();
+    }
+
+    // Fill contact details
+    await page.getByPlaceholder(/Escribe aquí/i).waitFor({ timeout: 5000 });
+    await page.getByPlaceholder(/Escribe aquí/i).fill('Test Usuario');
+    await page.keyboard.press('Enter');
+
+    await page.getByPlaceholder(/Escribe aquí/i).waitFor({ timeout: 5000 });
+    await page.getByPlaceholder(/Escribe aquí/i).fill('+34 600 111 222');
+    await page.keyboard.press('Enter');
+
+    await page.getByPlaceholder(/Escribe aquí/i).waitFor({ timeout: 5000 });
+    await page.getByPlaceholder(/Escribe aquí/i).fill('qa-network@amg-talleres.test');
+    await page.keyboard.press('Enter');
+
+    // Accept LOPD consent
+    const confirmBtn = dialog.getByRole('button', { name: /Confirmar y continuar/i });
+    await confirmBtn.waitFor({ timeout: 5000 });
+    await page.locator('label').filter({ hasText: /Acepto el tratamiento/i }).click();
+    await confirmBtn.click();
+
+    // The saveAppointment call will return 500 — chatbot must show the graceful error message
+    await expect(
+      page.getByText(/hubo un error al registrar tu cita/i),
+    ).toBeVisible({ timeout: 10_000 });
+  });
 });
