@@ -30,9 +30,9 @@ export function Footer({ config }: { config: LocalBusiness }) {
         {/* Taller column */}
         <div>
           <h4>Taller</h4>
-          <a href="#nosotros">Sobre nosotros</a>
-          <a href="#nosotros">Cómo trabajamos</a>
-          <a href="#visitanos">Visítanos</a>
+          <a href="/sobre-nosotros">Sobre nosotros</a>
+          <a href="/como-trabajamos">Cómo trabajamos</a>
+          <a href="/#visitanos">Visítanos</a>
         </div>
 
         {/* Legal column */}
