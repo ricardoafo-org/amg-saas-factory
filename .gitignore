@@ -14,12 +14,23 @@ node_modules/
 
 # PocketBase data
 pb_data/
-pb_migrations/
+
+# Auto-generated PB collection-creation migrations (per-environment IDs).
+# Hand-written migrations (named e.g. YYYYMMDD_*.js or *_add_*.js) are tracked.
+pb_migrations/*_created_*.js
 
 # Build
 dist/
 out/
 *.tsbuildinfo
+
+# next-pwa / serwist generated service worker artifacts
+public/sw.js
+public/swe-worker-*.js
+public/workbox-*.js
+
+# Stray local artifacts
+ssh-keygen
 
 # Test artifacts
 playwright-report/
