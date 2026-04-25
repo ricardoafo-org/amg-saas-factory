@@ -7,10 +7,10 @@ import {
   sendSms,
   sendBulkSms,
   searchCustomers,
-  SMS_TEMPLATES,
 } from '@/actions/sms';
-import type { SmsTemplateId, CustomerSearchResult, SmsSuggestion } from '@/actions/sms';
-import { interpolateTemplate } from '@/lib/sms/helpers';
+import type { CustomerSearchResult, SmsSuggestion } from '@/actions/sms';
+import { SMS_TEMPLATES, interpolateTemplate } from '@/lib/sms/helpers';
+import type { SmsTemplateId } from '@/lib/sms/helpers';
 
 const MAX_CHARS = 160;
 const MAX_BULK = 50;
