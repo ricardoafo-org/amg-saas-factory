@@ -1,5 +1,5 @@
 import { getStaffCtx } from '@/lib/auth';
-import { addBusinessDays } from '@/actions/admin/quotes';
+import { addBusinessDays } from '@/lib/quotes/helpers';
 import { QuoteForm } from '@/core/components/admin/QuoteForm';
 
 export default async function NewQuotePage() {
