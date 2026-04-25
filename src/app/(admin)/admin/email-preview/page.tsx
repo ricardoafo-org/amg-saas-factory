@@ -12,7 +12,7 @@ export default function EmailPreviewIndexPage() {
       <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '8px' }}>
         Previsualización de plantillas de email
       </h1>
-      <p style={{ color: '#666', fontSize: '14px', marginBottom: '32px' }}>
+      <p style={{ color: 'var(--muted-fg)', fontSize: '14px', marginBottom: '32px' }}>
         Datos de prueba realistas. No se envían emails desde esta página.
       </p>
 
@@ -24,17 +24,17 @@ export default function EmailPreviewIndexPage() {
             style={{
               display: 'block',
               padding: '16px 20px',
-              border: '1px solid #e5e5e5',
+              border: '1px solid var(--border)',
               borderRadius: '8px',
               textDecoration: 'none',
               color: 'inherit',
               transition: 'border-color 0.15s, box-shadow 0.15s',
             }}
           >
-            <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px', color: '#111' }}>
+            <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px', color: 'var(--fg)' }}>
               {t.label}
             </div>
-            <div style={{ fontSize: '13px', color: '#666' }}>{t.description}</div>
+            <div style={{ fontSize: '13px', color: 'var(--muted-fg)' }}>{t.description}</div>
           </a>
         ))}
       </div>

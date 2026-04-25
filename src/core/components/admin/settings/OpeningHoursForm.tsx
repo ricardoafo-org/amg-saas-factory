@@ -121,7 +121,7 @@ export function OpeningHoursForm({ initialHoursJson }: Props) {
                   >
                     <span
                       className={cn(
-                        'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow',
+                        'pointer-events-none inline-block h-4 w-4 rounded-full bg-card shadow',
                         'transform transition-transform',
                         day.open ? 'translate-x-4' : 'translate-x-0',
                       )}

@@ -51,7 +51,7 @@ export function RevenueBarChart({ data }: Props) {
                 y1={y}
                 x2={svgWidth}
                 y2={y}
-                stroke="hsl(226 25% 14%)"
+                stroke="var(--border)"
                 strokeWidth={1}
               />
             );
@@ -82,7 +82,7 @@ export function RevenueBarChart({ data }: Props) {
                   y={ivaY}
                   width={barWidth}
                   height={Math.max(ivaHeight, 0)}
-                  fill="hsl(22 100% 55%)"
+                  fill="var(--accent)"
                   rx={2}
                   className="cursor-pointer transition-opacity hover:opacity-80"
                   onMouseEnter={(e) => {
@@ -101,7 +101,7 @@ export function RevenueBarChart({ data }: Props) {
                   y={baseY}
                   width={barWidth}
                   height={Math.max(baseHeight, 0)}
-                  fill="hsl(349 90% 52%)"
+                  fill="var(--primary)"
                   rx={2}
                   className="cursor-pointer transition-opacity hover:opacity-80"
                   onMouseEnter={(e) => {
@@ -120,7 +120,7 @@ export function RevenueBarChart({ data }: Props) {
                   y={CHART_HEIGHT + 18}
                   textAnchor="middle"
                   fontSize={10}
-                  fill="hsl(210 10% 50%)"
+                  fill="var(--muted-fg)"
                 >
                   {dayNum}
                 </text>
@@ -129,7 +129,7 @@ export function RevenueBarChart({ data }: Props) {
                   y={CHART_HEIGHT + 30}
                   textAnchor="middle"
                   fontSize={9}
-                  fill="hsl(210 10% 40%)"
+                  fill="var(--muted-fg)"
                 >
                   {weekday}
                 </text>
@@ -146,8 +146,8 @@ export function RevenueBarChart({ data }: Props) {
                 width={120}
                 height={68}
                 rx={6}
-                fill="hsl(226 35% 7%)"
-                stroke="hsl(226 25% 14%)"
+                fill="var(--card)"
+                stroke="var(--border)"
                 strokeWidth={1}
               />
               <text
@@ -155,7 +155,7 @@ export function RevenueBarChart({ data }: Props) {
                 y={Math.max(tooltip.y - 54, 22)}
                 textAnchor="middle"
                 fontSize={10}
-                fill="hsl(210 20% 96%)"
+                fill="var(--fg)"
                 fontWeight={600}
               >
                 {tooltip.item.date}
@@ -165,7 +165,7 @@ export function RevenueBarChart({ data }: Props) {
                 y={Math.max(tooltip.y - 38, 38)}
                 textAnchor="middle"
                 fontSize={10}
-                fill="hsl(349 90% 52%)"
+                fill="var(--primary)"
               >
                 Base: {tooltip.item.base.toFixed(2)} €
               </text>
@@ -174,7 +174,7 @@ export function RevenueBarChart({ data }: Props) {
                 y={Math.max(tooltip.y - 22, 54)}
                 textAnchor="middle"
                 fontSize={10}
-                fill="hsl(22 100% 55%)"
+                fill="var(--accent)"
               >
                 IVA: {tooltip.item.iva.toFixed(2)} €
               </text>
@@ -183,7 +183,7 @@ export function RevenueBarChart({ data }: Props) {
                 y={Math.max(tooltip.y - 6, 70)}
                 textAnchor="middle"
                 fontSize={10}
-                fill="hsl(210 20% 96%)"
+                fill="var(--fg)"
                 fontWeight={600}
               >
                 Total: {tooltip.item.total.toFixed(2)} €

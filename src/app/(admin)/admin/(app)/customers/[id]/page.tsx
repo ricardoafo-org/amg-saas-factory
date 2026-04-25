@@ -14,7 +14,7 @@ type Props = {
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   pending: { label: 'Pendiente', className: 'bg-warning/10 text-warning border-warning/20' },
   confirmed: { label: 'Confirmada', className: 'bg-info/10 text-info border-info/20' },
-  in_progress: { label: 'En taller', className: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+  in_progress: { label: 'En taller', className: 'bg-[var(--status-in-progress)]/15 text-[var(--status-in-progress)] border-[var(--status-in-progress)]/30' },
   ready: { label: 'Lista', className: 'bg-success/10 text-success border-success/20' },
   delivered: { label: 'Entregada', className: 'bg-muted text-muted-foreground border-border' },
   cancelled: { label: 'Cancelada', className: 'bg-destructive/10 text-destructive border-destructive/20' },

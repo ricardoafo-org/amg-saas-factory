@@ -19,8 +19,8 @@ export function CopyHtmlButton({ html }: { html: string }) {
     <button
       onClick={handleCopy}
       style={{
-        background: copied ? '#16a34a' : '#374151',
-        color: '#fff',
+        background: copied ? 'var(--success)' : 'var(--secondary)',
+        color: copied ? 'var(--color-success-foreground)' : 'var(--secondary-fg)',
         border: 'none',
         borderRadius: '4px',
         padding: '6px 14px',
