@@ -51,12 +51,12 @@ export async function saveAppointment(payload: AppointmentPayload) {
   });
 
   const ivaConfig = await pb.collection('config').getFirstListItem(
-    `tenant_id = "${payload.tenantId}" && key = "iva_rate"`,
+    pb.filter('tenant_id = {:tenantId} && key = "iva_rate"', { tenantId: payload.tenantId }),
   );
   const ivaRate = parseFloat(ivaConfig['value']);
 
   const businessNameConfig = await pb.collection('config').getFirstListItem(
-    `tenant_id = "${payload.tenantId}" && key = "business_name"`,
+    pb.filter('tenant_id = {:tenantId} && key = "business_name"', { tenantId: payload.tenantId }),
   ).catch(() => null);
   const businessName = businessNameConfig ? String(businessNameConfig['value']) : clientConfig.businessName;
 
@@ -64,7 +64,10 @@ export async function saveAppointment(payload: AppointmentPayload) {
   let baseAmount = 0;
   const serviceNames: string[] = [];
   if (payload.serviceIds.length > 0) {
-    const filter = `tenant_id = "${payload.tenantId}" && (${payload.serviceIds.map((id) => `id = "${id}"`).join(' || ')})`;
+    const placeholders = payload.serviceIds.map((_, i) => `id = {:id${i}}`).join(' || ');
+    const params: Record<string, string> = { tenantId: payload.tenantId };
+    payload.serviceIds.forEach((id, i) => { params[`id${i}`] = id; });
+    const filter = pb.filter(`tenant_id = {:tenantId} && (${placeholders})`, params);
     const serviceRecords = await pb.collection('services').getList(1, 20, { filter }).catch(() => null);
     if (serviceRecords) {
       for (const rec of serviceRecords.items) {
@@ -243,12 +246,12 @@ export async function saveQuoteRequest(payload: QuotePayload) {
   });
 
   const ivaConfig = await pb.collection('config').getFirstListItem(
-    `tenant_id = "${payload.tenantId}" && key = "iva_rate"`,
+    pb.filter('tenant_id = {:tenantId} && key = "iva_rate"', { tenantId: payload.tenantId }),
   );
   const ivaRate = parseFloat(ivaConfig['value']);
 
   const businessNameConfig = await pb.collection('config').getFirstListItem(
-    `tenant_id = "${payload.tenantId}" && key = "business_name"`,
+    pb.filter('tenant_id = {:tenantId} && key = "business_name"', { tenantId: payload.tenantId }),
   ).catch(() => null);
   const businessName = businessNameConfig ? String(businessNameConfig['value']) : clientConfig.businessName;
 
@@ -328,7 +331,10 @@ export async function resolveFlowTokens(
   const keys = [...text.matchAll(/\{\{config\.(\w+)\}\}/g)].map((m) => m[1]);
   if (keys.length === 0) return text;
 
-  const filter = `tenant_id = "${tenantId}" && (${keys.map((k) => `key = "${k}"`).join(' || ')})`;
+  const placeholders = keys.map((_, i) => `key = {:k${i}}`).join(' || ');
+  const params: Record<string, string> = { tenantId };
+  keys.forEach((k, i) => { params[`k${i}`] = k!; });
+  const filter = pb.filter(`tenant_id = {:tenantId} && (${placeholders})`, params);
   const records = await pb.collection('config').getList(1, 50, { filter });
   const map = Object.fromEntries(records.items.map((r) => [r['key'], r['value']]));
 

@@ -95,7 +95,7 @@ vi.mock('@/lib/pb', () => ({
 }));
 
 // Import after mocks are registered
-import { saveAppointment } from '../chatbot';
+import { saveAppointment, resolveFlowTokens } from '../chatbot';
 import { getPb } from '@/lib/pb';
 
 // ── Test helpers ─────────────────────────────────────────────────────────────
@@ -415,9 +415,12 @@ describe('saveAppointment — failure handling', () => {
 
     await saveAppointment({ ...BASE_PAYLOAD, customerEmail: injectionEmail });
 
-    // pb.filter must have been called (parameterized path taken)
-    expect(mockPb.filter).toHaveBeenCalledOnce();
-    const [template, params] = mockPb.filter.mock.calls[0] as [string, Record<string, string>];
+    // pb.filter must have been called for the customer lookup (the parameterised path)
+    const customerLookupCall = (mockPb.filter.mock.calls as Array<[string, Record<string, string>]>).find(
+      ([template]) => template.includes('email = {:email}'),
+    );
+    expect(customerLookupCall).toBeDefined();
+    const [template, params] = customerLookupCall!;
 
     // Template must use named placeholders — never raw interpolation
     expect(template).toContain('{:tenantId}');
@@ -448,5 +451,96 @@ describe('saveAppointment — failure handling', () => {
     await expect(saveAppointment(BASE_PAYLOAD)).resolves.not.toThrow();
     expect(appointmentsCreate).toHaveBeenCalledOnce();
     expect(customersUpdate).not.toHaveBeenCalled();
+  });
+});
+
+// SEV-1: S4 (PocketBase filter injection — BUG-015)
+describe('saveAppointment — filter parameterisation (BUG-015 / S4)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('does NOT raw-interpolate payload.tenantId into the iva_rate config filter', async () => {
+    const injectionTenant = 'tenant-amg" || tenant_id != "';
+    const mockPb = makeMockPb({
+      configGetFirstListItem: makeConfigGetFirstListItem(),
+      customersGetFirstListItem: vi.fn().mockResolvedValue({ id: 'cust-1' }),
+      customersGetOne: vi.fn().mockResolvedValue({ total_visits: 0, total_spent: 0 }),
+      customersUpdate: vi.fn().mockResolvedValue({}),
+    });
+    vi.mocked(getPb).mockResolvedValue(mockPb as never);
+
+    await saveAppointment({ ...BASE_PAYLOAD, tenantId: injectionTenant });
+
+    // Every pb.filter() invocation must use named placeholders, never raw values in the template
+    const calls = mockPb.filter.mock.calls as Array<[string, Record<string, string>]>;
+    expect(calls.length).toBeGreaterThan(0);
+    for (const [template, params] of calls) {
+      expect(template).not.toContain(injectionTenant);
+      expect(template).toContain('{:tenantId}');
+      expect(params['tenantId']).toBe(injectionTenant);
+    }
+  });
+
+  it('does NOT raw-interpolate payload.serviceIds into the services filter', async () => {
+    const injectionServiceId = 'svc-1" || tenant_id != "';
+    const servicesGetList = vi.fn().mockResolvedValue({ items: [] });
+    const mockPb = makeMockPb({
+      configGetFirstListItem: makeConfigGetFirstListItem(),
+      customersGetFirstListItem: vi.fn().mockResolvedValue({ id: 'cust-1' }),
+      customersGetOne: vi.fn().mockResolvedValue({ total_visits: 0, total_spent: 0 }),
+      customersUpdate: vi.fn().mockResolvedValue({}),
+      servicesGetList,
+    });
+    vi.mocked(getPb).mockResolvedValue(mockPb as never);
+
+    await saveAppointment({ ...BASE_PAYLOAD, serviceIds: ['svc-good', injectionServiceId] });
+
+    // Find the pb.filter() call that built the services filter (the one with id-placeholders)
+    const servicesCall = (mockPb.filter.mock.calls as Array<[string, Record<string, string>]>).find(
+      ([template]) => template.includes('id = {:id'),
+    );
+    expect(servicesCall).toBeDefined();
+    const [template, params] = servicesCall!;
+
+    // Template must use {:idN} placeholders for every service id, never the literal id
+    expect(template).toContain('id = {:id0}');
+    expect(template).toContain('id = {:id1}');
+    expect(template).not.toContain(injectionServiceId);
+    expect(template).not.toContain('svc-good');
+
+    // Params object holds the raw values — that's fine; PB SDK escapes them
+    expect(params['id0']).toBe('svc-good');
+    expect(params['id1']).toBe(injectionServiceId);
+    expect(params['tenantId']).toBe(BASE_PAYLOAD.tenantId);
+  });
+});
+
+// SEV-1: S4 (PocketBase filter injection — BUG-015)
+describe('resolveFlowTokens — filter parameterisation (BUG-015 / S4)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('does NOT raw-interpolate tenantId into the config-token filter', async () => {
+    const injectionTenant = 'tenant-amg" || tenant_id != "';
+    const configGetList = vi.fn().mockResolvedValue({ items: [] });
+    const mockPb = {
+      filter: vi.fn((template: string, params: Record<string, string>) =>
+        template.replace(/\{:(\w+)\}/g, (_, key) => params[key] ?? ''),
+      ),
+      collection: vi.fn(() => ({ getList: configGetList })),
+    };
+    vi.mocked(getPb).mockResolvedValue(mockPb as never);
+
+    await resolveFlowTokens('Hola {{config.business_name}}', injectionTenant);
+
+    expect(mockPb.filter).toHaveBeenCalledOnce();
+    const [template, params] = mockPb.filter.mock.calls[0] as [string, Record<string, string>];
+    expect(template).toContain('{:tenantId}');
+    expect(template).toContain('key = {:k0}');
+    expect(template).not.toContain(injectionTenant);
+    expect(params['tenantId']).toBe(injectionTenant);
+    expect(params['k0']).toBe('business_name');
   });
 });
