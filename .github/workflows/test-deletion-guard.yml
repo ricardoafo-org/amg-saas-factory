@@ -1,0 +1,94 @@
+name: test-deletion-guard
+
+# Fails (CI red, blocks merge) if any *.test.ts|tsx or *.spec.ts|tsx file is DELETED
+# in a PR without an accompanying docs/specs/FEAT-XXX*.md change in the same PR.
+#
+# Design notes:
+#   - Uses `git diff --name-status origin/${{ github.base_ref }}...HEAD` so that
+#     git renames (status R) are NOT treated as deletions (status D).
+#   - A file moved foo.test.ts → bar.test.ts appears as R (rename), not D, and passes.
+#   - A legitimate test retirement MUST include a docs/specs/FEAT-XXX*.md change in the
+#     same PR to document the intent. Without that, the workflow exits non-zero.
+#   - Keep this workflow in its own file so the failure message is unambiguous in CI.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  test-deletion-guard:
+    name: test-deletion-guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history so git diff can compare against the base branch
+          fetch-depth: 0
+
+      - name: Detect deleted test files and require spec change
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_REF="${{ github.base_ref }}"
+          echo "Base ref: $BASE_REF"
+
+          # Fetch the base branch so git diff can compare against it
+          git fetch origin "$BASE_REF" --depth=1
+
+          # Collect files changed in this PR
+          # --name-status: D = deleted, R = rename (not a deletion), M = modified, A = added
+          DIFF=$(git diff --name-status "origin/${BASE_REF}...HEAD")
+          echo "--- diff (name-status) ---"
+          echo "$DIFF"
+          echo "---"
+
+          # Extract DELETED test files only (lines starting with D, followed by a test/spec path)
+          # Renames start with R (e.g. R100) and are excluded by the ^D anchor.
+          DELETED_TESTS=$(echo "$DIFF" \
+            | grep -E '^D\s+.*\.(test|spec)\.(ts|tsx)$' \
+            | awk '{print $2}' \
+            || true)
+
+          if [ -z "$DELETED_TESTS" ]; then
+            echo "No test files deleted in this PR. Guard passed."
+            exit 0
+          fi
+
+          echo "Deleted test files found:"
+          echo "$DELETED_TESTS"
+
+          # Check whether the PR also includes a docs/specs/FEAT-XXX*.md change.
+          # Any status (A/M/D/R) counts — the PR must simply touch a spec file.
+          SPEC_CHANGES=$(echo "$DIFF" \
+            | grep -E '\bdocs/specs/FEAT-[0-9]+[^[:space:]]*\.md$' \
+            | awk '{print $2}' \
+            || true)
+
+          if [ -z "$SPEC_CHANGES" ]; then
+            echo ""
+            echo "============================================================"
+            echo "ERROR: Test deletion without a spec change."
+            echo ""
+            echo "The following test file(s) were deleted in this PR:"
+            echo "$DELETED_TESTS" | sed 's/^/  - /'
+            echo ""
+            echo "Deleting a test file requires an accompanying change to a"
+            echo "docs/specs/FEAT-XXX*.md file that documents why the test"
+            echo "is being retired (e.g. FEAT-099-retire-foo.md)."
+            echo ""
+            echo "If you renamed the test file, verify the rename was committed"
+            echo "as a git rename (R status) rather than a delete+add pair."
+            echo "============================================================"
+            exit 1
+          fi
+
+          echo "Spec change(s) found alongside test deletion — guard passed."
+          echo "Spec files changed:"
+          echo "$SPEC_CHANGES" | sed 's/^/  - /'
+          exit 0
