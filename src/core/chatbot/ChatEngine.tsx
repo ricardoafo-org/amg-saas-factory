@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Check } from 'lucide-react';
+import { Send, Check } from 'lucide-react';
 import type { ChatbotFlow, FlowOption } from '@/lib/chatbot/engine';
 import type { Service } from '@/core/types/adapter';
 import { saveAppointment, saveQuoteRequest } from '@/actions/chatbot';
@@ -11,6 +11,10 @@ import { calcOilRecommendation, estimateOilDate } from '@/lib/oil';
 import { matchOptionByNlp, classifyIntent } from '@/lib/nlp/classifier';
 import { resolveWithClaude } from '@/actions/nlp';
 import { readSlotCache, writeSlotCache, clearSlotCache } from '@/core/chatbot/slot-cache';
+import { MOTION } from '@/lib/motion';
+import { VehicleCard } from '@/core/chatbot/components/VehicleCard';
+import { SummaryCard, type SummaryData } from '@/core/chatbot/components/SummaryCard';
+import { ConfirmCard } from '@/core/chatbot/components/ConfirmCard';
 
 type FlowNodeAny = {
   message?: string;
@@ -22,7 +26,11 @@ type FlowNodeAny = {
   next?: string;
 };
 
-type MessageItem = { role: 'bot' | 'user'; text: string; key: string };
+type MessageItem =
+  | { role: 'bot' | 'user'; text: string; key: string; kind?: undefined }
+  | { role: 'bot'; kind: 'vehicle'; key: string; text?: undefined; plate: string; model: string; year: string; km: string }
+  | { role: 'bot'; kind: 'summary'; key: string; text?: undefined; summaryData: SummaryData }
+  | { role: 'bot'; kind: 'confirmed'; key: string; text?: undefined; date: string; time: string };
 
 type Props = {
   flow: ChatbotFlow;
@@ -197,7 +205,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
         userAgent: navigator.userAgent,
       });
       if (slotId) await bookSlot(slotId, tenantId).catch(() => null);
-      onStepChange?.(3); // step 3 = Confirmado
+      onStepChange?.(4); // step 4 = done in 5-step stepper
       if (node.next) goToNode(node.next, vars);
       else setDone(true);
     } catch {
@@ -381,10 +389,11 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
     setStarted(true);
     setSelectedServiceValues([initialService]);
     setCurrentNodeId('ask_service');
+    // Spec: greeting changes when initialService is set (FEAT-029 + FEAT-033)
     setMessages([
       {
         role: 'bot',
-        text: `¡Perfecto! Vas a reservar “${serviceLabel}”. ¿Quieres añadir algún servicio más, o seguimos?`,
+        text: `¡Perfecto! Vamos con ${serviceLabel}. Empezamos por tu coche.`,
         key: mkKey(),
       },
     ]);
@@ -407,73 +416,94 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
   const confirmedTotal = confirmedBaseTotal + confirmedIva;
 
   return (
-    <div className="flex flex-col rounded-[--radius-xl] overflow-hidden w-full max-w-md mx-auto glass-strong border border-primary/15" style={{ boxShadow: '0 0 40px hsl(349 90% 52% / 0.08)' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-primary/90 to-primary/70 border-b border-primary/30">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary-foreground/20 border border-primary-foreground/30">
-            <Bot className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-primary-foreground leading-none">Asistente AMG</p>
-            <p className="text-[10px] text-primary-foreground/60 mt-0.5 font-mono">
-              {started && !done ? 'En línea' : done ? 'Conversación finalizada' : 'Listo para ayudarte'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 space-y-3 overflow-y-auto p-4 min-h-[320px] max-h-[440px] scroll-smooth">
+    <div className="flex flex-col flex-1 overflow-hidden">
+      {/* Messages — .chat-body applies muted bg + flex-col + gap */}
+      <div className="chat-body flex-1" style={{ minHeight: 300, maxHeight: 440 }}>
         {!started && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center h-full gap-4 py-8"
           >
-            <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/25 flex items-center justify-center">
-              <Bot className="h-8 w-8 text-primary/70" />
-            </div>
-            <div className="text-center space-y-1">
-              <p className="font-semibold text-sm">Hola, soy el asistente de {businessName}</p>
-              <p className="text-xs text-muted-foreground">Puedo ayudarte a reservar cita, calcular el cambio de aceite y mucho más.</p>
+            <div className="chat-avatar" style={{ width: 48, height: 48, fontSize: 16 }}>AM</div>
+            <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--fg)' }}>Hola, soy Andrés de {businessName}</p>
+              <p style={{ fontSize: 12, color: 'var(--fg-muted)' }}>Puedo ayudarte a reservar cita en minutos.</p>
             </div>
           </motion.div>
         )}
 
         <AnimatePresence>
-          {messages.map((msg) => (
-            <motion.div
-              key={msg.key}
-              initial={{ opacity: 0, y: 8, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.2 }}
-              className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {msg.role === 'bot' && (
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center mb-0.5">
-                  <Bot className="h-3.5 w-3.5 text-primary/80" />
-                </div>
-              )}
-              <div
-                className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-primary text-primary-foreground rounded-br-sm'
-                    : 'glass border border-border/60 text-foreground rounded-bl-sm'
-                }`}
+          {messages.map((msg) => {
+            // Card kinds render inline in the message body
+            if (msg.kind === 'vehicle') {
+              return (
+                <VehicleCard
+                  key={msg.key}
+                  vehicle={{ plate: msg.plate, model: msg.model, year: msg.year, km: msg.km }}
+                  onConfirm={() => {
+                    // Advance the flow — vehicle confirmed
+                    addUserMessage('Sí, es mi coche');
+                    const nodeNow = flow.nodes[currentNodeId] as FlowNodeAny | undefined;
+                    goToNode(nodeNow?.next ?? 'load_slots');
+                  }}
+                  onReject={() => {
+                    addUserMessage('No, quiero corregirlo');
+                    addBotMessage('Introduce la matrícula correcta:', 300);
+                  }}
+                />
+              );
+            }
+
+            if (msg.kind === 'summary') {
+              return (
+                <SummaryCard
+                  key={msg.key}
+                  data={msg.summaryData}
+                  saving={saving}
+                  onConfirm={() => {
+                    // Fire handleServiceSummaryConfirm equivalent — move to next node
+                    addUserMessage('Confirmar cita');
+                    const nextNodeId = variables['_service_summary_next'] ?? currentNodeId;
+                    if (nextNodeId && nextNodeId !== 'ask_service') {
+                      goToNode(nextNodeId, variables);
+                    } else {
+                      handleServiceSummaryConfirm();
+                    }
+                  }}
+                />
+              );
+            }
+
+            if (msg.kind === 'confirmed') {
+              return (
+                <ConfirmCard key={msg.key} date={msg.date} time={msg.time} />
+              );
+            }
+
+            // Normal text bubble
+            if (msg.role === 'user') {
+              return (
+                <motion.div
+                  key={msg.key}
+                  {...MOTION.chatMessage}
+                  className="bub user"
+                >
+                  {msg.text}
+                </motion.div>
+              );
+            }
+
+            return (
+              <motion.div
+                key={msg.key}
+                {...MOTION.chatMessage}
+                className="bub"
               >
                 {msg.text}
-              </div>
-              {msg.role === 'user' && (
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-secondary border border-border flex items-center justify-center mb-0.5">
-                  <User className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-              )}
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
 
           {isTyping && (
             <motion.div
@@ -481,16 +511,12 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="flex items-end gap-2 justify-start"
+              className="bub"
+              style={{ display: 'flex', alignItems: 'center', gap: 5 }}
             >
-              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center">
-                <Bot className="h-3.5 w-3.5 text-primary/80" />
-              </div>
-              <div className="glass border border-border/60 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 typing-dot" />
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 typing-dot" />
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 typing-dot" />
-              </div>
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 typing-dot" />
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 typing-dot" />
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 typing-dot" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -506,9 +532,9 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
       {!started && (
         <div className="border-t border-border/50 p-4">
           <button
+            type="button"
             onClick={start}
             className="w-full h-11 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all duration-200"
-            style={{ boxShadow: '0 0 16px hsl(349 90% 52% / 0.2)' }}
           >
             Iniciar conversación
           </button>
@@ -535,9 +561,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
           {!saving && !loadingSlots && currentNode && (
             <motion.div
               key="input"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
+              {...MOTION.flowStep}
               className="border-t border-border/50 p-4 space-y-3"
             >
               {/* Slot picker */}
@@ -555,6 +579,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                       return (
                         <button
                           key={slot.id}
+                          type="button"
                           onClick={() => handleSlotSelect(slot)}
                           className="group flex flex-col items-start p-2.5 rounded-[--radius-lg] border border-border/60 bg-background/40 hover:border-primary/50 hover:bg-primary/5 transition-all duration-150 text-left min-h-[44px]"
                         >
@@ -577,11 +602,15 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                 <div className="space-y-2.5">
                   <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Selecciona uno o más servicios</p>
                   <div className="space-y-1.5">
-                    {(currentNode!.options as Array<FlowOption & { value?: string }>).map((opt) => {
+                    {(currentNode!.options as Array<FlowOption & { value?: string }>).map((opt, i) => {
                       const isChecked = opt.value ? selectedServiceValues.includes(opt.value) : false;
                       return (
-                        <button
+                        <motion.button
                           key={opt.next + opt.label}
+                          initial={MOTION.chip.initial}
+                          animate={MOTION.chip.animate}
+                          transition={{ ...MOTION.chip.transition, delay: i * 0.05 }}
+                          type="button"
                           onClick={() => opt.value && handleServiceCheckboxToggle(opt.value)}
                           className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-[--radius-lg] border text-xs font-medium text-left transition-all duration-150 ${
                             isChecked
@@ -595,7 +624,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                             {isChecked && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
                           </div>
                           {opt.label}
-                        </button>
+                        </motion.button>
                       );
                     })}
                   </div>
@@ -604,6 +633,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                   )}
                   {selectedServiceValues.length > 0 && (
                     <button
+                      type="button"
                       onClick={handleConfirmServiceSelection}
                       className="w-full h-10 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all"
                     >
@@ -652,6 +682,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                     Todo trabajo está sujeto a presupuesto previo según RD 1457/1986.
                   </p>
                   <button
+                    type="button"
                     onClick={handleServiceSummaryConfirm}
                     className="w-full h-10 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all"
                   >
@@ -660,18 +691,22 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                 </div>
               )}
 
-              {/* Option buttons + NLP free-text */}
+              {/* Option chips — .chat-chip class + MOTION.chip stagger */}
               {showOptions && (
                 <div className="space-y-2.5">
-                  <div className="flex flex-wrap gap-2">
-                    {currentNode!.options!.map((opt) => (
-                      <button
+                  <div className="chat-chips">
+                    {currentNode!.options!.map((opt, i) => (
+                      <motion.button
                         key={opt.next + opt.label}
+                        initial={MOTION.chip.initial}
+                        animate={MOTION.chip.animate}
+                        transition={{ ...MOTION.chip.transition, delay: i * 0.05 }}
+                        type="button"
                         onClick={() => handleOptionSelect(opt as FlowOption & { value?: string })}
-                        className="rounded-full border border-primary/30 bg-primary/5 px-3.5 py-1.5 text-xs font-medium text-primary/90 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-150"
+                        className="chat-chip"
                       >
                         {opt.label}
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                   <div className="flex gap-2">
@@ -683,6 +718,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                       className="flex-1 h-9 rounded-[--radius-lg] bg-background/60 border border-border/60 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 placeholder:text-muted-foreground/30"
                     />
                     <button
+                      type="button"
                       onClick={handleNlpSubmit}
                       disabled={!nlpInput.trim()}
                       className="flex items-center justify-center w-9 h-9 rounded-[--radius-lg] bg-primary/10 text-primary border border-primary/25 disabled:opacity-30 hover:bg-primary hover:text-primary-foreground transition-colors"
@@ -705,6 +741,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                     className="flex-1 h-10 rounded-[--radius-lg] bg-background/60 border border-border px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 placeholder:text-muted-foreground/40"
                   />
                   <button
+                    type="button"
                     onClick={handleTextSubmit}
                     disabled={!inputValue.trim()}
                     className="flex items-center justify-center w-10 h-10 rounded-[--radius-lg] bg-primary text-primary-foreground disabled:opacity-40 hover:bg-primary/90 transition-colors"
@@ -714,7 +751,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                 </div>
               )}
 
-              {/* LOPD consent */}
+              {/* LOPD consent — checkbox MUST default unchecked (LOPDGDD) */}
               {isLopdNode && !currentNode?.collect && !currentNode?.options && (
                 <div className="space-y-3">
                   <p className="text-[11px] text-muted-foreground/70 leading-relaxed mb-2">
@@ -727,6 +764,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                         checked={consentChecked}
                         onChange={(e) => setConsentChecked(e.target.checked)}
                         className="peer sr-only"
+                        aria-label="Acepto la política de privacidad"
                       />
                       <div className="w-4 h-4 rounded border border-border peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
                         {consentChecked && (
@@ -745,6 +783,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                     </span>
                   </label>
                   <button
+                    type="button"
                     onClick={handleConsentSubmit}
                     disabled={!consentChecked}
                     className="w-full h-10 rounded-[--radius-lg] bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40 hover:bg-primary/90 transition-all"

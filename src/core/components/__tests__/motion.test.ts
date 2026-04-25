@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MOTION } from '@/lib/motion';
+import { MOTION, EASE, DUR } from '@/lib/motion';
 
 describe('MOTION constants completeness', () => {
   it('has pageEnter', () => {
@@ -33,7 +33,7 @@ describe('MOTION constants completeness', () => {
 
   it('has staggerChildren', () => {
     expect(MOTION.staggerChildren).toBeDefined();
-    expect(MOTION.staggerChildren.staggerChildren).toBe(0.07);
+    expect(MOTION.staggerChildren.staggerChildren).toBe(0.06);
   });
 
   it('has slideUp with correct shape', () => {
@@ -60,5 +60,44 @@ describe('MOTION constants completeness', () => {
     for (const key of required) {
       expect(MOTION).toHaveProperty(key);
     }
+  });
+
+  it('exposes bundle-canonical motion tokens', () => {
+    expect(DUR.fast).toBe(0.15);
+    expect(DUR.base).toBe(0.22);
+    expect(DUR.slow).toBe(0.32);
+    expect(EASE.out).toEqual([0.25, 0.46, 0.45, 0.94]);
+    expect(EASE.soft).toEqual([0.22, 1, 0.36, 1]);
+    expect(EASE.spring).toEqual([0.34, 1.4, 0.64, 1]);
+  });
+
+  it('cardHover shadow uses CSS variable, not hardcoded HSL', () => {
+    const hover = MOTION.cardHover.whileHover as { boxShadow: string };
+    expect(hover.boxShadow).toContain('var(');
+    expect(hover.boxShadow).not.toContain('hsl(');
+  });
+
+  it('chatMessage spring matches bundle ease-spring (1.4, not 1.56)', () => {
+    const ease = (MOTION.chatMessage.transition as { ease: readonly number[] }).ease;
+    expect(ease[1]).toBe(1.4);
+  });
+
+  it('has Tier-1 booking presets', () => {
+    expect(MOTION.counter).toBeDefined();
+    expect(MOTION.itvTween).toBeDefined();
+    expect(MOTION.serviceCard).toBeDefined();
+    expect(MOTION.serviceGridStagger.staggerChildren).toBe(0.06);
+  });
+
+  it('has Tier-2 polish presets', () => {
+    expect(MOTION.underlineDraw).toBeDefined();
+    expect(MOTION.stripesReveal).toBeDefined();
+    expect(MOTION.stripesRevealStagger.staggerChildren).toBe(0.08);
+    expect(MOTION.chip).toBeDefined();
+    expect(MOTION.chipStagger.staggerChildren).toBe(0.05);
+    expect(MOTION.flowStep).toBeDefined();
+    expect(MOTION.checkDraw.circle).toBeDefined();
+    expect(MOTION.checkDraw.tick).toBeDefined();
+    expect(MOTION.pulseDot).toBeDefined();
   });
 });

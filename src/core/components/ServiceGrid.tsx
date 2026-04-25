@@ -1,10 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Wrench, Car, Settings, CircleDot, Shield, Cpu, ScanLine, BadgeCheck, Clock } from 'lucide-react';
 import type { Service } from '@/core/types/adapter';
-import { cn } from '@/lib/cn';
+import { MOTION } from '@/lib/motion';
 
+// Props preserved for API compatibility — bundle renders static data
 type Props = {
   services: Service[];
   ivaRate: number;
@@ -12,20 +12,112 @@ type Props = {
   currency?: string;
 };
 
-const SERVICE_ICONS: Record<string, React.ElementType> = {
-  'cambio-aceite':           Wrench,
-  'pre-itv':                 Car,
-  'mecanica-general':        Settings,
-  'cambio-neumaticos':       CircleDot,
-  'frenos':                  Shield,
-  'diagnostico-electronico': Cpu,
-  'escaner-obd':             ScanLine,
-  'electronica':             Cpu,
-};
-
-function formatCurrency(amount: number, locale: string, currency: string) {
-  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
+// Bundle-canonical SVG icons (inline — match Website.html exactly)
+function IconOil() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/>
+      <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>
+    </svg>
+  );
 }
+function IconBrakes() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>
+      <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/>
+      <line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/>
+      <line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/>
+      <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>
+    </svg>
+  );
+}
+function IconItv() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
+      <circle cx="6.5" cy="16.5" r="2.5"/>
+      <circle cx="16.5" cy="16.5" r="2.5"/>
+    </svg>
+  );
+}
+function IconTyres() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 2a14.5 14.5 0 0 0 0 20M12 2a14.5 14.5 0 0 1 0 20M2 12h20"/>
+    </svg>
+  );
+}
+function IconAC() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      <circle cx="12" cy="12" r="4"/>
+    </svg>
+  );
+}
+function IconOBD() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="2" y="6" width="20" height="12" rx="2"/>
+      <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01"/>
+      <path d="M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/>
+    </svg>
+  );
+}
+
+// Bundle-canonical 6 services (static — matches Website.html sections C)
+const BUNDLE_SERVICES = [
+  {
+    id: 'cambio-aceite',
+    icon: <IconOil />,
+    dur: '~ 45 min',
+    title: 'Cambio de aceite y filtros',
+    desc: 'Aceite, filtro de aceite y revisión de niveles. Te enseñamos las piezas cambiadas antes de tirarlas.',
+    price: '49,99 €',
+  },
+  {
+    id: 'frenos',
+    icon: <IconBrakes />,
+    dur: '~ 75 min',
+    title: 'Revisión de frenos',
+    desc: 'Inspección de pastillas, discos y líquido. Presupuesto en el acto antes de empezar a sustituir nada.',
+    price: '79,99 €',
+  },
+  {
+    id: 'pre-itv',
+    icon: <IconItv />,
+    dur: '~ 60 min',
+    title: 'Pre-revisión ITV',
+    desc: 'Revisamos todo lo que miran en la ITV. Si algo falla, te lo decimos y lo arreglamos antes de ir.',
+    price: '39,99 €',
+  },
+  {
+    id: 'neumaticos',
+    icon: <IconTyres />,
+    dur: '~ 30 min',
+    title: 'Neumáticos y equilibrado',
+    desc: 'Trabajamos con Michelin, Continental, Hankook. Válvulas, equilibrado y alineación incluidos.',
+    price: '59,99 €',
+  },
+  {
+    id: 'aire-acondicionado',
+    icon: <IconAC />,
+    dur: '~ 40 min',
+    title: 'Aire acondicionado',
+    desc: 'Carga de gas, cambio de filtro de habitáculo y diagnóstico de fugas con lámpara UV.',
+    price: '64,99 €',
+  },
+  {
+    id: 'diagnostico-obd',
+    icon: <IconOBD />,
+    dur: '~ 20 min',
+    title: 'Diagnóstico OBD',
+    desc: 'Lectura y borrado de códigos de avería. Primera consulta gratis al contratar la reparación.',
+    price: '25,00 €',
+  },
+] as const;
 
 function openChatWithService(serviceId: string) {
   if (typeof window !== 'undefined') {
@@ -33,109 +125,75 @@ function openChatWithService(serviceId: string) {
   }
 }
 
-export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'EUR' }: Props) {
-  const fmt = (n: number) => formatCurrency(n, locale, currency);
-
+// Props accepted for API compatibility with the page — bundle uses static data
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function ServiceGrid(_props: Props) {
   return (
-    <section id="servicios" className="relative px-5 py-20 sm:py-24 bg-background">
-      <div className="relative mx-auto max-w-6xl">
-        <div className="mb-12 flex flex-col items-center text-center gap-3">
-          <span className="amg-stripes" aria-hidden>
-            <span /><span /><span />
-          </span>
-          <p className="eyebrow">Servicios</p>
-          <h2 className="h2 max-w-2xl">Trabajos honestos, presupuestos por escrito.</h2>
-          <p className="lead max-w-xl">
-            Precios orientativos. IVA desglosado. Antes de tocar el coche, te lo enseñamos por escrito.
-          </p>
-          <p className="meta">RD 1457/1986 · Garantía mínima de 3 meses</p>
+    <section id="servicios" className="sect">
+      <div className="sect-inner">
+        {/* Section header — matches bundle sect-head */}
+        <div className="sect-head">
+          <div>
+            <p className="sect-pre">Nuestros servicios</p>
+            <h2>Precios claros. Garantía clara. Trabajo claro.</h2>
+          </div>
+          <a className="sect-link" href="#servicios">
+            Ver todos
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service, i) => {
-            const Icon = SERVICE_ICONS[service.id] ?? (service.category ? SERVICE_ICONS[service.category] : undefined) ?? Wrench;
-            const iva = service.basePrice * ivaRate;
-            const total = service.basePrice + iva;
+        {/* 3-column service grid with stagger-in */}
+        <motion.div
+          className="svc-grid"
+          variants={{ visible: MOTION.serviceGridStagger }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-10% 0px' }}
+        >
+          {BUNDLE_SERVICES.map((svc) => (
+            <motion.article
+              key={svc.id}
+              className="svc-card"
+              variants={{
+                hidden: MOTION.serviceCard.initial,
+                visible: {
+                  ...MOTION.serviceCard.whileInView,
+                  transition: MOTION.serviceCard.transition,
+                },
+              }}
+            >
+              {/* Top row: icon + duration */}
+              <div className="svc-top">
+                <div className="svc-icon">{svc.icon}</div>
+                <span className="svc-dur">{svc.dur}</span>
+              </div>
 
-            return (
-              <motion.article
-                key={service.id}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
-                whileHover={{ y: -2 }}
-                className={cn(
-                  'ticket relative overflow-hidden flex flex-col p-6 transition-shadow duration-300',
-                  'hover:shadow-[var(--shadow-lg)]',
-                )}
-              >
-                <div className="amg-edge" aria-hidden />
+              {/* Title + description */}
+              <h3>{svc.title}</h3>
+              <p>{svc.desc}</p>
 
-                <div className="relative pl-3 flex flex-col flex-1">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center justify-center w-11 h-11 rounded-[--radius] bg-secondary border border-border">
-                      <Icon className="h-5 w-5 text-foreground" aria-hidden />
-                    </div>
-                    <span className="flex items-center gap-1 meta border border-border rounded-full px-2 py-0.5 bg-card">
-                      <Clock className="h-2.5 w-2.5" aria-hidden />
-                      ~{service.duration}min
-                    </span>
-                  </div>
-
-                  <h3 className="h4 mb-2 text-foreground">{service.name}</h3>
-                  {service.description && (
-                    <p className="text-sm text-[--fg-secondary] leading-relaxed mb-4 flex-1">
-                      {service.description}
-                    </p>
-                  )}
-
-                  <div className="mt-auto mb-3">
-                    <p className="text-base font-semibold text-foreground">
-                      Desde <span className="price text-primary">{fmt(total)}</span>{' '}
-                      <span className="meta inline">con IVA</span>
-                    </p>
-                  </div>
-
-                  <details className="group/details mb-3">
-                    <summary className="cursor-pointer meta hover:text-foreground transition-colors select-none list-none flex items-center gap-1">
-                      <span className="group-open/details:hidden">▶ Ver desglose IVA</span>
-                      <span className="hidden group-open/details:inline">▼ Ocultar desglose</span>
-                    </summary>
-                    <div className="mt-2 space-y-1 border border-border rounded-[--radius] p-3 bg-secondary text-xs">
-                      <div className="flex justify-between text-[--fg-secondary]">
-                        <span>Base imponible</span>
-                        <span className="price">{fmt(service.basePrice)}</span>
-                      </div>
-                      <div className="flex justify-between text-[--fg-secondary]">
-                        <span>IVA ({(ivaRate * 100).toFixed(0)}%)</span>
-                        <span className="price">{fmt(iva)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-foreground border-t border-border pt-1.5 mt-1">
-                        <span>Total</span>
-                        <span className="price text-primary">{fmt(total)}</span>
-                      </div>
-                    </div>
-                  </details>
-
-                  <div className="mb-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[--success-muted] border border-[oklch(0.58_0.14_148/0.25)] w-fit text-[10px] font-medium text-success">
-                    <BadgeCheck className="h-3 w-3 shrink-0" aria-hidden />
-                    <span>3 meses o 2.000 km</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => openChatWithService(service.id)}
-                    aria-label={`Reservar ${service.name}`}
-                    className="w-full h-11 rounded-[--radius-md] bg-primary text-primary-foreground text-sm font-semibold hover:bg-[--brand-red-dark] active:translate-y-px transition-all duration-150"
-                  >
-                    Reservar
-                  </button>
+              {/* Footer: price + CTA */}
+              <div className="svc-foot">
+                <div>
+                  <span className="svc-price-from">Desde</span>
+                  <span className="svc-price">{svc.price}</span>
+                  <span className="svc-price-iva">IVA incl.</span>
                 </div>
-              </motion.article>
-            );
-          })}
-        </div>
+                <button
+                  type="button"
+                  onClick={() => openChatWithService(svc.id)}
+                  className="btn btn-primary btn-sm"
+                  aria-label={`Reservar ${svc.title}`}
+                >
+                  Pedir
+                </button>
+              </div>
+            </motion.article>
+          ))}
+        </motion.div>
       </div>
     </section>
   );

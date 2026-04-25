@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, X } from 'lucide-react';
+import { X, Bot } from 'lucide-react';
 import { MOTION } from '@/lib/motion';
 import type { ChatbotFlow } from '@/lib/chatbot/engine';
 import type { Service } from '@/core/types/adapter';
 import { ChatEngine } from '@/core/chatbot/ChatEngine';
+import { BookingStepper } from '@/core/chatbot/components/BookingStepper';
 
 type Props = {
   flow: ChatbotFlow;
@@ -19,9 +20,6 @@ type Props = {
   services: Service[];
   ivaRate: number;
 };
-
-// Steps for the progress dots (matches chatbot booking flow stages)
-const STEPS = ['Servicio', 'Detalles', 'Consentimiento', 'Confirmado'];
 
 export function ChatWidget(props: Props) {
   const [open, setOpen] = useState(false);
@@ -131,59 +129,59 @@ export function ChatWidget(props: Props) {
               aria-modal="true"
               aria-label="Asistente de reservas"
             >
-              {/* Drawer header */}
-              <div className="flex items-center justify-between px-4 py-3 bg-primary border-b border-[--brand-red-dark] shrink-0">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary-foreground/20 border border-primary-foreground/30">
-                    <Bot className="h-4 w-4 text-primary-foreground" />
-                  </div>
+              {/* Drawer header — matches bundle: chat-avatar + Andrés · Talleres AMG */}
+              <div
+                className="flex items-center justify-between px-4 py-3 shrink-0"
+                style={{ borderBottom: '1px solid var(--border)', background: 'var(--card)' }}
+              >
+                <div className="flex items-center gap-3">
+                  {/* AM avatar circle — .chat-avatar utility */}
+                  <div className="chat-avatar" aria-hidden>AM</div>
                   <div>
-                    <p className="text-sm font-semibold text-primary-foreground leading-none">Asistente AMG</p>
-                    <p className="text-[10px] text-primary-foreground/60 mt-0.5 font-mono">Reserva en 2 minutos</p>
+                    <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--fg)', lineHeight: 1.2 }}>
+                      Andrés · Talleres AMG
+                    </p>
+                    <p
+                      style={{ fontSize: 12, color: 'var(--fg-muted)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}
+                    >
+                      <span
+                        className="dot-available"
+                        style={{ width: 6, height: 6 }}
+                        aria-hidden
+                      />
+                      Respondemos en &lt; 15 min
+                    </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleClose}
                   aria-label="Cerrar asistente"
-                  className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-primary-foreground/15 transition-colors text-primary-foreground/80 hover:text-primary-foreground"
+                  className="chat-close"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Progress dots */}
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-secondary border-b border-border shrink-0">
-                {STEPS.map((label, i) => (
-                  <div key={label} className="flex items-center gap-2 flex-1">
-                    <div className={`flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-bold transition-colors duration-300 shrink-0 ${
-                      i < step
-                        ? 'bg-success text-success-foreground'
-                        : i === step
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-border/40 text-muted-foreground/40'
-                    }`}>
-                      {i < step ? '✓' : i + 1}
-                    </div>
-                    <span className={`text-[9px] font-mono hidden sm:block ${
-                      i <= step ? 'text-foreground/70' : 'text-muted-foreground/30'
-                    }`}>
-                      {label}
-                    </span>
-                    {i < STEPS.length - 1 && (
-                      <div className={`h-px flex-1 transition-colors duration-300 ${i < step ? 'bg-success/50' : 'bg-border/30'}`} />
-                    )}
-                  </div>
-                ))}
-              </div>
+              {/* 5-step booking stepper */}
+              <BookingStepper step={step} />
 
               {/* Chat engine */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden flex flex-col">
                 <ChatEngine
                   {...props}
                   onStepChange={handleStepChange}
                   initialService={preselectedService}
                 />
+              </div>
+
+              {/* Privacy footer — .chat-foot */}
+              <div className="chat-foot shrink-0">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                Seguro · RGPD · no compartimos tus datos
               </div>
             </motion.div>
           </>

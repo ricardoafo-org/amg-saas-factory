@@ -5,6 +5,15 @@ const nextConfig: NextConfig = {
   // Enable typedRoutes once all app routes exist
   // experimental: { typedRoutes: true },
   output: 'standalone',
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+    ],
+  },
 };
 
 export default withPWA({
