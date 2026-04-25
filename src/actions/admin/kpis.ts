@@ -25,7 +25,7 @@ export async function getTodayKpis(): Promise<KpiData> {
   let ivaRate = 0.21; // fallback only if config is missing
   try {
     const configResult = await pb.collection('config').getFirstListItem(
-      `tenant_id = "${tenantId}" && key = "iva_rate"`,
+      pb.filter('tenant_id = {:tenantId} && key = "iva_rate"', { tenantId }),
     );
     const parsed = parseFloat(configResult['value'] as string);
     if (!isNaN(parsed)) ivaRate = parsed;
@@ -46,12 +46,18 @@ export async function getTodayKpis(): Promise<KpiData> {
     pb
       .collection('appointments')
       .getFullList({
-        filter: `tenant_id = "${tenantId}" && scheduled_at >= "${toIso(todayStart)}" && scheduled_at < "${toIso(todayEnd)}"`,
+        filter: pb.filter(
+          'tenant_id = {:tenantId} && scheduled_at >= {:from} && scheduled_at < {:to}',
+          { tenantId, from: toIso(todayStart), to: toIso(todayEnd) },
+        ),
       }),
     pb
       .collection('appointments')
       .getFullList({
-        filter: `tenant_id = "${tenantId}" && scheduled_at >= "${toIso(yesterdayStart)}" && scheduled_at < "${toIso(yesterdayEnd)}"`,
+        filter: pb.filter(
+          'tenant_id = {:tenantId} && scheduled_at >= {:from} && scheduled_at < {:to}',
+          { tenantId, from: toIso(yesterdayStart), to: toIso(yesterdayEnd) },
+        ),
       }),
   ]);
 

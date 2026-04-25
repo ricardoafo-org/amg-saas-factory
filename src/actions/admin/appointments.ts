@@ -83,7 +83,10 @@ export async function getAppointmentsByRange(
   let appointmentItems: Record<string, unknown>[] = [];
   try {
     const res = await pb.collection('appointments').getList(1, 200, {
-      filter: `tenant_id = "${tenantId}" && scheduled_at >= "${fromStr}" && scheduled_at < "${toStr}"`,
+      filter: pb.filter(
+        'tenant_id = {:tenantId} && scheduled_at >= {:fromStr} && scheduled_at < {:toStr}',
+        { tenantId, fromStr, toStr },
+      ),
       sort: 'scheduled_at',
     });
     appointmentItems = res.items as unknown as Record<string, unknown>[];
@@ -96,7 +99,10 @@ export async function getAppointmentsByRange(
   let slotItems: Record<string, unknown>[] = [];
   try {
     const res = await pb.collection('availability_slots').getList(1, 200, {
-      filter: `tenant_id = "${tenantId}" && slot_date >= "${fromStr}" && slot_date < "${toStr}"`,
+      filter: pb.filter(
+        'tenant_id = {:tenantId} && slot_date >= {:fromStr} && slot_date < {:toStr}',
+        { tenantId, fromStr, toStr },
+      ),
       sort: 'slot_date,start_time',
     });
     slotItems = res.items as unknown as Record<string, unknown>[];
@@ -166,7 +172,10 @@ async function fetchTodayStyleAppointments(
   let items: Record<string, unknown>[] = [];
   try {
     const res = await pb.collection('appointments').getList(1, 200, {
-      filter: `tenant_id = "${tenantId}" && scheduled_at >= "${toIso(fromDate)}" && scheduled_at < "${toIso(toDate)}"`,
+      filter: pb.filter(
+        'tenant_id = {:tenantId} && scheduled_at >= {:from} && scheduled_at < {:to}',
+        { tenantId, from: toIso(fromDate), to: toIso(toDate) },
+      ),
       sort: 'scheduled_at',
       expand: 'tech_id',
     });

@@ -36,11 +36,13 @@ export async function getVehicles(
   const ctx = await getStaffCtx();
   const perPage = 20;
 
-  let filter = `tenant_id = "${ctx.tenantId}"`;
+  const filterParams: Record<string, string> = { tenantId: ctx.tenantId };
+  let filterTpl = 'tenant_id = {:tenantId}';
   if (q.trim()) {
-    const safe = q.replace(/"/g, '');
-    filter += ` && plate ~ "${safe}"`;
+    filterParams['q'] = q.trim();
+    filterTpl += ' && plate ~ {:q}';
   }
+  const filter = ctx.pb.filter(filterTpl, filterParams);
 
   const sortMap: Record<VehicleSortField, string> = {
     itv_expiry: 'itv_expiry',
@@ -59,9 +61,14 @@ export async function getVehicles(
   const lastServiceMap: Record<string, string> = {};
 
   if (vehicleIds.length > 0) {
-    const idFilter = vehicleIds.map((id) => `vehicle_id = "${id}"`).join(' || ');
+    const idPlaceholders = vehicleIds.map((_, i) => `vehicle_id = {:vid${i}}`).join(' || ');
+    const apptParams: Record<string, string> = { tenantId: ctx.tenantId };
+    vehicleIds.forEach((id, i) => { apptParams[`vid${i}`] = id; });
     const appts = await ctx.pb.collection('appointments').getFullList({
-      filter: `tenant_id = "${ctx.tenantId}" && (${idFilter}) && status = "completed"`,
+      filter: ctx.pb.filter(
+        `tenant_id = {:tenantId} && (${idPlaceholders}) && status = "completed"`,
+        apptParams,
+      ),
       sort: '-scheduled_at',
       fields: 'vehicle_id,scheduled_at',
     });
@@ -135,7 +142,10 @@ export async function getVehicle(
   const appointmentsRes = await ctx.pb
     .collection('appointments')
     .getList(appointmentsPage, 10, {
-      filter: `tenant_id = "${ctx.tenantId}" && vehicle_id = "${id}"`,
+      filter: ctx.pb.filter(
+        'tenant_id = {:tenantId} && vehicle_id = {:id}',
+        { tenantId: ctx.tenantId, id },
+      ),
       sort: '-scheduled_at',
     });
 
@@ -196,7 +206,7 @@ export async function updateVehicle(
   let existing;
   try {
     existing = await ctx.pb.collection('vehicles').getFirstListItem(
-      `id = "${id}" && tenant_id = "${ctx.tenantId}"`,
+      ctx.pb.filter('id = {:id} && tenant_id = {:tenantId}', { id, tenantId: ctx.tenantId }),
     );
   } catch {
     return { success: false, error: 'Vehículo no encontrado' };

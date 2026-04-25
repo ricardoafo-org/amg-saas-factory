@@ -51,10 +51,13 @@ export async function getQuotes(opts?: {
     const ctx = await getStaffCtx();
     const { pb, tenantId } = ctx;
 
-    const filters: string[] = [`tenant_id = "${tenantId}"`];
+    const filterParams: Record<string, string> = { tenantId };
+    let filterTpl = 'tenant_id = {:tenantId}';
     if (opts?.status) {
-      filters.push(`status = "${opts.status}"`);
+      filterParams['status'] = opts.status;
+      filterTpl += ' && status = {:status}';
     }
+    const filter = pb.filter(filterTpl, filterParams);
 
     const sortMap: Record<string, string> = {
       date_asc: '+created',
@@ -65,7 +68,7 @@ export async function getQuotes(opts?: {
     const sort = opts?.sort ? sortMap[opts.sort] : '-created';
 
     const records = await pb.collection('quotes').getFullList({
-      filter: filters.join(' && '),
+      filter,
       sort,
     });
 
@@ -186,7 +189,7 @@ export async function updateQuoteStatus(
 
     // Verify ownership — scoped query enforces tenant isolation at DB layer
     await pb.collection('quotes').getFirstListItem(
-      `id = "${id}" && tenant_id = "${tenantId}"`,
+      pb.filter('id = {:id} && tenant_id = {:tenantId}', { id, tenantId }),
     );
 
     await pb.collection('quotes').update(id, { status });

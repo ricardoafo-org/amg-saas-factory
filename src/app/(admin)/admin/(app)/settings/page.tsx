@@ -60,7 +60,7 @@ export default async function SettingsPage() {
 
   try {
     const res = await pb.collection('services').getFullList({
-      filter: `tenant_id = "${tenantId}"`,
+      filter: pb.filter('tenant_id = {:tenantId}', { tenantId }),
       sort: 'name',
     });
     services = res.map((r) => ({

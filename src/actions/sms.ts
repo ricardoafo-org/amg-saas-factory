@@ -124,7 +124,10 @@ export async function getSmsSuggestions(): Promise<GetSmsSuggestionsResult> {
   try {
     // Fetch vehicles with ITV expiry within 30 days for this tenant
     const vehicles = await ctx.pb.collection('vehicles').getList(1, 200, {
-      filter: `tenant_id = "${ctx.tenantId}" && itv_expiry != "" && itv_expiry <= "${cutoff}"`,
+      filter: ctx.pb.filter(
+        'tenant_id = {:tenantId} && itv_expiry != "" && itv_expiry <= {:cutoff}',
+        { tenantId: ctx.tenantId, cutoff },
+      ),
       expand: 'customer_id',
     });
 
@@ -189,7 +192,7 @@ export async function sendBulkSms(input: z.infer<typeof SendBulkSmsSchema>): Pro
     try {
       // Fetch customer — always scoped to tenant
       const customer = await ctx.pb.collection('customers').getOne(customerId, {
-        filter: `tenant_id = "${ctx.tenantId}"`,
+        filter: ctx.pb.filter('tenant_id = {:tenantId}', { tenantId: ctx.tenantId }),
       }) as Customer;
 
       if (!customer.phone) { failed++; continue; }
@@ -253,7 +256,7 @@ export async function getSmsLog(): Promise<GetSmsLogResult> {
 
   try {
     const logs = await ctx.pb.collection('sms_log').getList<SmsLog>(1, 100, {
-      filter: `tenant_id = "${ctx.tenantId}"`,
+      filter: ctx.pb.filter('tenant_id = {:tenantId}', { tenantId: ctx.tenantId }),
       sort: '-created',
     });
 
@@ -296,11 +299,14 @@ export async function searchCustomers(query: string): Promise<SearchCustomersRes
     return { ok: true, customers: [] };
   }
 
-  const safe = query.trim().replace(/"/g, '');
+  const safe = query.trim();
 
   try {
     const results = await ctx.pb.collection('customers').getList<Customer>(1, 20, {
-      filter: `tenant_id = "${ctx.tenantId}" && (name ~ "${safe}" || phone ~ "${safe}")`,
+      filter: ctx.pb.filter(
+        'tenant_id = {:tenantId} && (name ~ {:q} || phone ~ {:q})',
+        { tenantId: ctx.tenantId, q: safe },
+      ),
       sort: 'name',
     });
 
