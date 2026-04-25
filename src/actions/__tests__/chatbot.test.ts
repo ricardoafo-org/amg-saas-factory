@@ -301,6 +301,40 @@ describe('saveAppointment — LOPDGDD consent-first invariant', () => {
   });
 });
 
+describe('saveAppointment — email (Resend) resilience', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('booking still completes and resolves when RESEND_API_KEY is absent', async () => {
+    // Delete the env var for this test, restore after.
+    const original = process.env['RESEND_API_KEY'];
+    delete process.env['RESEND_API_KEY'];
+
+    const appointmentsCreate = vi.fn().mockResolvedValue({ id: 'appt-ok' });
+    const mockPb = makeMockPb({
+      configGetFirstListItem: makeConfigGetFirstListItem(),
+      customersGetFirstListItem: vi.fn().mockResolvedValue({ id: 'cust-1' }),
+      customersGetOne: vi.fn().mockResolvedValue({ total_visits: 0, total_spent: 0 }),
+      customersUpdate: vi.fn().mockResolvedValue({}),
+      appointmentsCreate,
+    });
+
+    vi.mocked(getPb).mockResolvedValue(mockPb as never);
+
+    // Must resolve (not throw) even with no API key configured
+    await expect(saveAppointment(BASE_PAYLOAD)).resolves.not.toThrow();
+    // The appointment MUST still be written — email is non-fatal
+    expect(appointmentsCreate).toHaveBeenCalledOnce();
+
+    // Resend constructor must NOT have been called (early-return guard in sendBookingConfirmation)
+    const { Resend } = await import('resend');
+    expect(Resend).not.toHaveBeenCalled();
+
+    process.env['RESEND_API_KEY'] = original;
+  });
+});
+
 describe('saveAppointment — failure handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
