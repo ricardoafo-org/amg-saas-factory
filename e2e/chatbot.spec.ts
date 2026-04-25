@@ -4,8 +4,11 @@ import { ChatbotPage } from './pages/ChatbotPage';
 test.describe('Chatbot — core interactions', () => {
   let chatbot: ChatbotPage;
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, context }) => {
     chatbot = new ChatbotPage(page);
+    await context.addInitScript(() => {
+      try { localStorage.setItem('amg_cookie_consent', JSON.stringify({ analytics: false, marketing: false })); } catch {}
+    });
     await page.goto('/');
     // Open FAB then start conversation
     await page.getByRole('button', { name: /Abrir asistente de reservas/i }).click();
@@ -16,15 +19,17 @@ test.describe('Chatbot — core interactions', () => {
   });
 
   test('welcome message appears after starting chat', async ({ page }) => {
+    const dialog = page.getByRole('dialog', { name: /Asistente de reservas/i });
     await expect(page.getByText(/Hola, soy el asistente/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /Reservar cita/i })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /Reservar cita/i })).toBeVisible();
   });
 
   test('oil change recommendation flow reaches km input', async ({ page }) => {
-    await page.getByRole('button', { name: /Calcular cambio aceite/i }).click();
+    const dialog = page.getByRole('dialog', { name: /Asistente de reservas/i });
+    await dialog.getByRole('button', { name: /Calcular cambio aceite/i }).click();
     await expect(page.getByText(/tipo de aceite/i)).toBeVisible({ timeout: 5000 });
 
-    await page.getByRole('button', { name: /Sintético/i }).click();
+    await dialog.getByRole('button', { name: 'Sintético', exact: true }).click();
     await expect(page.getByText(/km.*último cambio/i)).toBeVisible({ timeout: 5000 });
 
     await page.getByPlaceholder(/Escribe aquí/i).fill('50000');
@@ -45,27 +50,30 @@ test.describe('Chatbot — core interactions', () => {
   });
 
   test('service booking flow starts after selecting Reservar cita', async ({ page }) => {
-    await page.getByRole('button', { name: /Reservar cita/i }).click();
+    const dialog = page.getByRole('dialog', { name: /Asistente de reservas/i });
+    await dialog.getByRole('button', { name: /Reservar cita/i }).click();
     await expect(page.getByText(/servicios necesitas/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('multi-select service checkboxes appear in booking flow', async ({ page }) => {
-    await page.getByRole('button', { name: /Reservar cita/i }).click();
+    const dialog = page.getByRole('dialog', { name: /Asistente de reservas/i });
+    await dialog.getByRole('button', { name: /Reservar cita/i }).click();
     await expect(page.getByText(/Selecciona uno o más servicios/i)).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('button', { name: /Cambio de aceite/i })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /Cambio de aceite/i })).toBeVisible();
   });
 
   test('LOPD consent checkbox is unchecked by default', async ({ page }) => {
+    const dialog = page.getByRole('dialog', { name: /Asistente de reservas/i });
     // Navigate to booking flow up to plate + fuel selection
-    await page.getByRole('button', { name: /Reservar cita/i }).click();
+    await dialog.getByRole('button', { name: /Reservar cita/i }).click();
     await expect(page.getByText(/servicios necesitas/i)).toBeVisible({ timeout: 5000 });
 
     // Select service via multi-select checkbox then confirm
-    await page.getByRole('button', { name: /Cambio de aceite/i }).click();
-    await page.getByRole('button', { name: /Confirmar selección/i }).click();
+    await dialog.getByRole('button', { name: 'Cambio de aceite', exact: true }).click();
+    await dialog.getByRole('button', { name: /Confirmar selección/i }).click();
 
     // Continue with reservation
-    await page.getByRole('button', { name: /Continuar con la reserva/i }).click();
+    await dialog.getByRole('button', { name: /Continuar con la reserva/i }).click();
 
     // Enter plate
     await page.getByPlaceholder(/Escribe aquí/i).fill('1234ABC');
