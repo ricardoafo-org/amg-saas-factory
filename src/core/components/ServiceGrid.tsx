@@ -67,7 +67,8 @@ function IconOBD() {
   );
 }
 
-// Bundle-canonical 6 services (static — matches Website.html sections C)
+// Bundle-canonical design layer — id, icon, duration label, and copy.
+// Prices are intentionally absent: they are computed at render from config (basePrice × ivaRate).
 export const BUNDLE_SERVICES = [
   {
     id: 'cambio-aceite',
@@ -75,7 +76,6 @@ export const BUNDLE_SERVICES = [
     dur: '~ 45 min',
     title: 'Cambio de aceite y filtros',
     desc: 'Aceite, filtro de aceite y revisión de niveles. Te enseñamos las piezas cambiadas antes de tirarlas.',
-    price: '49,99 €',
   },
   {
     id: 'frenos',
@@ -83,7 +83,6 @@ export const BUNDLE_SERVICES = [
     dur: '~ 75 min',
     title: 'Revisión de frenos',
     desc: 'Inspección de pastillas, discos y líquido. Presupuesto en el acto antes de empezar a sustituir nada.',
-    price: '79,99 €',
   },
   {
     id: 'pre-itv',
@@ -91,7 +90,6 @@ export const BUNDLE_SERVICES = [
     dur: '~ 60 min',
     title: 'Pre-revisión ITV',
     desc: 'Revisamos todo lo que miran en la ITV. Si algo falla, te lo decimos y lo arreglamos antes de ir.',
-    price: '39,99 €',
   },
   {
     id: 'neumaticos',
@@ -99,7 +97,6 @@ export const BUNDLE_SERVICES = [
     dur: '~ 30 min',
     title: 'Neumáticos y equilibrado',
     desc: 'Trabajamos con Michelin, Continental, Hankook. Válvulas, equilibrado y alineación incluidos.',
-    price: '59,99 €',
   },
   {
     id: 'aire-acondicionado',
@@ -107,7 +104,6 @@ export const BUNDLE_SERVICES = [
     dur: '~ 40 min',
     title: 'Aire acondicionado',
     desc: 'Carga de gas, cambio de filtro de habitáculo y diagnóstico de fugas con lámpara UV.',
-    price: '64,99 €',
   },
   {
     id: 'diagnostico-obd',
@@ -115,7 +111,6 @@ export const BUNDLE_SERVICES = [
     dur: '~ 20 min',
     title: 'Diagnóstico OBD',
     desc: 'Lectura y borrado de códigos de avería. Primera consulta gratis al contratar la reparación.',
-    price: '25,00 €',
   },
 ] as const;
 
@@ -125,9 +120,16 @@ function openChatWithService(serviceId: string) {
   }
 }
 
-// Props accepted for API compatibility with the page — bundle uses static data
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function ServiceGrid(_props: Props) {
+function formatPrice(basePrice: number, ivaRate: number, locale: string, currency: string): string {
+  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(
+    basePrice * (1 + ivaRate),
+  );
+}
+
+export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'EUR' }: Props) {
+  // Build a lookup map from config services so each card can resolve its price
+  const priceMap = new Map<string, number>(services.map((s) => [s.id, s.basePrice]));
+
   return (
     <section id="servicios" className="sect">
       <div className="sect-inner">
@@ -153,46 +155,56 @@ export function ServiceGrid(_props: Props) {
           whileInView="visible"
           viewport={{ once: true, margin: '-10% 0px' }}
         >
-          {BUNDLE_SERVICES.map((svc) => (
-            <motion.article
-              key={svc.id}
-              className="svc-card"
-              variants={{
-                hidden: MOTION.serviceCard.initial,
-                visible: {
-                  ...MOTION.serviceCard.whileInView,
-                  transition: MOTION.serviceCard.transition,
-                },
-              }}
-            >
-              {/* Top row: icon + duration */}
-              <div className="svc-top">
-                <div className="svc-icon">{svc.icon}</div>
-                <span className="svc-dur">{svc.dur}</span>
-              </div>
+          {BUNDLE_SERVICES.map((svc) => {
+            const basePrice = priceMap.get(svc.id);
+            const displayPrice =
+              basePrice !== undefined
+                ? formatPrice(basePrice, ivaRate, locale, currency)
+                : null;
 
-              {/* Title + description */}
-              <h3>{svc.title}</h3>
-              <p>{svc.desc}</p>
-
-              {/* Footer: price + CTA */}
-              <div className="svc-foot">
-                <div>
-                  <span className="svc-price-from">Desde</span>
-                  <span className="svc-price">{svc.price}</span>
-                  <span className="svc-price-iva">IVA incl.</span>
+            return (
+              <motion.article
+                key={svc.id}
+                className="svc-card"
+                variants={{
+                  hidden: MOTION.serviceCard.initial,
+                  visible: {
+                    ...MOTION.serviceCard.whileInView,
+                    transition: MOTION.serviceCard.transition,
+                  },
+                }}
+              >
+                {/* Top row: icon + duration */}
+                <div className="svc-top">
+                  <div className="svc-icon">{svc.icon}</div>
+                  <span className="svc-dur">{svc.dur}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openChatWithService(svc.id)}
-                  className="btn btn-primary btn-sm"
-                  aria-label={`Reservar ${svc.title}`}
-                >
-                  Pedir
-                </button>
-              </div>
-            </motion.article>
-          ))}
+
+                {/* Title + description */}
+                <h3>{svc.title}</h3>
+                <p>{svc.desc}</p>
+
+                {/* Footer: price + CTA */}
+                <div className="svc-foot">
+                  <div>
+                    <span className="svc-price-from">Desde</span>
+                    {displayPrice !== null && (
+                      <span className="svc-price">{displayPrice}</span>
+                    )}
+                    <span className="svc-price-iva">IVA incl.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openChatWithService(svc.id)}
+                    className="btn btn-primary btn-sm"
+                    aria-label={`Reservar ${svc.title}`}
+                  >
+                    Pedir
+                  </button>
+                </div>
+              </motion.article>
+            );
+          })}
         </motion.div>
       </div>
     </section>
