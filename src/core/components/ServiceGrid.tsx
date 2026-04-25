@@ -23,16 +23,6 @@ const SERVICE_ICONS: Record<string, React.ElementType> = {
   'electronica':             Cpu,
 };
 
-const SERVICE_GRADIENT: Record<string, string> = {
-  'cambio-aceite':           'from-amber-500/20 to-transparent',
-  'pre-itv':                 'from-blue-500/20 to-transparent',
-  'mecanica-general':        'from-primary/20 to-transparent',
-  'cambio-neumaticos':       'from-slate-500/20 to-transparent',
-  'frenos':                  'from-rose-500/20 to-transparent',
-  'diagnostico-electronico': 'from-cyan-500/20 to-transparent',
-  'escaner-obd':             'from-cyan-500/20 to-transparent',
-};
-
 function formatCurrency(amount: number, locale: string, currency: string) {
   return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
 }
@@ -47,107 +37,97 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
   const fmt = (n: number) => formatCurrency(n, locale, currency);
 
   return (
-    <section id="servicios" className="relative px-5 py-20 overflow-hidden">
-      <div className="absolute inset-0 grid-bg opacity-30" aria-hidden />
-
-      <div className="relative z-10 mx-auto max-w-6xl">
-        <div className="mb-12 text-center">
-          <p className="mb-2 text-xs font-mono text-primary tracking-[0.2em] uppercase">Servicios</p>
-          <h2 className="text-4xl font-extrabold tracking-tight">
-            Nuestros <span className="gradient-text">Servicios</span>
-          </h2>
-          <p className="mt-3 text-muted-foreground text-sm max-w-md mx-auto">
-            Precios transparentes, sin sorpresas. IVA desglosado para tu comodidad.
+    <section id="servicios" className="relative px-5 py-20 sm:py-24 bg-background">
+      <div className="relative mx-auto max-w-6xl">
+        <div className="mb-12 flex flex-col items-center text-center gap-3">
+          <span className="amg-stripes" aria-hidden>
+            <span /><span /><span />
+          </span>
+          <p className="eyebrow">Servicios</p>
+          <h2 className="h2 max-w-2xl">Trabajos honestos, presupuestos por escrito.</h2>
+          <p className="lead max-w-xl">
+            Precios orientativos. IVA desglosado. Antes de tocar el coche, te lo enseñamos por escrito.
           </p>
-          <p className="mt-2 text-xs text-muted-foreground/60 max-w-sm mx-auto">
-            Siempre recibirás presupuesto escrito antes de cualquier trabajo — RD 1457/1986
-          </p>
+          <p className="meta">RD 1457/1986 · Garantía mínima de 3 meses</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service, i) => {
             const Icon = SERVICE_ICONS[service.id] ?? (service.category ? SERVICE_ICONS[service.category] : undefined) ?? Wrench;
             const iva = service.basePrice * ivaRate;
             const total = service.basePrice + iva;
-            const gradient = SERVICE_GRADIENT[service.id] ?? 'from-primary/10 to-transparent';
 
             return (
               <motion.article
                 key={service.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
+                transition={{ duration: 0.4, delay: i * 0.05, ease: [0.25, 0.46, 0.45, 0.94] }}
                 whileHover={{ y: -2 }}
-                className="group relative rounded-[--radius-lg] overflow-hidden cursor-default hover:shadow-glow transition-shadow duration-300"
+                className={cn(
+                  'ticket relative overflow-hidden flex flex-col p-6 transition-shadow duration-300',
+                  'hover:shadow-[var(--shadow-lg)]',
+                )}
               >
-                <div className="relative h-full glass-strong rounded-[--radius-lg] p-6 flex flex-col transition-colors duration-300">
-                  {/* Top gradient splash */}
-                  <div className={cn('absolute top-0 left-0 right-0 h-24 bg-gradient-to-b rounded-t-[--radius-lg] pointer-events-none', gradient)} aria-hidden />
+                <div className="amg-edge" aria-hidden />
 
-                  {/* Icon + duration badge */}
-                  <div className="relative flex items-start justify-between mb-4">
-                    <div className="flex items-center justify-center w-11 h-11 rounded-[--radius] bg-background/60 border border-border group-hover:border-primary/40 group-hover:bg-primary/5 transition-colors duration-300">
-                      <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors duration-300" aria-hidden />
+                <div className="relative pl-3 flex flex-col flex-1">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center justify-center w-11 h-11 rounded-[--radius] bg-secondary border border-border">
+                      <Icon className="h-5 w-5 text-foreground" aria-hidden />
                     </div>
-                    <span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground/50 border border-border/40 rounded-full px-2 py-0.5 bg-background/30">
+                    <span className="flex items-center gap-1 meta border border-border rounded-full px-2 py-0.5 bg-card">
                       <Clock className="h-2.5 w-2.5" aria-hidden />
                       ~{service.duration}min
                     </span>
                   </div>
 
-                  {/* Name + description */}
-                  <h3 className="font-bold text-base text-foreground mb-1 group-hover:text-primary transition-colors duration-200">
-                    {service.name}
-                  </h3>
+                  <h3 className="h4 mb-2 text-foreground">{service.name}</h3>
                   {service.description && (
-                    <p className="text-xs text-muted-foreground leading-relaxed mb-4 flex-1">
+                    <p className="text-sm text-[--fg-secondary] leading-relaxed mb-4 flex-1">
                       {service.description}
                     </p>
                   )}
 
-                  {/* Price — at a glance */}
                   <div className="mt-auto mb-3">
-                    <p className="text-sm font-bold text-foreground">
-                      Desde <span className="gradient-text">{fmt(total)}</span>{' '}
-                      <span className="text-xs font-normal text-muted-foreground">con IVA</span>
+                    <p className="text-base font-semibold text-foreground">
+                      Desde <span className="price text-primary">{fmt(total)}</span>{' '}
+                      <span className="meta inline">con IVA</span>
                     </p>
                   </div>
 
-                  {/* IVA breakdown */}
                   <details className="group/details mb-3">
-                    <summary className="cursor-pointer text-[10px] text-muted-foreground/50 font-mono hover:text-muted-foreground transition-colors select-none list-none flex items-center gap-1">
+                    <summary className="cursor-pointer meta hover:text-foreground transition-colors select-none list-none flex items-center gap-1">
                       <span className="group-open/details:hidden">▶ Ver desglose IVA</span>
                       <span className="hidden group-open/details:inline">▼ Ocultar desglose</span>
                     </summary>
-                    <div className="mt-2 space-y-1 border border-border/40 rounded-[--radius] p-3 bg-background/30 text-xs">
-                      <div className="flex justify-between text-muted-foreground">
+                    <div className="mt-2 space-y-1 border border-border rounded-[--radius] p-3 bg-secondary text-xs">
+                      <div className="flex justify-between text-[--fg-secondary]">
                         <span>Base imponible</span>
-                        <span className="font-mono">{fmt(service.basePrice)}</span>
+                        <span className="price">{fmt(service.basePrice)}</span>
                       </div>
-                      <div className="flex justify-between text-muted-foreground">
+                      <div className="flex justify-between text-[--fg-secondary]">
                         <span>IVA ({(ivaRate * 100).toFixed(0)}%)</span>
-                        <span className="font-mono">{fmt(iva)}</span>
+                        <span className="price">{fmt(iva)}</span>
                       </div>
-                      <div className="flex justify-between font-bold text-foreground border-t border-border/40 pt-1.5 mt-1">
+                      <div className="flex justify-between font-bold text-foreground border-t border-border pt-1.5 mt-1">
                         <span>Total</span>
-                        <span className="font-mono gradient-text">{fmt(total)}</span>
+                        <span className="price text-primary">{fmt(total)}</span>
                       </div>
                     </div>
                   </details>
 
-                  {/* Warranty badge — RD 1457/1986 Art. 16 */}
-                  <div className="mb-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-success/8 border border-success/20 w-fit text-[10px] font-medium text-success">
+                  <div className="mb-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[--success-muted] border border-[oklch(0.58_0.14_148/0.25)] w-fit text-[10px] font-medium text-success">
                     <BadgeCheck className="h-3 w-3 shrink-0" aria-hidden />
-                    <span>3 meses o 2.000 km (lo primero que ocurra)</span>
+                    <span>3 meses o 2.000 km</span>
                   </div>
 
-                  {/* Reservar CTA */}
                   <button
                     type="button"
                     onClick={() => openChatWithService(service.id)}
                     aria-label={`Reservar ${service.name}`}
-                    className="w-full h-10 rounded-[--radius-lg] border border-primary/30 bg-primary/5 text-primary text-xs font-semibold hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 mt-1"
+                    className="w-full h-11 rounded-[--radius-md] bg-primary text-primary-foreground text-sm font-semibold hover:bg-[--brand-red-dark] active:translate-y-px transition-all duration-150"
                   >
                     Reservar
                   </button>

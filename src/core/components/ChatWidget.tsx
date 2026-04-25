@@ -89,7 +89,7 @@ export function ChatWidget(props: Props) {
               type="button"
               onClick={() => { setOpen(true); setHasNotification(false); }}
               aria-label="Abrir asistente de reservas"
-              className="relative flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-glow hover:bg-primary/90 transition-colors duration-200"
+              className="relative flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-lg)] hover:bg-[--brand-red-dark] transition-colors duration-200"
             >
               <Bot className="h-6 w-6" />
               {hasNotification && (
@@ -126,13 +126,13 @@ export function ChatWidget(props: Props) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 40 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed z-50 bottom-0 left-0 right-0 md:bottom-6 md:right-6 md:left-auto md:w-[420px] flex flex-col rounded-t-[--radius-xl] md:rounded-[--radius-xl] overflow-hidden shadow-[var(--shadow-dialog)] border border-primary/15"
+              className="fixed z-50 bottom-0 left-0 right-0 md:bottom-6 md:right-6 md:left-auto md:w-[420px] flex flex-col rounded-t-[--radius-xl] md:rounded-[--radius-xl] overflow-hidden shadow-[var(--shadow-dialog)] border border-border bg-card"
               role="dialog"
               aria-modal="true"
               aria-label="Asistente de reservas"
             >
               {/* Drawer header */}
-              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/90 to-primary/70 border-b border-primary/30 shrink-0">
+              <div className="flex items-center justify-between px-4 py-3 bg-primary border-b border-[--brand-red-dark] shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary-foreground/20 border border-primary-foreground/30">
                     <Bot className="h-4 w-4 text-primary-foreground" />
@@ -153,7 +153,7 @@ export function ChatWidget(props: Props) {
               </div>
 
               {/* Progress dots */}
-              <div className="flex items-center gap-2 px-4 py-2.5 bg-card/80 border-b border-border/40 shrink-0">
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-secondary border-b border-border shrink-0">
                 {STEPS.map((label, i) => (
                   <div key={label} className="flex items-center gap-2 flex-1">
                     <div className={`flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-bold transition-colors duration-300 shrink-0 ${

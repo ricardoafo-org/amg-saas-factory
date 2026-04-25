@@ -30,16 +30,20 @@ test.describe('Homepage', () => {
   });
 
   test('services section renders all 5 services', async ({ page }) => {
-    await expect(page.getByText('Cambio de Aceite')).toBeVisible();
-    await expect(page.getByText('Revisión Pre-ITV')).toBeVisible();
-    await expect(page.getByText('Mecánica General')).toBeVisible();
-    await expect(page.getByText('Cambio de Neumáticos')).toBeVisible();
-    await expect(page.getByText('Revisión de Frenos')).toBeVisible();
+    const grid = page.locator('#servicios');
+    await expect(grid.getByRole('heading', { name: 'Cambio de Aceite' })).toBeVisible();
+    await expect(grid.getByRole('heading', { name: 'Revisión Pre-ITV' })).toBeVisible();
+    await expect(grid.getByRole('heading', { name: 'Mecánica General' })).toBeVisible();
+    await expect(grid.getByRole('heading', { name: 'Cambio de Neumáticos' })).toBeVisible();
+    await expect(grid.getByRole('heading', { name: 'Revisión de Frenos' })).toBeVisible();
   });
 
   test('stats bar shows key metrics', async ({ page }) => {
-    await expect(page.getByText('15+')).toBeVisible();
-    await expect(page.getByText('2.000+')).toBeVisible();
+    // Years-open figure (year-since-1987 = 39+ in 2026); rendered as "{yearsOpen}+"
+    const yearsOpen = new Date().getFullYear() - 1987;
+    await expect(page.getByText(`${yearsOpen}+`).first()).toBeVisible();
+    // Customers-served label is config-derived (e.g. "2,3k" or "2,4k") — assert label, not exact value
+    await expect(page.getByText('Clientes atendidos')).toBeVisible();
   });
 
   test('ITV section has calculate button', async ({ page }) => {

@@ -21,7 +21,9 @@ test.describe('Mobile viewport', () => {
 
   test('service cards visible without horizontal scroll', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('Cambio de Aceite')).toBeVisible();
+    await expect(
+      page.locator('#servicios').getByRole('heading', { name: 'Cambio de Aceite' }),
+    ).toBeVisible();
   });
 
   test('phone link is visible on mobile', async ({ page }) => {

@@ -32,6 +32,7 @@ export type LocalBusiness = {
   foundingYear?: number;
   reviewRating?: number;
   reviewCount?: number;
+  customersServed?: number;
   address: {
     street: string;
     city: string;
