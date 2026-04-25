@@ -68,7 +68,7 @@ function IconOBD() {
 }
 
 // Bundle-canonical 6 services (static — matches Website.html sections C)
-const BUNDLE_SERVICES = [
+export const BUNDLE_SERVICES = [
   {
     id: 'cambio-aceite',
     icon: <IconOil />,

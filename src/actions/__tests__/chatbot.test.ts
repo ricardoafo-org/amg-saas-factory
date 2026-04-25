@@ -65,7 +65,13 @@ function makeMockPb({
   servicesGetList?: ReturnType<typeof vi.fn>;
   appointmentsCreate?: ReturnType<typeof vi.fn>;
 } = {}) {
+  // Simulate pb.filter() — mirrors the real SDK: replaces {:key} with the value (no escaping needed in tests)
+  const filterFn = vi.fn((template: string, params: Record<string, string>) => {
+    return template.replace(/\{:(\w+)\}/g, (_, key) => params[key] ?? '');
+  });
+
   return {
+    filter: filterFn,
     collection: vi.fn((name: string) => {
       if (name === 'consent_log') return { create: consentLogCreate };
       if (name === 'config') return { getFirstListItem: configGetFirstListItem };
@@ -355,6 +361,72 @@ describe('saveAppointment — failure handling', () => {
 
     await expect(saveAppointment(BASE_PAYLOAD)).rejects.toThrow();
     expect(appointmentsCreate).not.toHaveBeenCalled();
+  });
+
+  it('sanitizes error on customer create failure — thrown message contains no PII', async () => {
+    const customerEmail = BASE_PAYLOAD.customerEmail;
+    const customerPhone = BASE_PAYLOAD.customerPhone;
+    const customerName = BASE_PAYLOAD.customerName;
+    // PB might embed the rejected payload in the error message
+    const rawPbError = new Error(
+      `Create failed: email=${customerEmail} phone=${customerPhone} name=${customerName}`,
+    );
+    const customersCreate = vi.fn().mockRejectedValue(rawPbError);
+
+    const mockPb = makeMockPb({
+      configGetFirstListItem: makeConfigGetFirstListItem(),
+      customersGetFirstListItem: vi.fn().mockRejectedValue(new Error('not found')),
+      customersCreate,
+    });
+
+    vi.mocked(getPb).mockResolvedValue(mockPb as never);
+
+    let caughtError: Error | undefined;
+    try {
+      await saveAppointment(BASE_PAYLOAD);
+    } catch (err) {
+      caughtError = err instanceof Error ? err : new Error(String(err));
+    }
+
+    expect(caughtError).toBeDefined();
+    expect(caughtError!.message).not.toContain(customerEmail);
+    expect(caughtError!.message).not.toContain(customerPhone);
+    expect(caughtError!.message).not.toContain(customerName);
+    expect(caughtError!.message).toBe('customer_create_failed');
+  });
+
+  it('filter-injection attempt via email does NOT match customer in different tenant', async () => {
+    // Attacker-supplied email with PB filter metacharacters
+    const injectionEmail = 'victim@real.com" || "1"="1';
+    const customersGetFirstListItem = vi.fn().mockRejectedValue(new Error('not found'));
+    const customersCreate = vi.fn().mockResolvedValue({ id: 'cust-new' });
+    const customersGetOne = vi.fn().mockResolvedValue({ total_visits: 0, total_spent: 0 });
+    const customersUpdate = vi.fn().mockResolvedValue({});
+
+    const mockPb = makeMockPb({
+      configGetFirstListItem: makeConfigGetFirstListItem(),
+      customersGetFirstListItem,
+      customersCreate,
+      customersGetOne,
+      customersUpdate,
+    });
+
+    vi.mocked(getPb).mockResolvedValue(mockPb as never);
+
+    await saveAppointment({ ...BASE_PAYLOAD, customerEmail: injectionEmail });
+
+    // pb.filter must have been called (parameterized path taken)
+    expect(mockPb.filter).toHaveBeenCalledOnce();
+    const [template, params] = mockPb.filter.mock.calls[0] as [string, Record<string, string>];
+
+    // Template must use named placeholders — never raw interpolation
+    expect(template).toContain('{:tenantId}');
+    expect(template).toContain('{:email}');
+
+    // The raw injection string must be confined to the params object, not baked into the template
+    expect(template).not.toContain(injectionEmail);
+    expect(params['email']).toBe(injectionEmail.toLowerCase().trim());
+    expect(params['tenantId']).toBe(BASE_PAYLOAD.tenantId);
   });
 
   it('does NOT throw when aggregate update fails after appointment commits', async () => {

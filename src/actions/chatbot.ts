@@ -129,24 +129,32 @@ async function findOrCreateCustomer(
   const safeEmail = opts.email.toLowerCase().trim();
   try {
     const existing = await pb.collection('customers').getFirstListItem(
-      `tenant_id = "${opts.tenantId}" && email = "${safeEmail}"`,
+      pb.filter('tenant_id = {:tenantId} && email = {:email}', {
+        tenantId: opts.tenantId,
+        email: safeEmail,
+      }),
     );
     return existing.id;
   } catch {
-    const created = await pb.collection('customers').create({
-      tenant_id: opts.tenantId,
-      name: opts.name,
-      email: safeEmail,
-      phone: opts.phone,
-      first_seen: new Date().toISOString(),
-      last_seen: new Date().toISOString(),
-      total_visits: 0,
-      total_spent: 0,
-      preferred_contact: 'email',
-      marketing_consent: false,
-      notes: '',
-    });
-    return created.id;
+    try {
+      const created = await pb.collection('customers').create({
+        tenant_id: opts.tenantId,
+        name: opts.name,
+        email: safeEmail,
+        phone: opts.phone,
+        first_seen: new Date().toISOString(),
+        last_seen: new Date().toISOString(),
+        total_visits: 0,
+        total_spent: 0,
+        preferred_contact: 'email',
+        marketing_consent: false,
+        notes: '',
+      });
+      return created.id;
+    } catch (err) {
+      console.error('customer_create_failed', err instanceof Error ? err.message : 'unknown');
+      throw new Error('customer_create_failed');
+    }
   }
 }
 
