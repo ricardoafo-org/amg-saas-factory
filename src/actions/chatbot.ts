@@ -75,6 +75,14 @@ export async function saveAppointment(payload: AppointmentPayload) {
   }
   const totalAmount = baseAmount * (1 + ivaRate);
 
+  // LOPDGDD: consent logged above. Now find or create the customer record.
+  const customerId = await findOrCreateCustomer(pb, {
+    tenantId: payload.tenantId,
+    name: payload.customerName,
+    email: payload.customerEmail,
+    phone: payload.customerPhone,
+  });
+
   await pb.collection('appointments').create({
     tenant_id: payload.tenantId,
     customer_name: payload.customerName,
@@ -87,7 +95,20 @@ export async function saveAppointment(payload: AppointmentPayload) {
     base_amount: baseAmount,
     iva_rate: ivaRate,
     total_amount: totalAmount,
+    customer_id: customerId,
   });
+
+  // Update customer aggregates — failure is non-fatal; appointment is already written.
+  try {
+    const customer = await pb.collection('customers').getOne(customerId);
+    await pb.collection('customers').update(customerId, {
+      last_seen: new Date().toISOString(),
+      total_visits: (Number(customer['total_visits']) || 0) + 1,
+      total_spent: (Number(customer['total_spent']) || 0) + totalAmount,
+    });
+  } catch (err) {
+    console.error('Customer aggregate update failed:', err instanceof Error ? err.message : 'unknown error');
+  }
 
   if (payload.customerEmail) {
     await sendBookingConfirmation({
@@ -98,6 +119,34 @@ export async function saveAppointment(payload: AppointmentPayload) {
       matricula: payload.matricula,
       businessName,
     });
+  }
+}
+
+async function findOrCreateCustomer(
+  pb: Awaited<ReturnType<typeof getPb>>,
+  opts: { tenantId: string; name: string; email: string; phone: string },
+): Promise<string> {
+  const safeEmail = opts.email.toLowerCase().trim();
+  try {
+    const existing = await pb.collection('customers').getFirstListItem(
+      `tenant_id = "${opts.tenantId}" && email = "${safeEmail}"`,
+    );
+    return existing.id;
+  } catch {
+    const created = await pb.collection('customers').create({
+      tenant_id: opts.tenantId,
+      name: opts.name,
+      email: safeEmail,
+      phone: opts.phone,
+      first_seen: new Date().toISOString(),
+      last_seen: new Date().toISOString(),
+      total_visits: 0,
+      total_spent: 0,
+      preferred_contact: 'email',
+      marketing_consent: false,
+      notes: '',
+    });
+    return created.id;
   }
 }
 
