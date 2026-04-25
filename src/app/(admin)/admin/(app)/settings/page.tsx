@@ -13,7 +13,9 @@ async function getConfigValue(
   try {
     const record = await pb
       .collection('config')
-      .getFirstListItem(`tenant_id = "${tenantId}" && key = "${key}"`);
+      .getFirstListItem(
+        pb.filter('tenant_id = {:tenantId} && key = {:key}', { tenantId, key }),
+      );
     return (record['value'] as string) ?? fallback;
   } catch {
     return fallback;

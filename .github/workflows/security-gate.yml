@@ -1,0 +1,78 @@
+name: Security Gate
+
+# Deterministic security checks on every PR.
+# Mirrors .claude/agents/security-auditor.md and compliance-reviewer.md as
+# code, so violations are caught BEFORE auto-merge can fire — closing the gap
+# that let the FEAT-031 filter-injection land on main.
+#
+# Required check on main branch protection: enforce in repo settings.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  security-gate:
+    name: Security gate (deterministic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Need full history to diff against base for PR scope
+          fetch-depth: 0
+
+      - name: Determine changed files (PR scope)
+        id: changed
+        if: github.event_name == 'pull_request'
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          files=$(git diff --name-only "$base" "$head" -- 'src/**/*.ts' 'src/**/*.tsx' | tr '\n' ' ')
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+          echo "Changed TS/TSX files: $files"
+
+      - name: Run security gate (PR — changed files only)
+        if: github.event_name == 'pull_request'
+        run: |
+          if [[ -z "${{ steps.changed.outputs.files }}" ]]; then
+            echo "No TS/TSX changed — gate skipped."
+            exit 0
+          fi
+          bash scripts/ci-security-gate.sh --files "${{ steps.changed.outputs.files }}"
+
+      - name: Run security gate (push to main — full src/ scan)
+        if: github.event_name == 'push'
+        run: bash scripts/ci-security-gate.sh
+
+      - name: Comment summary on PR (on failure)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = [
+              '### Security Gate FAILED',
+              '',
+              'One or more deterministic security checks blocked this PR.',
+              'See the **Security gate** job log above for the file:line breakdown.',
+              '',
+              'These checks mirror `.claude/agents/security-auditor.md` and `compliance-reviewer.md`.',
+              'Run them locally with:',
+              '',
+              '```sh',
+              'bash scripts/ci-security-gate.sh',
+              '```',
+              '',
+              'Do not bypass this gate without a documented exception in the PR description.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

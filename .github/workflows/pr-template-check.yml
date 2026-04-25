@@ -1,0 +1,83 @@
+name: PR Template Check
+
+# Enforces that PR descriptions include the structured sections from
+# .github/pull_request_template.md. Block merge if a required section is
+# missing or its body looks like the template placeholder text.
+#
+# This catches the failure mode where an implementer (or human) opens a PR
+# with deviations buried in tool-result text, no reviewer reports cited,
+# and no confirmation that auto-merge was enabled.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-template-check:
+    name: PR template — required sections
+    runs-on: ubuntu-latest
+    # Skip Dependabot — it uses its own PR template
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - name: Validate PR description
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const required = [
+              { heading: '## Summary',           label: 'Summary' },
+              { heading: '## Spec Deviations',   label: 'Spec Deviations' },
+              { heading: '## Reviewer Reports',  label: 'Reviewer Reports' },
+              { heading: '## Auto-merge',        label: 'Auto-merge' },
+              { heading: '## Quality gates',     label: 'Quality gates' },
+            ];
+
+            const missing = [];
+            const empty   = [];
+
+            for (const section of required) {
+              const idx = body.indexOf(section.heading);
+              if (idx === -1) {
+                missing.push(section.label);
+                continue;
+              }
+
+              // Extract the body of this section (until next ## or end)
+              const after = body.slice(idx + section.heading.length);
+              const nextHeadingIdx = after.search(/\n##\s/m);
+              const sectionBody = (nextHeadingIdx === -1 ? after : after.slice(0, nextHeadingIdx)).trim();
+
+              // Strip HTML comments (template placeholders)
+              const stripped = sectionBody.replace(/<!--[\s\S]*?-->/g, '').trim();
+
+              if (stripped.length === 0) {
+                empty.push(section.label);
+              }
+            }
+
+            if (missing.length === 0 && empty.length === 0) {
+              core.info('PR template — all required sections present and non-empty.');
+              return;
+            }
+
+            const lines = [
+              '### PR template check FAILED',
+              '',
+              'The PR description is missing required structure. Update the PR body so it follows `.github/pull_request_template.md`.',
+              '',
+            ];
+            if (missing.length > 0) {
+              lines.push(`Missing sections: ${missing.map(s => '`' + s + '`').join(', ')}`);
+            }
+            if (empty.length > 0) {
+              lines.push(`Empty sections (write \`None\` if there is nothing to report): ${empty.map(s => '`' + s + '`').join(', ')}`);
+            }
+            lines.push('');
+            lines.push('This check exists because PRs without explicit Spec Deviations and Reviewer Reports lead to incidents like the FEAT-031 filter-injection that auto-merged before review.');
+
+            core.setFailed(lines.join('\n'));

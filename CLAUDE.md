@@ -45,22 +45,25 @@ Format: `<type>(<scope>): <description>` — 72 char max, imperative, no period.
 Types: `feat | fix | chore | docs | test | refactor | style | ci`
 Always add: `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`
 
-**Merge checklist** (in order):
-1. `npm run type-check` → zero exit
-2. `npm test` → all pass
-3. `compliance-reviewer` → zero violations
-4. `validator` (Builder-Validator chain) → PASS
-5. `qa-engineer` QA run → PASS or PARTIAL (no blocking bugs)
-6. Human validates golden path manually
-7. PR opened with `.github/pull_request_template.md` → squash merge
+**Workflow** (in order — see `docs/adr/ADR-011-ai-dev-process-hardening.md`):
+1. **Orchestrator** dispatches implementer with the spec
+2. **Implementer** runs branch hygiene (`git checkout -B <branch> origin/main`), implements, runs LOCAL gates: `type-check` + `test` + `lint` + `flows:validate` + `bash scripts/ci-security-gate.sh`
+3. **Implementer** pushes the branch and reports — does NOT open the PR
+4. **Orchestrator** runs the reviewer chain: `compliance-reviewer` → `validator` → `security-auditor` — all must PASS
+5. **Orchestrator** opens the PR with structured template + atomically enables auto-merge: `gh pr create … && gh pr merge <n> --auto --squash --delete-branch`
+6. **CI** runs as a second line of defence: `Security gate` + `PR template check` + standard gates — required checks on `main`
+7. **`qa-engineer`** runs after merge to tst — files bugs against new state
 
-Never commit to `main` directly. Never force-push. Never skip hooks (`--no-verify`).
+Never commit to `main` directly. Never force-push. Never skip hooks (`--no-verify`). Never have the implementer open the PR — that race is what let the FEAT-031 filter-injection auto-merge before review.
 
 ## Builder-Validator chain (mandatory for server actions + PocketBase queries)
 
-1. `implementer` builds and runs quality gates (Ralph Loop)
-2. `validator` reviews for tenant isolation, LOPDGDD order, hardcoded values, PII
-3. Merge only after validator VERDICT: PASS
+1. `implementer` builds and runs LOCAL quality gates (Ralph Loop), pushes branch, STOPS
+2. `compliance-reviewer` runs grep checks for LOPDGDD/IVA/tenant — must PASS
+3. `validator` reviews for tenant isolation, LOPDGDD order, hardcoded values, PII — must PASS
+4. `security-auditor` checks IDOR, filter injection, prompt injection, auth — must PASS
+5. Orchestrator opens PR (only after the three above PASS) with auto-merge enabled
+6. CI security-gate provides defence in depth — blocks merge if any reviewer was skipped
 
 ## Session hygiene
 

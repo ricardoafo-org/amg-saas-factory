@@ -16,7 +16,9 @@ async function setConfigKey(
   try {
     existing = await pb
       .collection('config')
-      .getFirstListItem(`tenant_id = "${tenantId}" && key = "${key}"`);
+      .getFirstListItem(
+        pb.filter('tenant_id = {:tenantId} && key = {:key}', { tenantId, key }),
+      );
   } catch {
     existing = null;
   }
