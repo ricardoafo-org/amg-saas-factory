@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="6" fill="#0d0d1a"/>
-  <circle cx="16" cy="16" r="13" stroke="#e11d48" stroke-width="1.5" stroke-dasharray="4 2" opacity="0.6"/>
-  <circle cx="16" cy="16" r="9" fill="#0d0d1a" stroke="#e11d48" stroke-width="1.5"/>
-  <path d="M18 9 L14 16 L17 16 L14 23 L22 15 L18 15 Z" fill="#f97316"/>
+  <rect width="32" height="32" rx="6" fill="oklch(0.18 0.01 60)"/>
+  <text x="16" y="18.5" text-anchor="middle" font-family="'Archivo Black','Anton',ui-sans-serif,sans-serif" font-weight="900" font-size="13" letter-spacing="0.3" fill="oklch(0.97 0.006 85)">AMG</text>
+  <g>
+    <rect x="5" y="25" width="6.5" height="2.5" rx="0.6" fill="oklch(0.72 0.12 230)"/>
+    <rect x="13" y="25" width="6.5" height="2.5" rx="0.6" fill="oklch(0.42 0.16 265)"/>
+    <rect x="21" y="25" width="6.5" height="2.5" rx="0.6" fill="oklch(0.56 0.20 25)"/>
+  </g>
 </svg>

@@ -4,6 +4,7 @@ import { ItvCountdown } from '@/core/components/ItvCountdown';
 import { Footer } from '@/core/components/Footer';
 import { TrustStrip } from '@/core/components/TrustStrip';
 import { Testimonials } from '@/core/components/Testimonials';
+import { VisitSection } from '@/core/components/VisitSection';
 import { ChatWidget } from '@/core/components/ChatWidget';
 import { loadClientConfig, loadChatbotFlow } from '@/lib/config';
 import type { ChatbotFlow } from '@/lib/chatbot/engine';
@@ -34,6 +35,7 @@ export default async function Home() {
       )}
 
       <Testimonials />
+      <VisitSection config={config} />
       <Footer config={config} />
 
       {/* Floating chat widget — client component */}
