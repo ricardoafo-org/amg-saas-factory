@@ -21,35 +21,6 @@ function getTwilioClient(): ReturnType<typeof twilio> | null {
 }
 
 // ---------------------------------------------------------------------------
-// SMS Templates
-// ---------------------------------------------------------------------------
-
-export const SMS_TEMPLATES = {
-  recordatorio_cita: {
-    id: 'recordatorio_cita',
-    label: 'Recordatorio de cita',
-    body: 'Hola {nombre}, recuerda tu cita en {taller} mañana {fecha} a las {hora}. Reprogramar: {link}. Resp. STOP para cancelar.',
-  },
-  vehiculo_listo: {
-    id: 'vehiculo_listo',
-    label: 'Vehículo listo',
-    body: 'Hola {nombre}, tu vehículo {plate} ya está listo para recoger en {taller}. Horario: {hours}. Resp. STOP para cancelar.',
-  },
-  presupuesto_enviado: {
-    id: 'presupuesto_enviado',
-    label: 'Presupuesto enviado',
-    body: 'Hola {nombre}, hemos preparado tu presupuesto ({total}€). Revísalo: {link}. Resp. STOP para cancelar.',
-  },
-  itv_proximo: {
-    id: 'itv_proximo',
-    label: 'ITV próxima a vencer',
-    body: 'Hola {nombre}, la ITV de tu {plate} vence el {fecha}. ¿Reservamos revisión previa? {bookingLink}. Resp. STOP para cancelar.',
-  },
-} as const;
-
-export type SmsTemplateId = keyof typeof SMS_TEMPLATES;
-
-// ---------------------------------------------------------------------------
 // sendSms
 // ---------------------------------------------------------------------------
 
