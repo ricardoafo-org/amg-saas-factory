@@ -444,43 +444,55 @@
     height: 44px; padding: 0 22px; font-size: 14px;
   }
 
-  /* ── Header ─────────────────────────────────────────────────────────── */
-  .hdr {
+  /* ── Navbar (FEAT-038 PR 2) ──────────────────────────────────────────
+     Drops backdrop-blur (saturated in 2026; Vercel/Linear rolled back).
+     Replaces with: solid bg + hairline + AMG tri-stripe + suspension bounce
+     on pin/unpin via --ease-mech. */
+  .nav {
     position: sticky; top: 0; z-index: 40;
-    background: color-mix(in oklch, var(--bg) 92%, transparent);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: var(--bg);
     border-bottom: 1px solid var(--border);
+    transition: box-shadow var(--dur-base) var(--ease-mech);
   }
-  .hdr::after {
+  .nav[data-scrolled="true"] {
+    box-shadow: 0 1px 0 0 color-mix(in oklch, var(--fg) 6%, transparent);
+  }
+  .nav::after {
     content: ""; display: block; height: 3px;
     background: linear-gradient(to right,
       var(--brand-m-lightblue) 0%,     var(--brand-m-lightblue) 33.33%,
       var(--brand-m-darkblue)  33.33%, var(--brand-m-darkblue)  66.66%,
       var(--brand-red)         66.66%, var(--brand-red)         100%);
   }
-  .hdr-inner {
+  .nav-inner {
     max-width: 1200px; margin: 0 auto;
     padding: 14px 24px;
     display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    transition: padding var(--dur-base) var(--ease-mech);
   }
-  .hdr-logo img { height: 34px; display: block; }
-  .hdr-nav {
+  .nav[data-scrolled="true"] .nav-inner {
+    padding-block: 8px;
+  }
+  .nav-logo { display: inline-flex; align-items: center; }
+  .nav-links {
     display: flex; gap: 28px;
     font-size: 14px; color: var(--fg-secondary); font-weight: 500;
   }
-  .hdr-nav a { transition: color var(--dur-fast) var(--ease-out); }
-  .hdr-nav a:hover { color: var(--fg); }
-  .hdr-right { display: flex; align-items: center; gap: 16px; }
-  .hdr-phone {
+  .nav-links a { transition: color var(--dur-fast) var(--ease-mech); }
+  .nav-links a:hover { color: var(--fg); }
+  .nav-right { display: flex; align-items: center; gap: 16px; }
+  .nav-phone {
     display: inline-flex; align-items: center; gap: 6px;
     font: 600 14px var(--font-sans); color: var(--fg);
     text-decoration: none;
   }
-  .hdr-phone span { font-family: var(--font-mono); font-weight: 500; }
+  .nav-phone span { font-family: var(--font-mono); font-weight: 500; }
   @media (max-width: 768px) {
-    .hdr-nav { display: none; }
-    .hdr-phone { display: none; }
+    .nav-links { display: none; }
+    .nav-phone { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav, .nav-inner, .nav-links a { transition: none; }
   }
 
   /* ── Hero meta row ──────────────────────────────────────────────────── */

@@ -1,3 +1,4 @@
+import { Navbar } from '@/core/components/layout/Navbar';
 import { Hero } from '@/core/components/Hero';
 import { ServiceGrid } from '@/core/components/ServiceGrid';
 import { ItvCountdown } from '@/core/components/ItvCountdown';
@@ -19,6 +20,7 @@ export default async function Home() {
 
   return (
     <>
+      <Navbar config={config} />
       <Hero config={config} nextSlot={nextSlot} />
       <TrustStrip />
       <ServiceGrid
