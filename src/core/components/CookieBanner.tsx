@@ -71,7 +71,7 @@ export function CookieBanner() {
       {/* Backdrop when panel is open on mobile */}
       {panelOpen && (
         <div
-          className="fixed inset-0 bg-background/60 backdrop-blur-sm z-40"
+          className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-40"
           onClick={() => setPanelOpen(false)}
           aria-hidden
         />
@@ -86,7 +86,7 @@ export function CookieBanner() {
           animation: 'cookieBannerSlideUp 0.3s ease-out forwards',
         }}
       >
-        <div className="glass-strong rounded-[--radius-xl] mx-auto max-w-3xl shadow-[0_-4px_32px_hsl(226_40%_2%/0.6)] border border-border/60">
+        <div className="bg-card rounded-[--radius-xl] mx-auto max-w-3xl shadow-[var(--shadow-dialog)] border border-border">
           {/* Main banner row */}
           <div className="px-4 py-4 sm:px-5">
             <div className="flex items-start gap-3 mb-3">

@@ -18,29 +18,28 @@ export function Footer({ config }: { config: LocalBusiness }) {
   const waNumber = contact.whatsapp?.replace(/\D/g, '');
 
   return (
-    <footer className="relative border-t border-border/50 bg-card/30">
+    <footer className="relative border-t border-border bg-card">
+      <div className="amg-band w-full" aria-hidden />
       <div className="mx-auto max-w-6xl px-5 py-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
 
-        {/* Col 1: Brand + social links */}
         <div className="space-y-4">
           <div className="flex items-center gap-2.5">
             <img src="/logo.svg" alt={businessName} className="h-8 w-auto" />
           </div>
           {tagline && (
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">{tagline}</p>
+            <p className="text-sm text-[--fg-secondary] leading-relaxed max-w-xs">{tagline}</p>
           )}
-          <p className="text-xs text-muted-foreground/60 leading-relaxed max-w-xs">
+          <p className="text-xs text-[--fg-secondary] leading-relaxed max-w-xs">
             Taller mecánico de confianza en {address.city}. Mecánica general, cambios de aceite, revisiones pre-ITV y mucho más.
           </p>
 
-          {/* Social / contact actions */}
           <div className="flex flex-col gap-2 pt-1">
             <a
               href={`tel:${contact.phone}`}
-              className="inline-flex items-center gap-2 text-sm text-foreground/80 hover:text-primary transition-colors w-fit"
+              className="inline-flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors w-fit"
             >
-              <Phone className="h-4 w-4 text-primary/50 shrink-0" />
-              {contact.phone}
+              <Phone className="h-4 w-4 text-primary shrink-0" />
+              <span className="font-mono">{contact.phone}</span>
             </a>
 
             {waNumber && (
@@ -48,9 +47,9 @@ export function Footer({ config }: { config: LocalBusiness }) {
                 href={`https://wa.me/${waNumber}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-foreground/80 hover:text-green-400 transition-colors w-fit"
+                className="inline-flex items-center gap-2 text-sm text-foreground hover:text-success transition-colors w-fit"
               >
-                <MessageCircle className="h-4 w-4 text-green-500/50 shrink-0" />
+                <MessageCircle className="h-4 w-4 text-success shrink-0" />
                 WhatsApp
               </a>
             )}
@@ -60,34 +59,33 @@ export function Footer({ config }: { config: LocalBusiness }) {
                 href={contact.googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-foreground/80 hover:text-primary transition-colors w-fit"
+                className="inline-flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors w-fit"
               >
-                <MapPin className="h-4 w-4 text-primary/50 shrink-0" />
+                <MapPin className="h-4 w-4 text-primary shrink-0" />
                 Ver en Google Maps
-                <ExternalLink className="h-3 w-3 opacity-50" />
+                <ExternalLink className="h-3 w-3 opacity-60" />
               </a>
             )}
 
             {contact.email && (
               <a
                 href={`mailto:${contact.email}`}
-                className="inline-flex items-center gap-2 text-sm text-foreground/80 hover:text-primary transition-colors w-fit"
+                className="inline-flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors w-fit"
               >
-                <Mail className="h-4 w-4 text-primary/50 shrink-0" />
+                <Mail className="h-4 w-4 text-primary shrink-0" />
                 {contact.email}
               </a>
             )}
           </div>
 
-          <address className="not-italic text-xs text-muted-foreground/50 leading-snug">
+          <address className="not-italic meta leading-snug">
             {address.street}<br />
             {address.postalCode} {address.city}, {address.region}
           </address>
         </div>
 
-        {/* Col 2: Quick links */}
         <div className="space-y-4">
-          <h3 className="text-xs font-mono uppercase tracking-[0.15em] text-muted-foreground">Acceso rápido</h3>
+          <h3 className="eyebrow">Acceso rápido</h3>
           <nav aria-label="Navegación de pie de página">
             <ul className="space-y-2.5 text-sm">
               {[
@@ -95,14 +93,18 @@ export function Footer({ config }: { config: LocalBusiness }) {
                 { label: 'Reservar cita', href: '#', isAction: true },
                 { label: 'Calculadora ITV', href: '#itv' },
                 { label: 'Opiniones', href: '#testimonios' },
-                { label: 'Política de Privacidad', href: config.privacyPolicy?.url, external: true },
+                {
+                  label: 'Política de Privacidad',
+                  href: config.privacyPolicy?.url ?? '/politica-de-privacidad',
+                  external: !!config.privacyPolicy?.url,
+                },
               ].map(({ label, href, isAction, external }) => (
                 <li key={label}>
                   {isAction ? (
                     <button
                       type="button"
                       data-action="open-chat"
-                      className="open-chat-trigger text-foreground/70 hover:text-primary transition-colors text-left"
+                      className="open-chat-trigger text-foreground hover:text-primary transition-colors text-left"
                     >
                       {label}
                     </button>
@@ -111,10 +113,10 @@ export function Footer({ config }: { config: LocalBusiness }) {
                       href={href}
                       target={external ? '_blank' : undefined}
                       rel={external ? 'noopener noreferrer' : undefined}
-                      className="text-foreground/70 hover:text-primary transition-colors flex items-center gap-1"
+                      className="text-foreground hover:text-primary transition-colors flex items-center gap-1"
                     >
                       {label}
-                      {external && <ExternalLink className="h-2.5 w-2.5 opacity-50" />}
+                      {external && <ExternalLink className="h-2.5 w-2.5 opacity-60" />}
                     </a>
                   )}
                 </li>
@@ -123,21 +125,18 @@ export function Footer({ config }: { config: LocalBusiness }) {
           </nav>
         </div>
 
-        {/* Col 3: Hours + address */}
         <div className="space-y-4">
-          <h3 className="text-xs font-mono uppercase tracking-[0.15em] text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="h-3 w-3" />
-              Horario
-            </span>
+          <h3 className="eyebrow inline-flex items-center gap-1.5">
+            <Clock className="h-3 w-3" />
+            Horario
           </h3>
           {operatingHours && operatingHours.length > 0 && (
-            <table className="w-full text-xs text-foreground/75" aria-label="Horario de apertura">
-              <tbody className="divide-y divide-border/20">
+            <table className="w-full text-sm" aria-label="Horario de apertura">
+              <tbody className="divide-y divide-border">
                 {operatingHours.map((h) => (
-                  <tr key={h.day} className={h.closed ? 'opacity-40' : ''}>
-                    <td className="py-1.5 font-medium">{DAY_LABELS[h.day] ?? h.day}</td>
-                    <td className="py-1.5 text-right font-mono text-muted-foreground">
+                  <tr key={h.day} className={h.closed ? 'opacity-50' : ''}>
+                    <td className="py-1.5 font-medium text-foreground">{DAY_LABELS[h.day] ?? h.day}</td>
+                    <td className="py-1.5 text-right price text-[--fg-secondary]">
                       {h.closed ? 'Cerrado' : `${h.open} – ${h.close}`}
                     </td>
                   </tr>
@@ -148,46 +147,45 @@ export function Footer({ config }: { config: LocalBusiness }) {
         </div>
       </div>
 
-      {/* Consumer rights bar */}
-      <div className="border-t border-border/30 px-5 py-3 flex items-center justify-center gap-2">
-        <p className="text-[10px] text-muted-foreground/35 font-mono text-center">
+      <div className="border-t border-border px-5 py-3 flex items-center justify-center gap-2">
+        <p className="meta text-center">
           Derechos del consumidor:{' '}
-          <a href="https://www.ocu.org" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground/60 transition-colors inline-flex items-center gap-0.5">
+          <a href="https://www.ocu.org" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors inline-flex items-center gap-0.5">
             ocu.org <ExternalLink className="h-2.5 w-2.5 inline" />
           </a>
           {' '}·{' '}
-          <a href="https://sede.dgt.gob.es" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground/60 transition-colors inline-flex items-center gap-0.5">
+          <a href="https://sede.dgt.gob.es" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors inline-flex items-center gap-0.5">
             ITV — DGT <ExternalLink className="h-2.5 w-2.5 inline" />
           </a>
         </p>
       </div>
 
-      {/* Legal bottom bar */}
-      <div className="border-t border-border/30 px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <p className="text-[11px] text-muted-foreground/40 font-mono text-center sm:text-left">
-          © {currentYear} {businessName}
-          {legal?.cif ? ` — CIF: ${legal.cif}` : ''}
-          {legal?.registrationNumber
-            ? ` — Reg. Talleres Murcia n.º ${legal.registrationNumber}`
-            : ''}
-          {' '}· RD 920/2017 · LOPDGDD · IVA incluido
-        </p>
-        <p className="text-[10px] text-muted-foreground/30 font-mono text-center sm:text-left mt-0.5">
-          Garantía de reparación: 3 meses o 2.000 km (lo primero que ocurra) · RD 1457/1986 ·{' '}
-          Precios orientativos sin IVA, sujetos a presupuesto previo
-        </p>
+      <div className="border-t border-border px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex flex-col gap-1 text-center sm:text-left">
+          <p className="meta">
+            © {currentYear} {businessName}
+            {legal?.cif ? ` — CIF: ${legal.cif}` : ''}
+            {legal?.registrationNumber
+              ? ` — Reg. Talleres Murcia n.º ${legal.registrationNumber}`
+              : ''}
+            {' '}· RD 920/2017 · LOPDGDD · IVA incluido
+          </p>
+          <p className="meta opacity-80">
+            Garantía: 3 meses o 2.000 km · RD 1457/1986 · Precios orientativos sujetos a presupuesto previo
+          </p>
+        </div>
         <nav className="flex items-center gap-3 flex-wrap justify-center" aria-label="Vínculos legales">
-          <a href="/politica-de-privacidad" className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
+          <a href="/politica-de-privacidad" className="meta hover:text-foreground transition-colors">
             Privacidad
           </a>
-          <span className="text-muted-foreground/20 text-[11px]" aria-hidden>·</span>
-          <a href="/politica-de-cookies" className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
+          <span className="text-border" aria-hidden>·</span>
+          <a href="/politica-de-cookies" className="meta hover:text-foreground transition-colors">
             Cookies
           </a>
           {legal?.dpoEmail && (
             <>
-              <span className="text-muted-foreground/20 text-[11px]" aria-hidden>·</span>
-              <a href={`mailto:${legal.dpoEmail}`} className="text-[11px] text-muted-foreground/40 hover:text-muted-foreground transition-colors">
+              <span className="text-border" aria-hidden>·</span>
+              <a href={`mailto:${legal.dpoEmail}`} className="meta hover:text-foreground transition-colors">
                 DPO
               </a>
             </>
