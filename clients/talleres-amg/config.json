@@ -30,58 +30,50 @@
   "services": [
     {
       "id": "cambio-aceite",
-      "name": "Cambio de Aceite",
-      "description": "Cambio de aceite y filtro con revisión de niveles",
-      "basePrice": 39.99,
+      "name": "Cambio de aceite y filtros",
+      "description": "Aceite, filtro de aceite y revisión de niveles",
+      "basePrice": 41.32,
       "duration": 45,
       "category": "mantenimiento"
     },
     {
-      "id": "pre-itv",
-      "name": "Revisión Pre-ITV",
-      "description": "Inspección completa antes de pasar la ITV",
-      "basePrice": 49.99,
-      "duration": 60,
-      "category": "inspeccion"
-    },
-    {
-      "id": "mecanica-general",
-      "name": "Mecánica General",
-      "description": "Diagnóstico y reparación de averías",
-      "basePrice": 65.00,
-      "duration": 90,
-      "category": "reparacion"
-    },
-    {
-      "id": "cambio-neumaticos",
-      "name": "Cambio de Neumáticos",
-      "description": "Montaje, equilibrado y alineación",
-      "basePrice": 15.00,
-      "duration": 30,
-      "category": "neumaticos"
-    },
-    {
       "id": "frenos",
-      "name": "Revisión de Frenos",
-      "description": "Inspección y sustitución de pastillas y discos",
-      "basePrice": 79.99,
+      "name": "Revisión de frenos",
+      "description": "Inspección de pastillas, discos y líquido de frenos",
+      "basePrice": 66.11,
       "duration": 75,
       "category": "seguridad"
     },
     {
-      "id": "diagnostico-electronico",
-      "name": "Diagnóstico Electrónico",
-      "description": "Diagnóstico completo con escáner profesional e informe detallado",
-      "basePrice": 45.00,
+      "id": "pre-itv",
+      "name": "Pre-revisión ITV",
+      "description": "Inspección completa de todos los puntos que revisa la ITV",
+      "basePrice": 32.97,
       "duration": 60,
-      "category": "electronica"
+      "category": "inspeccion"
     },
     {
-      "id": "escaner-obd",
-      "name": "Escáner OBD",
-      "description": "Lectura rápida de códigos de error y borrado de averías",
-      "basePrice": 25.00,
+      "id": "neumaticos",
+      "name": "Neumáticos y equilibrado",
+      "description": "Montaje, equilibrado y alineación con válvulas incluidas",
+      "basePrice": 49.58,
       "duration": 30,
+      "category": "neumaticos"
+    },
+    {
+      "id": "aire-acondicionado",
+      "name": "Aire acondicionado",
+      "description": "Carga de gas, cambio de filtro de habitáculo y diagnóstico de fugas",
+      "basePrice": 53.71,
+      "duration": 40,
+      "category": "mantenimiento"
+    },
+    {
+      "id": "diagnostico-obd",
+      "name": "Diagnóstico OBD",
+      "description": "Lectura y borrado de códigos de avería con informe",
+      "basePrice": 20.66,
+      "duration": 20,
       "category": "electronica"
     }
   ],
