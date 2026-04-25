@@ -51,7 +51,7 @@ Run history (every single one failed):
 
 ## Root Cause Analysis
 
-Two distinct issues found:
+**Three** distinct issues found (only discovered sequentially as each was fixed):
 
 ### Primary blocker — `TST_SSH_KEY` is malformed
 
@@ -63,7 +63,15 @@ Two distinct issues found:
 
 Verified with admin account: secret `TST_SSH_KEY` exists (last updated 2026-04-25T00:59:10Z) but the format is invalid.
 
-### Secondary issue — secret name mismatch
+### Secondary blocker — health check has no port to connect to
+
+After fixing the SSH key (re-uploaded via `gh secret set TST_SSH_KEY < ~/.ssh/amg_tst_deploy` at 12:05Z), the next deploy attempt got past SSH, pulled the image, started the container — and then the deploy script's health check failed with `HTTP 000` for all 30 attempts (60s).
+
+Root cause: `infra/docker-compose.tst.yml` declares the `app` service with `expose: 3000` only, no `ports:` mapping. `expose` opens the port to other containers in the same Docker network (which is how Caddy reaches it for the public TLS-terminated traffic), but it does **not** bind to the VPS host's loopback. Meanwhile `scripts/deploy-tst.sh:22` runs `curl http://localhost:3000/api/health` from the VPS host shell — which has nothing to connect to.
+
+Fix in this PR: add `ports: ["127.0.0.1:3000:3000"]` to the `app` service. Loopback-only binding keeps the public surface unchanged (Caddy still terminates 80/443) while letting the deploy script's health curl reach the app.
+
+### Tertiary issue — secret name mismatch
 
 `.github/workflows/deploy-tst.yml:63` references `secrets.TST_KNOWN_HOSTS` but the actual secret is named `TST_SSH_KNOWN_HOSTS`. This passes empty string to the `fingerprint` parameter. Fingerprint is optional in the action so this is non-fatal, but should be cleaned up — or the parameter removed entirely if host key pinning isn't desired.
 
@@ -71,24 +79,22 @@ Note: the `appleboy/ssh-action` `fingerprint` parameter expects an **SSH key fin
 
 ## Fix
 
-**Cannot be fixed by Claude alone** — requires user/admin to re-upload the SSH private key.
+Done across two layers:
 
-User action required:
-```bash
-# On a machine that has the working private key for the deploy user
-gh secret set TST_SSH_KEY < ~/.ssh/id_ed25519_tst_deploy
+1. **Manual (already executed at 12:05Z):** rotated `TST_SSH_KEY` GitHub secret using
+   ```bash
+   gh secret set TST_SSH_KEY < ~/.ssh/amg_tst_deploy
+   ```
+   The `<` redirect preserves newlines that the GitHub web UI silently strips.
 
-# Verify by re-running the latest deploy-tst run, or push an empty commit:
-git commit --allow-empty -m "chore(ci): retrigger tst deploy after secret rotation"
-git push origin main
-```
+2. **Code (this PR):** add `ports: ["127.0.0.1:3000:3000"]` to the `app` service in `infra/docker-compose.tst.yml` so the deploy script's loopback health check can reach the running container.
 
-The `<` redirect is critical — it preserves newlines from the file. Pasting into the GitHub web UI is what most likely caused the original malformed upload.
+Deferred to a separate follow-up PR (after deployment is verified working):
+- Workflow secret-name typo at `.github/workflows/deploy-tst.yml:63` (`TST_KNOWN_HOSTS` → `TST_SSH_KNOWN_HOSTS`, or remove the `fingerprint:` line if host pinning isn't intended)
+- Decide whether to keep loopback-only port binding or move the health check inside the container via `docker compose exec`
 
-Code-side cleanup (separate small PR):
-- Either rename `secrets.TST_KNOWN_HOSTS` → `secrets.TST_SSH_KNOWN_HOSTS` in the workflow if the secret is a fingerprint, OR remove the `fingerprint:` line entirely if host key pinning isn't enforced today.
-
-Branch: `fix/BUG-006` (workflow cleanup only — secret rotation is manual)
+Branch: `fix/BUG-006-deploy-tst-ssh-key`
+Files changed: `infra/docker-compose.tst.yml`, `docs/bugs/open-BUG-006.md`
 
 ## Verification
 

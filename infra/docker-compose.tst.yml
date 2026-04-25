@@ -18,6 +18,11 @@ services:
     image: ghcr.io/ricardoafo-org/amg-saas-factory:${IMAGE_TAG:-tst}
     restart: unless-stopped
     env_file: .env.tst
+    ports:
+      # Bind to loopback only so the VPS-side deploy script can hit
+      # http://localhost:3000/api/health for post-deploy verification.
+      # Caddy still fronts the public 80/443 traffic via the docker network.
+      - "127.0.0.1:3000:3000"
     expose:
       - "3000"
     depends_on:
