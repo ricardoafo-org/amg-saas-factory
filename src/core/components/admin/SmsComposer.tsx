@@ -8,9 +8,9 @@ import {
   sendBulkSms,
   searchCustomers,
   SMS_TEMPLATES,
-  interpolateTemplate,
 } from '@/actions/sms';
 import type { SmsTemplateId, CustomerSearchResult, SmsSuggestion } from '@/actions/sms';
+import { interpolateTemplate } from '@/lib/sms/helpers';
 
 const MAX_CHARS = 160;
 const MAX_BULK = 50;
