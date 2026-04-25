@@ -9,7 +9,9 @@ import { VehicleReady } from '@/emails/VehicleReady';
 import { CopyHtmlButton } from './CopyHtmlButton';
 
 const BASE_URL = process.env['NEXT_PUBLIC_BASE_URL'] ?? 'http://localhost:3000';
-const PRIMARY = '#1a1a2e';
+// Preview-only: passes a CSS var to the email template renderer.
+// Real email delivery uses the resolved hex in the action layer.
+const PRIMARY = 'var(--brand-ink)';
 
 const MOCK_DATE = '2026-05-15T10:00:00.000Z';
 const VALID_UNTIL = '28 de mayo de 2026';
@@ -134,8 +136,8 @@ export default async function EmailPreviewPage({
     <div style={{ fontFamily: 'system-ui, sans-serif', padding: '0' }}>
       <div
         style={{
-          background: '#1a1a2e',
-          color: '#fff',
+          background: 'var(--brand-ink)',
+          color: 'var(--color-brand-paper)',
           padding: '12px 24px',
           display: 'flex',
           alignItems: 'center',
@@ -146,11 +148,11 @@ export default async function EmailPreviewPage({
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <Link
             href="/admin/email-preview"
-            style={{ color: '#aaa', fontSize: '13px', textDecoration: 'none' }}
+            style={{ color: 'var(--muted-fg)', fontSize: '13px', textDecoration: 'none' }}
           >
             ← Todos los templates
           </Link>
-          <span style={{ color: '#fff', fontWeight: 600, fontSize: '14px' }}>
+          <span style={{ color: 'var(--color-brand-paper)', fontWeight: 600, fontSize: '14px' }}>
             {TEMPLATE_LABELS[name]}
           </span>
         </div>

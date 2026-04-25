@@ -71,7 +71,7 @@ const STATUS_CONFIG: Record<
   },
   in_progress: {
     label: 'En taller',
-    className: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    className: 'bg-[var(--status-in-progress)]/15 text-[var(--status-in-progress)] border-[var(--status-in-progress)]/30',
   },
   ready: {
     label: 'Lista',

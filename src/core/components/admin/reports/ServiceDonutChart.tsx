@@ -8,13 +8,13 @@ type Props = {
 };
 
 const COLORS = [
-  'hsl(349 90% 52%)',
-  'hsl(22 100% 55%)',
-  'hsl(210 80% 55%)',
-  'hsl(142 70% 45%)',
-  'hsl(280 70% 60%)',
-  'hsl(50 90% 55%)',
-  'hsl(180 60% 45%)',
+  'var(--primary)',
+  'var(--accent)',
+  'var(--brand-m-darkblue)',
+  'var(--brand-m-lightblue)',
+  'var(--status-ready)',
+  'var(--status-pending)',
+  'var(--status-completed)',
 ];
 
 const SIZE = 180;
@@ -101,19 +101,19 @@ export function ServiceDonutChart({ data }: Props) {
           {/* Centre label */}
           {activeSlice ? (
             <>
-              <text x={CX} y={CY - 8} textAnchor="middle" fontSize={11} fill="hsl(210 20% 96%)" fontWeight={600}>
+              <text x={CX} y={CY - 8} textAnchor="middle" fontSize={11} fill="var(--fg)" fontWeight={600}>
                 {activeSlice.item.percentage.toFixed(1)}%
               </text>
-              <text x={CX} y={CY + 8} textAnchor="middle" fontSize={9} fill="hsl(210 10% 50%)">
+              <text x={CX} y={CY + 8} textAnchor="middle" fontSize={9} fill="var(--muted-fg)">
                 {activeSlice.item.service.slice(0, 14)}
               </text>
             </>
           ) : (
             <>
-              <text x={CX} y={CY - 4} textAnchor="middle" fontSize={11} fill="hsl(210 20% 96%)" fontWeight={600}>
+              <text x={CX} y={CY - 4} textAnchor="middle" fontSize={11} fill="var(--fg)" fontWeight={600}>
                 {data.length}
               </text>
-              <text x={CX} y={CY + 10} textAnchor="middle" fontSize={9} fill="hsl(210 10% 50%)">
+              <text x={CX} y={CY + 10} textAnchor="middle" fontSize={9} fill="var(--muted-fg)">
                 servicios
               </text>
             </>
