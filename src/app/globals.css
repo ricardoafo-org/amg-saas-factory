@@ -122,6 +122,7 @@
   --ease-out:    cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --ease-soft:   cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-mech:   cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast:    150ms;
   --dur-base:    220ms;
   --dur-slow:    320ms;
@@ -1025,6 +1026,57 @@
 @keyframes shimmer {
   0%   { background-position: -200% center; }
   100% { background-position: 200% center; }
+}
+
+/* AMG logo — pistons fire on hover (asymmetric crank-angle offset). */
+@keyframes amg-piston-fire {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-2.2px); }
+  100% { transform: translateY(0); }
+}
+
+/* AMG logo — light sweep across piston ring grooves on hover. */
+@keyframes amg-ring-sweep {
+  0%   { opacity: 0; transform: translateY(-3px); }
+  50%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(3px); }
+}
+
+.amg-logo .piston-l,
+.amg-logo .piston-r,
+.amg-logo .ring-sweep-l,
+.amg-logo .ring-sweep-r {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+@media (hover: hover) {
+  .amg-logo:hover .piston-l {
+    animation: amg-piston-fire 360ms var(--ease-mech) both;
+  }
+  .amg-logo:hover .piston-r {
+    animation: amg-piston-fire 360ms var(--ease-mech) 80ms both;
+  }
+  .amg-logo:hover .ring-sweep-l {
+    animation: amg-ring-sweep 320ms var(--ease-mech) both;
+  }
+  .amg-logo:hover .ring-sweep-r {
+    animation: amg-ring-sweep 320ms var(--ease-mech) 80ms both;
+  }
+}
+
+/* AMG logo — Windows High Contrast Mode: collapse fills to system colours. */
+@media (forced-colors: active) {
+  .amg-logo .glyph,
+  .amg-logo .glyph-stroke {
+    fill: CanvasText;
+    stroke: CanvasText;
+  }
+  .amg-logo .ring-sweep-l,
+  .amg-logo .ring-sweep-r,
+  .amg-logo .engrave-highlight {
+    display: none;
+  }
 }
 
 /* Reduced motion */

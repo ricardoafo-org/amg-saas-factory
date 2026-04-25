@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
-import { Archivo_Black } from 'next/font/google';
+import { Archivo, Archivo_Black } from 'next/font/google';
 import { ThemeProvider } from 'next-themes';
 import { CookieBanner } from '@/core/components/CookieBanner';
 import { loadClientConfig } from '@/lib/config';
@@ -12,6 +12,13 @@ const archivoBlack = Archivo_Black({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-archivo-black',
+});
+
+const archivo = Archivo({
+  weight: ['400', '500'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-archivo',
 });
 
 const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
@@ -35,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${GeistSans.variable} ${GeistMono.variable} ${archivoBlack.variable}`}
+      className={`${GeistSans.variable} ${GeistMono.variable} ${archivoBlack.variable} ${archivo.variable}`}
     >
       <body className="bg-background text-foreground antialiased">
         <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false}>
