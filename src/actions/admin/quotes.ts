@@ -125,7 +125,12 @@ export async function createQuote(input: CreateQuoteInput): Promise<CreateQuoteR
     // IVA rate from config collection — mandatory
     const ivaConfig = await pb
       .collection('config')
-      .getFirstListItem(`tenant_id = "${tenantId}" && key = "iva_rate"`);
+      .getFirstListItem(
+        pb.filter('tenant_id = {:tenantId} && key = {:key}', {
+          tenantId,
+          key: 'iva_rate',
+        }),
+      );
     const ivaRate = parseFloat(ivaConfig['value'] as string);
 
     // Compute totals from line items

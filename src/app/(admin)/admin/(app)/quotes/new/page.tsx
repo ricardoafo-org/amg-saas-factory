@@ -10,7 +10,12 @@ export default async function NewQuotePage() {
   try {
     const config = await pb
       .collection('config')
-      .getFirstListItem(`tenant_id = "${tenantId}" && key = "iva_rate"`);
+      .getFirstListItem(
+        pb.filter('tenant_id = {:tenantId} && key = {:key}', {
+          tenantId,
+          key: 'iva_rate',
+        }),
+      );
     const parsed = parseFloat(config['value'] as string);
     if (!isNaN(parsed) && parsed > 0) ivaRate = parsed;
   } catch {
