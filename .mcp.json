@@ -4,13 +4,18 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"]
     },
-    "pocketbase": {
-      "command": "npx",
-      "args": ["-y", "pocketbase-mcp"],
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
       "env": {
-        "PB_URL": "http://127.0.0.1:8090",
-        "PB_ADMIN_EMAIL": "${POCKETBASE_ADMIN_EMAIL}",
-        "PB_ADMIN_PASSWORD": "${POCKETBASE_ADMIN_PASSWORD}"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${BOT_GH_TOKEN}"
       }
     }
   }
