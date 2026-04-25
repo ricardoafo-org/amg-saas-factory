@@ -7,18 +7,18 @@
   "reviewRating": 4.9,
   "reviewCount": 124,
   "address": {
-    "street": "Polígono Industrial Cabezo Beaza, Calle Zinc 12",
+    "street": "Calle Dr. Serrano, 49",
     "city": "Cartagena",
-    "postalCode": "30353",
+    "postalCode": "30300",
     "region": "Región de Murcia",
     "country": "ES",
-    "geo": { "lat": 37.5731, "lng": -0.9945 }
+    "geo": { "lat": 37.6072, "lng": -0.9885 }
   },
   "contact": {
     "phone": "+34 968 000 000",
     "email": "info@talleresentamg.es",
     "whatsapp": "+34 604273678",
-    "googleMapsUrl": "https://maps.google.com/?q=Talleres+AMG+Cartagena"
+    "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Talleres+AMG+Calle+Dr+Serrano+49+30300+Cartagena"
   },
   "branding": {
     "primaryColor": "#1a1a2e",
