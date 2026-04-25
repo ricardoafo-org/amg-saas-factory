@@ -1,142 +1,114 @@
-import { Phone, MapPin, Clock, ExternalLink, MessageCircle, Navigation } from 'lucide-react';
+import Image from 'next/image';
 import type { LocalBusiness } from '@/core/types/adapter';
 
-const DAY_LABELS: Record<string, string> = {
-  monday:    'Lunes',
-  tuesday:   'Martes',
-  wednesday: 'Miércoles',
-  thursday:  'Jueves',
-  friday:    'Viernes',
-  saturday:  'Sábado',
-  sunday:    'Domingo',
-};
-
-function isOpenNow(operatingHours: LocalBusiness['operatingHours']): boolean {
-  const now = new Date();
-  const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-  const todayKey = dayKeys[now.getDay()];
-  const today = operatingHours.find((h) => h.day === todayKey);
-  if (!today || today.closed) return false;
-  const minutesNow = now.getHours() * 60 + now.getMinutes();
-  const [oH, oM] = today.open.split(':').map(Number);
-  const [cH, cM] = today.close.split(':').map(Number);
-  const open = (oH ?? 0) * 60 + (oM ?? 0);
-  const close = (cH ?? 0) * 60 + (cM ?? 0);
-  return minutesNow >= open && minutesNow < close;
-}
-
 export function VisitSection({ config }: { config: LocalBusiness }) {
-  const { contact, address, operatingHours } = config;
+  const { contact } = config;
   const waNumber = contact.whatsapp?.replace(/\D/g, '');
-  const open = isOpenNow(operatingHours);
+  const mapsUrl = contact.googleMapsUrl ?? 'https://maps.google.com';
 
   return (
-    <section id="visitanos" className="relative px-5 py-20 sm:py-24 paper">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-10 flex flex-col items-center text-center gap-3">
-          <span className="amg-stripes" aria-hidden>
-            <span /><span /><span />
-          </span>
-          <p className="eyebrow">Visítanos</p>
-          <h2 className="h2">Pásate por el taller.</h2>
-          <p className="lead max-w-xl">
-            Estamos en {address.city}. Sin cita también: si pasas a primera hora te atendemos.
-          </p>
+    <section className="sect" id="visitanos" style={{ paddingTop: 0 }}>
+      <div className="sect-inner">
+        {/* Section header */}
+        <div className="sect-head">
+          <div>
+            <p className="sect-pre">Visítanos</p>
+            <h2>Calle Mayor 42 · a dos pasos del Ayuntamiento.</h2>
+          </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-12">
-          <article className="md:col-span-7 ticket relative overflow-hidden p-7 sm:p-9">
-            <div className="amg-edge" aria-hidden />
-            <div className="pl-3 flex flex-col gap-5">
-              <div>
-                <p className="eyebrow eyebrow-dot">Dirección</p>
-                <address className="not-italic mt-3 text-lg font-medium text-foreground leading-snug">
-                  {address.street}
-                  <br />
-                  <span className="font-mono text-base text-[--fg-secondary]">
-                    {address.postalCode} {address.city}
-                  </span>
-                </address>
-                <p className="meta mt-1.5">{address.region}, {address.country}</p>
+        {/* 2-col visit grid */}
+        <div className="visit">
+          {/* Left: workshop photo */}
+          <div className="visit-photo">
+            <Image
+              src="https://images.unsplash.com/photo-1504222490345-c075b6008014?w=900&q=80&auto=format&fit=crop"
+              alt="Fachada del taller con coches y herramientas"
+              fill
+              sizes="(max-width: 900px) 100vw, 55vw"
+              style={{ objectFit: 'cover' }}
+              priority={false}
+            />
+          </div>
+
+          {/* Right: info card with hairline-separated rows */}
+          <div className="visit-info">
+            {/* Dirección row */}
+            <div className="visit-row">
+              <div className="ic" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
               </div>
-
-              <div className="flex flex-wrap gap-3 pt-1">
-                {contact.googleMapsUrl && (
-                  <a
-                    href={contact.googleMapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 h-11 px-4 rounded-[--radius-md] bg-primary text-primary-foreground text-sm font-semibold hover:bg-[--brand-red-dark] transition-colors"
-                  >
-                    <Navigation className="h-4 w-4" />
-                    Cómo llegar
-                    <ExternalLink className="h-3 w-3 opacity-70" />
-                  </a>
-                )}
-
-                <a
-                  href={`tel:${contact.phone}`}
-                  className="inline-flex items-center gap-2 h-11 px-4 rounded-[--radius-md] bg-card text-foreground text-sm font-semibold border border-[--border-strong] hover:bg-secondary transition-colors"
-                >
-                  <Phone className="h-4 w-4 text-primary" />
-                  <span className="font-mono">{contact.phone}</span>
+              <div>
+                <h4>Dirección</h4>
+                <p>Calle Mayor 42, 30201 Cartagena, Murcia</p>
+                <a className="dir-cta" href={mapsUrl} target="_blank" rel="noopener noreferrer">
+                  Cómo llegar
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
                 </a>
+              </div>
+            </div>
 
+            {/* Teléfono row */}
+            <div className="visit-row">
+              <div className="ic" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+              </div>
+              <div>
+                <h4>Teléfono / WhatsApp</h4>
+                <p>
+                  {contact.phone}
+                  {' · '}respondemos en 15 min en horario laboral
+                </p>
                 {waNumber && (
                   <a
-                    href={`https://wa.me/${waNumber}?text=Hola,%20me%20gustar%C3%ADa%20pedir%20cita`}
+                    className="dir-cta"
+                    href={`https://wa.me/${waNumber}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 h-11 px-4 rounded-[--radius-md] bg-card text-foreground text-sm font-semibold border border-[--border-strong] hover:bg-secondary transition-colors"
                   >
-                    <MessageCircle className="h-4 w-4 text-success" />
-                    WhatsApp
+                    Escribir por WhatsApp
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
                   </a>
                 )}
               </div>
+            </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-border">
-                <span
-                  className={open ? 'dot-available' : 'dot-warning'}
-                  role="status"
-                  aria-label={open ? 'Abierto ahora' : 'Cerrado ahora'}
-                />
-                <span className="text-sm">
-                  <span className="meta mr-1.5">{open ? 'ABIERTO AHORA' : 'CERRADO AHORA'}</span>
-                  <span className="text-[--fg-secondary]">
-                    {open ? '· estamos atendiendo' : '· vuelve en horario laboral'}
-                  </span>
-                </span>
+            {/* Horario row */}
+            <div className="visit-row">
+              <div className="ic" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4>Horario</h4>
+                <div className="hours">
+                  <div className="hours-row">
+                    <span>Lunes — Viernes</span>
+                    <span>8:00 — 19:00</span>
+                  </div>
+                  <div className="hours-row">
+                    <span>Sábado</span>
+                    <span>9:00 — 14:00</span>
+                  </div>
+                  <div className="hours-row closed">
+                    <span>Domingo</span>
+                    <span>Cerrado</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </article>
-
-          <aside className="md:col-span-5 glass rounded-[--radius-lg] p-7 sm:p-8 flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" />
-              <p className="eyebrow">Horario</p>
-            </div>
-
-            <table className="w-full text-sm" aria-label="Horario de apertura">
-              <tbody className="divide-y divide-border">
-                {operatingHours.map((h) => (
-                  <tr key={h.day} className={h.closed ? 'opacity-60' : ''}>
-                    <td className="py-2 font-medium text-foreground">
-                      {DAY_LABELS[h.day] ?? h.day}
-                    </td>
-                    <td className="py-2 text-right price text-[--fg-secondary]">
-                      {h.closed ? 'Cerrado' : `${h.open} – ${h.close}`}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <p className="meta pt-2 border-t border-border flex items-start gap-1.5">
-              <MapPin className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-              <span>Polígono Cabezo Beaza · Acceso fácil desde la A-30</span>
-            </p>
-          </aside>
+          </div>
         </div>
       </div>
     </section>

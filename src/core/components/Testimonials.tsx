@@ -1,104 +1,79 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Quote } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { MOTION } from '@/lib/motion';
 
+// Bundle-canonical testimonials — copy from Website.html Section F
 const TESTIMONIALS = [
   {
-    name: 'Carlos M.',
-    text: 'Rapidísimos y honestos con el presupuesto. No te cobran nada que no necesites.',
-    rating: 5,
-    service: 'Cambio de aceite',
+    initials: 'MG',
+    text: 'Me llamaron antes de cambiar nada para decirme el precio exacto. Al final fue menos de lo presupuestado porque una pieza estaba en buen estado. Vuelvo seguro.',
+    name: 'María González',
+    vehicle: 'Golf V · Reseña en Google',
   },
   {
-    name: 'Ana L.',
-    text: 'Pasé la ITV a la primera gracias a su revisión pre-ITV. Muy recomendables.',
-    rating: 5,
-    service: 'Revisión Pre-ITV',
+    initials: 'JS',
+    text: 'Llevo 15 años con ellos. Arreglaron el embrague de mi furgo en un día cuando otro taller me decía que era imposible. Gente honesta y trabajadora.',
+    name: 'Javier Sánchez',
+    vehicle: 'Transit · Cliente desde 2010',
   },
   {
-    name: 'Pedro S.',
-    text: 'Llevan años cuidando mis coches. Nunca me han fallado.',
-    rating: 5,
-    service: 'Mecánica general',
+    initials: 'CM',
+    text: 'Mi hija acababa de sacarse el carnet y la atendieron con una paciencia que no he visto en otro sitio. Le explicaron todo sin hacerla sentir tonta. Diez.',
+    name: 'Carmen Martín',
+    vehicle: 'Clio IV · Reseña en Google',
   },
 ] as const;
 
-const ROTATE_MS = 5000;
-
 export function Testimonials() {
-  const [active, setActive] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setActive((prev) => (prev + 1) % TESTIMONIALS.length);
-    }, ROTATE_MS);
-    return () => clearInterval(id);
-  }, []);
-
-  const t = TESTIMONIALS[active];
-
   return (
-    <section id="testimonios" className="relative px-5 py-20 sm:py-24 bg-background">
-      <div className="relative mx-auto max-w-2xl">
-        <div className="mb-10 flex flex-col items-center text-center gap-3">
-          <span className="amg-stripes" aria-hidden>
-            <span /><span /><span />
-          </span>
-          <p className="eyebrow">Opiniones</p>
-          <h2 className="h2">Quien viene, vuelve.</h2>
+    <section className="sect" id="testimonios">
+      <div className="sect-inner">
+        {/* Section header */}
+        <div className="sect-head">
+          <div>
+            <p className="sect-pre">Lo que dicen los vecinos</p>
+            <h2>38 años en el barrio no se inventan.</h2>
+          </div>
         </div>
 
-        <div className="relative min-h-[220px] flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={active}
-              {...MOTION.slideUp}
-              exit={{ opacity: 0, y: -12 }}
-              className="ticket relative overflow-hidden p-8 w-full"
+        {/* 3-card grid with stagger-in — replaces old carousel */}
+        <motion.div
+          className="testi-grid"
+          variants={{ visible: MOTION.serviceGridStagger }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-10% 0px' }}
+        >
+          {TESTIMONIALS.map((t) => (
+            <motion.article
+              key={t.initials}
+              className="testi"
+              variants={{
+                hidden: MOTION.serviceCard.initial,
+                visible: {
+                  ...MOTION.serviceCard.whileInView,
+                  transition: MOTION.serviceCard.transition,
+                },
+              }}
             >
-              <div className="amg-edge" aria-hidden />
-              <div className="pl-3">
-                <Quote className="h-6 w-6 text-primary mx-auto mb-3" aria-hidden />
+              {/* 5 yellow stars */}
+              <div className="testi-stars" aria-label="5 de 5 estrellas">★★★★★</div>
 
-                <div className="flex justify-center gap-0.5 mb-4" aria-label={`Valoración: ${t.rating} de 5 estrellas`}>
-                  {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-[--brand-amber] text-[--brand-amber]" aria-hidden />
-                  ))}
-                </div>
+              {/* Quote */}
+              <p className="testi-text">{t.text}</p>
 
-                <blockquote className="text-base text-foreground leading-relaxed mb-6 text-center">
-                  &ldquo;{t.text}&rdquo;
-                </blockquote>
-
-                <div className="flex flex-col items-center gap-1">
-                  <p className="font-semibold text-sm">{t.name}</p>
-                  <p className="meta">{t.service}</p>
+              {/* Author */}
+              <div className="testi-meta">
+                <div className="testi-avatar" aria-hidden>{t.initials}</div>
+                <div>
+                  <div className="testi-name">{t.name}</div>
+                  <div className="testi-sub">{t.vehicle}</div>
                 </div>
               </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        <div className="flex justify-center gap-2 mt-6" role="tablist" aria-label="Testimonios">
-          {TESTIMONIALS.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              role="tab"
-              aria-selected={i === active}
-              aria-label={`Testimonio ${i + 1}`}
-              onClick={() => setActive(i)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i === active
-                  ? 'bg-primary w-6'
-                  : 'bg-border hover:bg-[--border-strong] w-2'
-              }`}
-            />
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

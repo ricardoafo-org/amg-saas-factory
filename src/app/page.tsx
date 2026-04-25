@@ -20,7 +20,7 @@ export default async function Home() {
   return (
     <>
       <Hero config={config} nextSlot={nextSlot} />
-      <TrustStrip config={config} />
+      <TrustStrip />
       <ServiceGrid
         services={config.services}
         ivaRate={config.ivaRate}
