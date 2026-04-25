@@ -112,6 +112,21 @@ export type WorkOrder = PbRecord & {
   labor_minutes: number;
 };
 
+export type Appointment = PbRecord & {
+  tenant_id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  service_ids: string[];
+  scheduled_at: string;
+  notes: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  base_amount: number;
+  iva_rate: number;
+  total_amount: number;
+  customer_id?: string;
+};
+
 export type SmsLogStatus = 'sent' | 'delivered' | 'failed';
 
 export type SmsLog = PbRecord & {
