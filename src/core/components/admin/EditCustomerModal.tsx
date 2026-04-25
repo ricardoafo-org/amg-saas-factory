@@ -167,7 +167,7 @@ export function EditCustomerModal({ customer, onClose }: Props) {
                 }`}
               >
                 <span
-                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-card transition-transform ${
                     marketingConsent ? 'translate-x-4' : 'translate-x-0.5'
                   }`}
                 />
