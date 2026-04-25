@@ -17,7 +17,10 @@ export default async function ReportsPage() {
   let bookings: Booking[] = [];
   try {
     const res = await pb.collection('appointments').getFullList({
-      filter: `tenant_id = "${tenantId}" && scheduled_at >= "${fromStr}" && scheduled_at < "${toStr}"`,
+      filter: pb.filter(
+        'tenant_id = {:tenantId} && scheduled_at >= {:fromStr} && scheduled_at < {:toStr}',
+        { tenantId, fromStr, toStr },
+      ),
       sort: 'scheduled_at',
     });
 

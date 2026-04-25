@@ -153,7 +153,7 @@ export async function upsertService(
       // Verify this service belongs to the tenant before updating
       const existing = await pb
         .collection('services')
-        .getOne(id, { filter: `tenant_id = "${tenantId}"` })
+        .getOne(id, { filter: pb.filter('tenant_id = {:tenantId}', { tenantId }) })
         .catch(() => null);
 
       if (!existing) return { ok: false, error: 'Servicio no encontrado' };
@@ -191,7 +191,7 @@ export async function toggleServiceActive(
   try {
     const existing = await pb
       .collection('services')
-      .getOne(id, { filter: `tenant_id = "${tenantId}"` })
+      .getOne(id, { filter: pb.filter('tenant_id = {:tenantId}', { tenantId }) })
       .catch(() => null);
 
     if (!existing) return { ok: false, error: 'Servicio no encontrado' };

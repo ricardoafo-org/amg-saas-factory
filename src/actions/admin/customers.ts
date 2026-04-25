@@ -36,11 +36,13 @@ export async function getCustomers(
   const ctx = await getStaffCtx();
   const perPage = 20;
 
-  let filter = `tenant_id = "${ctx.tenantId}"`;
+  const filterParams: Record<string, string> = { tenantId: ctx.tenantId };
+  let filterTpl = 'tenant_id = {:tenantId}';
   if (q.trim()) {
-    const safe = q.replace(/"/g, '');
-    filter += ` && (name ~ "${safe}" || email ~ "${safe}")`;
+    filterParams['q'] = q.trim();
+    filterTpl += ' && (name ~ {:q} || email ~ {:q})';
   }
+  const filter = ctx.pb.filter(filterTpl, filterParams);
 
   const sortMap: Record<SortField, string> = {
     name: 'name',
@@ -58,10 +60,11 @@ export async function getCustomers(
   const vehicleCountMap: Record<string, number> = {};
 
   if (ids.length > 0) {
-    const idFilter =
-      ids.map((id) => `customer_id = "${id}"`).join(' || ');
+    const idPlaceholders = ids.map((_, i) => `customer_id = {:cid${i}}`).join(' || ');
+    const vehicleParams: Record<string, string> = { tenantId: ctx.tenantId };
+    ids.forEach((id, i) => { vehicleParams[`cid${i}`] = id; });
     const vehicles = await ctx.pb.collection('vehicles').getFullList({
-      filter: `tenant_id = "${ctx.tenantId}" && (${idFilter})`,
+      filter: ctx.pb.filter(`tenant_id = {:tenantId} && (${idPlaceholders})`, vehicleParams),
       fields: 'customer_id',
     });
     for (const v of vehicles) {
@@ -120,7 +123,7 @@ export async function getCustomer(
   let customer;
   try {
     customer = await ctx.pb.collection('customers').getOne(id, {
-      filter: `tenant_id = "${ctx.tenantId}"`,
+      filter: ctx.pb.filter('tenant_id = {:tenantId}', { tenantId: ctx.tenantId }),
     });
   } catch {
     return null;
@@ -133,11 +136,17 @@ export async function getCustomer(
 
   const [vehiclesRes, appointmentsRes] = await Promise.all([
     ctx.pb.collection('vehicles').getFullList({
-      filter: `tenant_id = "${ctx.tenantId}" && customer_id = "${id}"`,
+      filter: ctx.pb.filter(
+        'tenant_id = {:tenantId} && customer_id = {:id}',
+        { tenantId: ctx.tenantId, id },
+      ),
       sort: '-created',
     }),
     ctx.pb.collection('appointments').getList(appointmentsPage, 10, {
-      filter: `tenant_id = "${ctx.tenantId}" && customer_id = "${id}"`,
+      filter: ctx.pb.filter(
+        'tenant_id = {:tenantId} && customer_id = {:id}',
+        { tenantId: ctx.tenantId, id },
+      ),
       sort: '-scheduled_at',
     }),
   ]);
@@ -204,7 +213,7 @@ export async function updateCustomer(
   let existing;
   try {
     existing = await ctx.pb.collection('customers').getFirstListItem(
-      `id = "${id}" && tenant_id = "${ctx.tenantId}"`,
+      ctx.pb.filter('id = {:id} && tenant_id = {:tenantId}', { id, tenantId: ctx.tenantId }),
     );
   } catch {
     return { success: false, error: 'Cliente no encontrado' };

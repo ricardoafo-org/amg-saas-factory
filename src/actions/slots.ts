@@ -25,7 +25,10 @@ export async function getAvailableSlots(
   const toStr = to.toISOString().split('T')[0];
 
   const res = await pb.collection('availability_slots').getList(1, 50, {
-    filter: `tenant_id = "${tenantId}" && slot_date >= "${fromStr}" && slot_date <= "${toStr}"`,
+    filter: pb.filter(
+      'tenant_id = {:tenantId} && slot_date >= {:fromStr} && slot_date <= {:toStr}',
+      { tenantId, fromStr, toStr },
+    ),
     sort: 'slot_date,start_time',
   });
 
@@ -51,7 +54,10 @@ export async function getNextAvailableSlot(tenantId: string): Promise<AvailableS
     const toStr = to.toISOString().split('T')[0];
 
     const res = await pb.collection('availability_slots').getList(1, 50, {
-      filter: `tenant_id = "${tenantId}" && slot_date >= "${today}" && slot_date <= "${toStr}"`,
+      filter: pb.filter(
+        'tenant_id = {:tenantId} && slot_date >= {:today} && slot_date <= {:toStr}',
+        { tenantId, today, toStr },
+      ),
       sort: 'slot_date,start_time',
     });
 
