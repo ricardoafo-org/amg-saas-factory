@@ -68,23 +68,29 @@ jobs:
   # can't see: bad env vars, PocketBase unreachable, container crashloop,
   # rollback that didn't trigger. /api/health returns the build-time
   # NEXT_PUBLIC_COMMIT_SHA, so commit mismatch = stale container = red gate.
+  #
+  # NOTE: /api/health alone is too shallow — it has no app dependencies, so
+  # an SSR error or hydration crash on `/` won't fail it. We also probe `/`
+  # for SSR markers (length + brand text). For full hydration coverage we
+  # need Playwright against deployed tst — tracked separately.
   health-check:
-    name: Health check tst.amg-talleres.com
+    name: Health check (tst)
     needs: build-and-deploy
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      TST_BASE_URL: https://tst.178-104-237-14.sslip.io
     steps:
       - name: Probe /api/health until commit matches deployed SHA
         env:
           EXPECTED_SHA: ${{ github.sha }}
-          HEALTH_URL: https://tst.amg-talleres.com/api/health
         run: |
           set -euo pipefail
           # Container can take 20-40s to come up after docker compose up -d.
           # Try for ~2 minutes with 10s spacing — total 12 attempts.
           for attempt in $(seq 1 12); do
-            echo "Attempt ${attempt}/12 — GET ${HEALTH_URL}"
-            response=$(curl --silent --show-error --max-time 10 "${HEALTH_URL}" || true)
+            echo "Attempt ${attempt}/12 — GET ${TST_BASE_URL}/api/health"
+            response=$(curl --silent --show-error --max-time 10 "${TST_BASE_URL}/api/health" || true)
             if [ -z "${response}" ]; then
               echo "  no response yet"
               sleep 10
@@ -102,3 +108,20 @@ jobs:
           done
           echo "Health check failed after 12 attempts. Container did not converge on ${EXPECTED_SHA}."
           exit 1
+
+      - name: Probe homepage SSR (catches render errors /api/health misses)
+        run: |
+          set -euo pipefail
+          body=$(curl --silent --show-error --max-time 15 "${TST_BASE_URL}/")
+          bytes=${#body}
+          echo "Homepage size: ${bytes} bytes"
+          if [ "${bytes}" -lt 10000 ]; then
+            echo "FAIL: homepage HTML is suspiciously small (<10KB) — likely SSR error page"
+            echo "${body}" | head -100
+            exit 1
+          fi
+          if ! echo "${body}" | grep -q "Talleres AMG"; then
+            echo "FAIL: homepage HTML does not contain brand marker 'Talleres AMG'"
+            exit 1
+          fi
+          echo "Homepage SSR OK (${bytes} bytes, brand marker present)."
