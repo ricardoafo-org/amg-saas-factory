@@ -749,6 +749,25 @@
     font: 500 11px var(--font-mono); color: var(--fg-muted);
     letter-spacing: 0.06em; text-transform: uppercase;
   }
+  /* Warranty disclosure pill — RD 1457/1986 conformance signal. */
+  .svc-warranty {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--success-muted, color-mix(in srgb, var(--success) 12%, transparent));
+    color: var(--success-strong, var(--success));
+    border: 1px solid color-mix(in srgb, var(--success) 24%, transparent);
+    font: 600 11px var(--font-sans);
+    letter-spacing: 0.02em;
+    width: fit-content;
+  }
+  .svc-warranty svg { stroke-width: 2.4; }
+  @media (forced-colors: active) {
+    .svc-warranty {
+      background: Canvas;
+      color: CanvasText;
+      border: 1px solid CanvasText;
+    }
+  }
   .svc-foot {
     display: flex; justify-content: space-between; align-items: flex-end;
     padding-top: 16px; margin-top: auto; border-top: 1px solid var(--border);
@@ -1010,14 +1029,25 @@
     color: oklch(1 0 0 / 0.5);
     font-weight: 500;
   }
-  .ftr-inner a {
+  .ftr-inner a,
+  .ftr-inner button {
     display: block;
     color: oklch(1 0 0 / 0.75);
     font-size: 14px;
     padding: 4px 0;
     transition: color var(--dur-fast) var(--ease-out);
   }
-  .ftr-inner a:hover { color: oklch(1 0 0); }
+  .ftr-inner button {
+    background: transparent;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    color: oklch(1 0 0 / 0.75);
+  }
+  .ftr-inner a:hover,
+  .ftr-inner button:hover,
+  .ftr-inner button:focus-visible { color: oklch(1 0 0); }
   .ftr-brand img { filter: invert(1) brightness(1.8); height: 38px; margin-bottom: 14px; display: block; }
   .ftr-brand p { color: oklch(1 0 0 / 0.65); font-size: 14px; line-height: 1.55; max-width: 320px; margin: 0; }
   .ftr-bottom {
