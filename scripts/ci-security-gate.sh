@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Deterministic security gate — mirrors checks from
-#   .claude/agents/security-auditor.md  (HIGH/CRITICAL findings)
-#   .claude/agents/compliance-reviewer.md  (LOPDGDD, IVA, tenant)
+# Deterministic security gate — covers HIGH/CRITICAL findings
+# (tenant-isolation IDOR, filter injection, hardcoded secrets) and
+# compliance checks (LOPDGDD, IVA, tenant data hardcoding).
 #
 # Exit codes:
 #   0  all gates pass

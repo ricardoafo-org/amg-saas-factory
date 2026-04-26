@@ -52,3 +52,11 @@ tmp/
 
 # Claude Code scheduled-task lock — runtime state, not source
 .claude/scheduled_tasks.lock
+
+# Personal AI dev framework — lives off-repo per ADR-013.
+# Agent charters, path-scoped rules, and skill bundles are personal workflow,
+# not project artifact. Source of truth is ~/.claude/ (per-user); engram holds
+# the compact runtime projections.
+.claude/agents/
+.claude/rules/
+.claude/skills/

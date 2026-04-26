@@ -66,14 +66,6 @@ File bugs using `docs/bugs/_TEMPLATE.md`. File ADRs using `docs/adr/_TEMPLATE.md
 | `Stop` hook | `npm run type-check` — non-zero exit = task NOT done |
 | CI on PR | `security-gate.yml` (deterministic grep) + `test-deletion-guard.yml` + `pr-template-check.yml` |
 
-## Path-scoped rules (auto-loaded by Claude Code)
+## AI tooling
 
-Located in `.claude/rules/` — apply automatically when editing files at matching paths:
-
-| Rule file | Applies to |
-|---|---|
-| `server-actions.md` | `src/actions/**`, `src/app/api/**` |
-| `components.md` | `src/**/*.tsx` |
-| `chatbot-flows.md` | `clients/**/chatbot_flow.json` |
-
-These remain in-repo until the migration in ADR-013 completes.
+Personal AI tooling — agent charters, path-scoped rules, skill bundles — lives off-repo per [ADR-013](docs/adr/ADR-013-personal-framework-off-repo.md). Source of truth is `~/.claude/`; engram holds the compact runtime projections. The repo does not assume any particular AI toolchain — all quality gates (`security-gate.yml`, `test-deletion-guard.yml`, `pr-template-check.yml`) are deterministic CI checks that run without AI knowledge.

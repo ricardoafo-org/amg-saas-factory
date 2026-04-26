@@ -40,7 +40,6 @@
   - changed-files:
       - any-glob-to-any-file:
           - "src/**/consent*"
-          - ".claude/skills/es-compliance/**"
 
 "area:schema":
   - changed-files:
