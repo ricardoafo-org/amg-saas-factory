@@ -79,7 +79,7 @@
 "type:test":
   - changed-files:
       - any-glob-to-any-file:
-          - "e2e/**"
+          - "tests/**"
           - "**/*.test.ts"
           - "**/*.spec.ts"
 

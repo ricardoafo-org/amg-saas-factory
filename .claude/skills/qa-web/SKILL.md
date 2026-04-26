@@ -7,7 +7,7 @@ Domain: Playwright E2E and manual browser testing for the AMG SaaS Factory.
 ## Architecture context
 
 - **Stack**: Next.js 15 App Router + PocketBase at :8090
-- **E2E tool**: Playwright (`e2e/*.spec.ts`)
+- **E2E tool**: Playwright (`tests/e2e/*.spec.ts`)
 - **Unit tool**: Vitest (`src/**/__tests__/**`)
 - **Dev server**: must be running at `:3000`; PocketBase at `:8090`
 
@@ -32,7 +32,7 @@ npm run type-check
 npx playwright test
 
 # E2E — single file
-npx playwright test e2e/chatbot.spec.ts
+npx playwright test tests/e2e/chatbot.spec.ts
 
 # E2E — headed (see browser)
 npx playwright test --headed

@@ -98,7 +98,7 @@ jobs:
         run: npm audit --omit=dev --audit-level=high || true
 
   # E2E smoke (Playwright) — Phase 5 of FEAT-041.
-  # Runs e2e/smoke.spec.ts — a curated suite written against the current DOM
+  # Runs tests/e2e/smoke.spec.ts — a curated suite written against the current DOM
   # (post-FEAT-038/039) covering: brand title, hero copy, contact channels
   # (WhatsApp + tel:), FAB reachability, services grid, ITV calculator inputs,
   # Visit Google Maps URL contract.
@@ -140,7 +140,7 @@ jobs:
       - name: Run smoke suite
         run: |
           npx playwright test \
-            e2e/smoke.spec.ts \
+            tests/e2e/smoke.spec.ts \
             --project=chromium \
             --shard=${{ matrix.shard }}/4
       - name: Upload trace on failure

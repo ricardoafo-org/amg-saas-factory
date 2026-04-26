@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 2 : 0,
@@ -10,7 +10,7 @@ export default defineConfig({
 
   snapshotPathTemplate: '{testDir}/__snapshots__/{testFilePath}/{arg}{ext}',
 
-  globalSetup: './e2e/global-setup.ts',
+  globalSetup: './tests/e2e/global-setup.ts',
 
   use: {
     baseURL: 'http://localhost:3000',
