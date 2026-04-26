@@ -7,6 +7,7 @@ import { TrustStrip } from '@/core/components/TrustStrip';
 import { Testimonials } from '@/core/components/Testimonials';
 import { VisitSection } from '@/core/components/VisitSection';
 import { ChatWidget } from '@/core/components/ChatWidget';
+import { PcbMotif } from '@/core/components/brand/PcbMotif';
 import { loadClientConfig, loadChatbotFlow } from '@/lib/config';
 import type { ChatbotFlow } from '@/lib/chatbot/engine';
 import { getNextAvailableSlot } from '@/actions/slots';
@@ -23,6 +24,7 @@ export default async function Home() {
       <Navbar config={config} />
       <Hero config={config} nextSlot={nextSlot} />
       <TrustStrip />
+      <PcbMotif />
       <ServiceGrid
         services={config.services}
         ivaRate={config.ivaRate}
@@ -36,6 +38,7 @@ export default async function Home() {
         </div>
       )}
 
+      <PcbMotif />
       <Testimonials />
       <VisitSection config={config} />
       <Footer config={config} />
