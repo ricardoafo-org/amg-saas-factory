@@ -9,9 +9,10 @@ import { ChatEngine } from '@/core/chatbot/ChatEngine';
 import { BookingStepper } from '@/core/chatbot/components/BookingStepper';
 import { BookingApp } from '@/core/chatbot/booking/BookingApp';
 
-// Feature flag: NEXT_PUBLIC_CHAT_V2=true mounts BookingApp instead of ChatEngine.
-// Defaults to false — ChatEngine keeps serving until PR-C flips the flag.
-const CHAT_V2 = process.env.NEXT_PUBLIC_CHAT_V2 === 'true';
+// Feature flag: NEXT_PUBLIC_CHAT_V2 mounts BookingApp.
+// PR-C flipped default to ON (BookingApp). Set NEXT_PUBLIC_CHAT_V2=false to roll back to ChatEngine.
+// Soak window: ≥ 24h on tst before removing the flag entirely (follow-up PR).
+const CHAT_V2 = process.env.NEXT_PUBLIC_CHAT_V2 !== 'false';
 
 /**
  * FEAT-038 PR 10 — Heavy chatbot subtree.
