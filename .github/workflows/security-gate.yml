@@ -1,9 +1,10 @@
 name: Security Gate
 
 # Deterministic security checks on every PR.
-# Mirrors .claude/agents/security-auditor.md and compliance-reviewer.md as
-# code, so violations are caught BEFORE auto-merge can fire — closing the gap
-# that let the FEAT-031 filter-injection land on main.
+# Codifies HIGH/CRITICAL findings (tenant-isolation IDOR, filter injection,
+# hardcoded secrets) and compliance checks (LOPDGDD, IVA, tenant data) so
+# violations are caught BEFORE auto-merge can fire — closing the gap that
+# let the FEAT-031 filter-injection land on main.
 #
 # Required check on main branch protection: enforce in repo settings.
 
@@ -61,7 +62,7 @@ jobs:
               'One or more deterministic security checks blocked this PR.',
               'See the **Security gate** job log above for the file:line breakdown.',
               '',
-              'These checks mirror `.claude/agents/security-auditor.md` and `compliance-reviewer.md`.',
+              'These checks codify HIGH/CRITICAL findings (tenant isolation, filter injection, hardcoded secrets) and compliance rules (LOPDGDD, IVA, tenant data).',
               'Run them locally with:',
               '',
               '```sh',
