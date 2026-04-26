@@ -5,27 +5,23 @@ on:
     branches:
       - main
 
+# Serialize deploys: if two PRs land back-to-back, the second waits for the
+# first to finish before building+pushing+SSH'ing. cancel-in-progress=false
+# because every commit on main MUST land on tst (no skipping intermediate
+# revisions). The PR gate already ran type-check + next-build + tests, so
+# we no longer duplicate the smoke step here.
+concurrency:
+  group: deploy-tst
+  cancel-in-progress: false
+
 permissions:
   contents: read
   packages: write
 
 jobs:
-  smoke:
-    name: Smoke (type-check on merge commit)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run type-check
-
   build-and-deploy:
     name: Build image · Push GHCR · Deploy via SSH
     runs-on: ubuntu-latest
-    needs: smoke
 
     steps:
       - name: Checkout
