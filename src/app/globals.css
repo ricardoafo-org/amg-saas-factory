@@ -1168,6 +1168,51 @@
   .pcb-hero .pcb-trace path { stroke: CanvasText; }
 }
 
+/* ── PR 6 — PCB section divider micro-motif ── */
+.pcb-motif {
+  display: block;
+  width: 100%;
+  height: 60px;
+  margin: 0;
+  contain: layout paint;
+  color: var(--fg);
+  opacity: 0.55;
+}
+.pcb-motif > svg { display: block; width: 100%; height: 100%; }
+.pcb-motif-rail {
+  stroke: color-mix(in oklch, var(--fg) 14%, transparent);
+  stroke-width: 1;
+}
+.pcb-motif-trace {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pcb-motif-trace--copper { stroke: var(--color-brand-amber); }
+.pcb-motif-trace--data   { stroke: color-mix(in oklch, var(--color-brand-amber) 35%, var(--fg) 25%); }
+.pcb-motif-via { fill: var(--color-brand-paper); stroke: var(--fg); stroke-width: 0.75; }
+.pcb-motif-chip { fill: var(--color-pcb-chip); stroke: var(--fg); stroke-width: 0.75; }
+.pcb-motif-stripe--1 { fill: var(--color-brand-amber); }
+.pcb-motif-stripe--2 { fill: var(--color-brand-red); }
+.pcb-motif-stripe--3 { fill: var(--color-brand-ink); }
+
+@media (forced-colors: active) {
+  .pcb-motif rect,
+  .pcb-motif path,
+  .pcb-motif line,
+  .pcb-motif circle {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+  .pcb-motif { opacity: 1; }
+  /* Logo polish — single accent under HC mode */
+  .amg-logo path,
+  .amg-logo rect,
+  .amg-logo text,
+  .amg-logo polygon { fill: CanvasText; stroke: CanvasText; }
+  .amg-logo .amg-logo-stripe { fill: Highlight; }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
