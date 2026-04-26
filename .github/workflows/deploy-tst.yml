@@ -62,3 +62,43 @@ jobs:
           # known_hosts file lines — wrong format for this parameter.
           # Track proper host pinning as a pro-only follow-up before pro launch.
           script: /home/deploy/deploy-tst.sh sha-${{ github.sha }}
+
+  # Post-deploy health check — verifies the new image actually came up and
+  # is serving the commit we just shipped. Catches failures the static gates
+  # can't see: bad env vars, PocketBase unreachable, container crashloop,
+  # rollback that didn't trigger. /api/health returns the build-time
+  # NEXT_PUBLIC_COMMIT_SHA, so commit mismatch = stale container = red gate.
+  health-check:
+    name: Health check tst.amg-talleres.com
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe /api/health until commit matches deployed SHA
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          HEALTH_URL: https://tst.amg-talleres.com/api/health
+        run: |
+          set -euo pipefail
+          # Container can take 20-40s to come up after docker compose up -d.
+          # Try for ~2 minutes with 10s spacing — total 12 attempts.
+          for attempt in $(seq 1 12); do
+            echo "Attempt ${attempt}/12 — GET ${HEALTH_URL}"
+            response=$(curl --silent --show-error --max-time 10 "${HEALTH_URL}" || true)
+            if [ -z "${response}" ]; then
+              echo "  no response yet"
+              sleep 10
+              continue
+            fi
+            echo "  body: ${response}"
+            ok=$(echo "${response}" | jq -r '.ok // false')
+            commit=$(echo "${response}" | jq -r '.commit // "missing"')
+            if [ "${ok}" = "true" ] && [ "${commit}" = "${EXPECTED_SHA}" ]; then
+              echo "Healthy. ok=true commit=${commit}"
+              exit 0
+            fi
+            echo "  ok=${ok} commit=${commit} (expected ${EXPECTED_SHA}) — retrying"
+            sleep 10
+          done
+          echo "Health check failed after 12 attempts. Container did not converge on ${EXPECTED_SHA}."
+          exit 1
