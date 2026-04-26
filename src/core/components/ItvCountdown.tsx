@@ -72,6 +72,32 @@ function calcDaysFromLastItv(
   return { days, nextDate: next };
 }
 
+/**
+ * Display state derived from the +2-year next-ITV computation. Exported for tests.
+ * Audit row I2: negative days must surface a distinct "expired" branch with
+ * legal-risk framing and a stronger CTA — not a confusing negative-number tween.
+ */
+export type ItvDisplayState =
+  | { kind: 'none' }
+  | { kind: 'expired'; daysOverdue: number; nextDate: Date }
+  | { kind: 'urgent'; days: number; nextDate: Date }
+  | { kind: 'normal'; days: number; nextDate: Date };
+
+export function getItvDisplayState(
+  lastItvDateStr: string,
+  now: Date = new Date(),
+): ItvDisplayState {
+  if (!lastItvDateStr) return { kind: 'none' };
+  const last = new Date(lastItvDateStr);
+  if (isNaN(last.getTime())) return { kind: 'none' };
+  const next = new Date(last);
+  next.setFullYear(next.getFullYear() + 2);
+  const days = Math.ceil((next.getTime() - now.getTime()) / (24 * 3600 * 1000));
+  if (days < 0) return { kind: 'expired', daysOverdue: -days, nextDate: next };
+  if (days <= 30) return { kind: 'urgent', days, nextDate: next };
+  return { kind: 'normal', days, nextDate: next };
+}
+
 const PLATE_RE = /^\d{4}\s?[A-Z]{3}$/i;
 
 function formatDate(d: Date): string {
@@ -102,7 +128,11 @@ export function ItvCountdown() {
 
   /* ── derived result (pure, not state) ── */
   const result = lastItv ? calcDaysFromLastItv(lastItv) : null;
-  const targetDays = result?.days ?? null;
+  const display = getItvDisplayState(lastItv);
+  const isExpired = display.kind === 'expired';
+  /* Tween still drives the big number for non-expired states; expired snaps to a
+     dedicated banner that does NOT animate a negative number (audit row I2). */
+  const targetDays = isExpired ? null : (result?.days ?? null);
   const nextDate = result?.nextDate ?? null;
   const isUrgent = targetDays !== null && targetDays <= 30;
 
@@ -266,8 +296,50 @@ export function ItvCountdown() {
             </select>
           </div>
 
+          {/* Audit row I2: expired banner gets its own visual treatment so a
+              caducada ITV doesn't render as a confusing negative-number tween. */}
+          {isExpired && display.kind === 'expired' && (
+            <div
+              className="itv-result itv-result--expired"
+              role="alert"
+              aria-live="assertive"
+              data-state="expired"
+            >
+              <svg
+                width="28" height="28" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.2"
+                strokeLinecap="round" strokeLinejoin="round"
+                style={{ flex: 'none', marginTop: '2px' }}
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4M12 16h.01" />
+              </svg>
+              <div>
+                <div className="itv-result-big" aria-label="ITV caducada">
+                  ITV caducada
+                </div>
+                <div className="itv-result-lab">
+                  Caducó el <strong>{formatDate(display.nextDate)}</strong> ·
+                  hace <strong>{display.daysOverdue} {display.daysOverdue === 1 ? 'día' : 'días'}</strong>.
+                  Circular con la ITV caducada conlleva multa de 200€ y
+                  suspensión del seguro. <strong>Reserva ya</strong> y la
+                  pasamos esta semana.
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ marginTop: '12px' }}
+                  onClick={openPreItv}
+                >
+                  Reservar pre-ITV urgente
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Result box — shown only once a date is entered and tween has started */}
-          {displayDays !== null && nextDate !== null && (
+          {!isExpired && displayDays !== null && nextDate !== null && (
             <div
               className="itv-result"
               role="status"
