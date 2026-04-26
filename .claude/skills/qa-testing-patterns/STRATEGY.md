@@ -110,7 +110,7 @@ describe('PocketBase schema contracts', () => {
 
 #### Page Objects (reusable abstractions)
 ```ts
-// e2e/pages/ChatbotPage.ts
+// tests/e2e/pages/ChatbotPage.ts
 export class ChatbotPage {
   constructor(private page: Page) {}
 
@@ -139,7 +139,7 @@ export class ChatbotPage {
 
 #### Test Fixtures (data + setup)
 ```ts
-// e2e/fixtures/chatbot.fixture.ts
+// tests/e2e/fixtures/chatbot.fixture.ts
 export const chatbotFixture = {
   oilChangeBooking: {
     service: 'Cambio de aceite',
@@ -154,7 +154,7 @@ export const chatbotFixture = {
 
 #### Tests using patterns
 ```ts
-// e2e/chatbot-booking.spec.ts
+// tests/e2e/chatbot-booking.spec.ts
 import { test, expect } from '@playwright/test';
 import { ChatbotPage } from './pages/ChatbotPage';
 import { chatbotFixture } from './fixtures/chatbot.fixture';
@@ -183,7 +183,7 @@ test.describe('Chatbot booking flow', () => {
 **Pattern: Throttling profiles + graceful degradation checks**
 
 ```ts
-// e2e/network-resilience.spec.ts
+// tests/e2e/network-resilience.spec.ts
 import { test, expect, devices } from '@playwright/test';
 
 test.describe('Network resilience', () => {
@@ -223,7 +223,7 @@ test.describe('Network resilience', () => {
 **Pattern: Baseline → diffs on changes**
 
 ```ts
-// e2e/visual.spec.ts
+// tests/e2e/visual.spec.ts
 test.describe('Visual regression', () => {
   test('service card layout on mobile', async ({ page }) => {
     await page.goto('/');
@@ -252,7 +252,7 @@ test.describe('Visual regression', () => {
 
 Use a test fixture registry:
 ```ts
-// e2e/fixtures/scenarios.fixture.ts
+// tests/e2e/fixtures/scenarios.fixture.ts
 export const scenarios = {
   ISOLATED: async (pb) => seedTestTenant(pb, `test-${Date.now()}`),
   SHARED_MULTIBOOKING: async (pb) => {
@@ -268,7 +268,7 @@ export const scenarios = {
 
 ### Cleanup Pattern
 ```ts
-// e2e/helpers/cleanup.ts
+// tests/e2e/helpers/cleanup.ts
 export async function cleanupTestData(pb: PocketBase, tenantId: string) {
   const collections = ['appointments', 'availability_slots', 'quotes', 'consent_log'];
   for (const col of collections) {

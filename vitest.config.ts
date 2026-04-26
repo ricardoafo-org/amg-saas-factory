@@ -8,7 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['e2e/**', 'node_modules/**'],
+    exclude: ['tests/**', 'node_modules/**'],
     env: {
       // Tests that import server modules (layout, pages) need TENANT_ID set
       // because getTenantId() throws at module init when unset.
