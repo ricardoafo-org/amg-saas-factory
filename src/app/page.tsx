@@ -7,6 +7,7 @@ import { TrustStrip } from '@/core/components/TrustStrip';
 import { Testimonials } from '@/core/components/Testimonials';
 import { VisitSection } from '@/core/components/VisitSection';
 import { ChatWidget } from '@/core/components/ChatWidget';
+import { MobileContactBar } from '@/core/components/MobileContactBar';
 import { RuleDivider } from '@/core/components/brand/RuleDivider';
 import { loadClientConfig, loadChatbotFlow } from '@/lib/config';
 import type { ChatbotFlow } from '@/lib/chatbot/engine';
@@ -57,6 +58,12 @@ export default async function Home() {
         policyHash={config.privacyPolicy.hash}
         services={config.services}
         ivaRate={config.ivaRate}
+      />
+
+      {/* Mobile-only sticky contact bar (Llamar / WhatsApp / Reservar). */}
+      <MobileContactBar
+        phone={config.contact.phone}
+        whatsapp={config.contact.whatsapp}
       />
     </>
   );

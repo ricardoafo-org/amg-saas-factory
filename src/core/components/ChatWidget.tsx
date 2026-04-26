@@ -56,9 +56,14 @@ export function ChatWidget(props: Props) {
     }
     function handleDocClick(e: MouseEvent) {
       const target = e.target as HTMLElement;
-      if (target.closest('[data-action="open-chat"]')) {
+      const trigger = target.closest<HTMLElement>('[data-action="open-chat"]');
+      if (trigger) {
         setOpen(true);
         setHasNotification(false);
+        // Surfaces like the footer can pre-route the chat to a specific service
+        // by tagging the trigger with data-service-id="<id>".
+        const serviceId = trigger.dataset['serviceId'];
+        if (serviceId) setPreselectedService(serviceId);
       }
     }
     window.addEventListener('amg:open-chat', handleOpenChat);
@@ -74,6 +79,14 @@ export function ChatWidget(props: Props) {
     setOpen(true);
     setHasNotification(false);
   }, []);
+
+  // Broadcast open/closed transitions so other surfaces (mobile contact bar,
+  // floating call-to-actions) can step out of the way while the chat is active.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('amg:chat-state', { detail: { open } }),
+    );
+  }, [open]);
 
   return (
     <>
