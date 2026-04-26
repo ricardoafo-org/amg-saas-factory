@@ -1,8 +1,11 @@
 import Image from 'next/image';
 import type { LocalBusiness } from '@/core/types/adapter';
+import { groupHours } from '@/lib/hours';
+import { VisitOpenStatus } from './VisitOpenStatus';
 
 export function VisitSection({ config }: { config: LocalBusiness }) {
-  const { address, contact } = config;
+  const { address, contact, operatingHours } = config;
+  const hourGroups = groupHours(operatingHours);
   const waNumber = contact.whatsapp?.replace(/\D/g, '');
   const mapsUrl =
     contact.googleMapsUrl ??
@@ -116,20 +119,22 @@ export function VisitSection({ config }: { config: LocalBusiness }) {
                 </svg>
               </div>
               <div style={{ flex: 1 }}>
-                <h4>Horario</h4>
+                <div className="visit-hours-head">
+                  <h4>Horario</h4>
+                  <VisitOpenStatus operatingHours={operatingHours} />
+                </div>
                 <div className="hours">
-                  <div className="hours-row">
-                    <span>Lunes — Viernes</span>
-                    <span>8:00 — 19:00</span>
-                  </div>
-                  <div className="hours-row">
-                    <span>Sábado</span>
-                    <span>9:00 — 14:00</span>
-                  </div>
-                  <div className="hours-row closed">
-                    <span>Domingo</span>
-                    <span>Cerrado</span>
-                  </div>
+                  {hourGroups.map((g) => (
+                    <div
+                      key={g.label}
+                      className={`hours-row${g.kind === 'closed' ? ' closed' : ''}`}
+                    >
+                      <span>{g.label}</span>
+                      <span>
+                        {g.kind === 'open' ? `${g.open} — ${g.close}` : 'Cerrado'}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

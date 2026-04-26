@@ -9,6 +9,16 @@ import type { LocalBusiness } from '@/core/types/adapter';
  * are a CLAUDE.md violation (tenant data in component).
  */
 
+const AMG_HOURS = [
+  { day: 'monday' as const, open: '08:00', close: '18:00' },
+  { day: 'tuesday' as const, open: '08:00', close: '18:00' },
+  { day: 'wednesday' as const, open: '08:00', close: '18:00' },
+  { day: 'thursday' as const, open: '08:00', close: '18:00' },
+  { day: 'friday' as const, open: '08:00', close: '18:00' },
+  { day: 'saturday' as const, open: '09:00', close: '14:00' },
+  { day: 'sunday' as const, open: '00:00', close: '00:00', closed: true },
+];
+
 const makeFixture = (overrides: Partial<LocalBusiness> = {}): LocalBusiness => ({
   tenantId: 'fixture',
   businessName: 'Talleres Fixture',
@@ -33,7 +43,7 @@ const makeFixture = (overrides: Partial<LocalBusiness> = {}): LocalBusiness => (
     fontFamily: 'sans-serif',
   },
   services: [],
-  operatingHours: [],
+  operatingHours: AMG_HOURS,
   privacyPolicy: { url: '', version: '0.0.0', hash: '0'.repeat(64) },
   ivaRate: 0.21,
   locale: 'es-ES',
@@ -103,6 +113,27 @@ describe('VisitSection — BUG-014 regression', () => {
     expect(html).toContain('Llamar ahora');
     expect(html).not.toContain('Escribir por WhatsApp');
     expect(html).not.toContain('wa.me');
+  });
+
+  it('sources hours from config.operatingHours instead of hardcoded literals (V2)', () => {
+    // V2 audit: replacing the previously hardcoded "8:00 — 19:00" literals.
+    // Config hours for AMG are 08:00–18:00 weekdays — the rendered string must follow.
+    const html = renderToStaticMarkup(<VisitSection config={makeFixture()} />);
+    expect(html).toContain('Lunes — Viernes');
+    expect(html).toContain('08:00 — 18:00');
+    expect(html).toContain('Sábado');
+    expect(html).toContain('09:00 — 14:00');
+    expect(html).toContain('Domingo');
+    // The pre-V2 hardcoded "19:00" close must be gone — that was the bug.
+    expect(html).not.toContain('8:00 — 19:00');
+  });
+
+  it('renders a live open-status pill driven by operatingHours (V2)', () => {
+    const html = renderToStaticMarkup(<VisitSection config={makeFixture()} />);
+    // Client component renders one of three states server-side based on `new Date()`.
+    // We only assert the pill exists and carries one of the known data-state values.
+    expect(html).toMatch(/class="visit-status[^"]*"/);
+    expect(html).toMatch(/data-state="(open|closing-soon|closed)"/);
   });
 
   it('renders the Cartagena-locale tagline derived from address (no Madrid leak)', () => {

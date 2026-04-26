@@ -997,6 +997,53 @@
   .hours { display: grid; gap: 6px; font-size: 14px; color: var(--fg-secondary); font-variant-numeric: tabular-nums; }
   .hours-row { display: flex; justify-content: space-between; }
   .hours-row.closed { color: var(--fg-muted); }
+  .visit-hours-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+  }
+  .visit-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    font: 600 11px var(--font-sans);
+    letter-spacing: 0.02em; line-height: 1;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .visit-status-dot {
+    width: 6px; height: 6px; border-radius: 999px;
+    background: currentColor;
+  }
+  .visit-status--open {
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+    color: var(--success-strong, var(--success));
+    border-color: color-mix(in srgb, var(--success) 24%, transparent);
+  }
+  .visit-status--open .visit-status-dot {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 24%, transparent);
+    animation: visit-status-pulse 2.4s ease-in-out infinite;
+  }
+  .visit-status--closing {
+    background: color-mix(in srgb, var(--warning, oklch(0.78 0.16 80)) 14%, transparent);
+    color: var(--warning-strong, oklch(0.55 0.15 70));
+    border-color: color-mix(in srgb, var(--warning, oklch(0.78 0.16 80)) 28%, transparent);
+  }
+  .visit-status--closed {
+    background: var(--muted);
+    color: var(--fg-muted);
+    border-color: var(--border);
+  }
+  @keyframes visit-status-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .visit-status--open .visit-status-dot { animation: none; }
+  }
+  @media (forced-colors: active) {
+    .visit-status {
+      background: Canvas; color: CanvasText; border: 1px solid CanvasText;
+    }
+    .visit-status-dot { background: CanvasText; box-shadow: none; }
+  }
   @media (max-width: 900px) {
     .visit { grid-template-columns: 1fr; }
   }
