@@ -75,6 +75,14 @@ export function ChatWidget(props: Props) {
     setHasNotification(false);
   }, []);
 
+  // Broadcast open/closed transitions so other surfaces (mobile contact bar,
+  // floating call-to-actions) can step out of the way while the chat is active.
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('amg:chat-state', { detail: { open } }),
+    );
+  }, [open]);
+
   return (
     <>
       <div className="fixed bottom-6 right-6 z-50" aria-label="Asistente de reservas">

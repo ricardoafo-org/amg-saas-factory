@@ -1566,6 +1566,68 @@
   to { opacity: 1; transform: scale(1); }
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Mobile sticky contact bar — three equal tap targets above the safe-area
+   inset. Hidden on tablet/desktop (the navbar already exposes phone +
+   Reservar there). Slides out of view when the chat panel opens so the
+   booking surface owns the screen. */
+.contact-bar {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 45; /* below chat (z 50) so the chat FAB stays clickable when bar is hidden */
+  display: none;
+  background: var(--color-surface-elevated, var(--card));
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  gap: 8px;
+  transform: translateY(0);
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.contact-bar[data-chat-open='true'] {
+  transform: translateY(110%);
+  pointer-events: none;
+}
+.contact-bar-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px; /* WCAG tap target */
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  border: 1px solid var(--border-strong);
+  background: var(--card);
+  color: var(--fg);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.contact-bar-btn:hover, .contact-bar-btn:focus-visible { background: var(--secondary); }
+.contact-bar-btn--primary {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: transparent;
+}
+.contact-bar-btn--primary:hover, .contact-bar-btn--primary:focus-visible {
+  background: var(--brand-red-dark);
+}
+
+/* Show only on mobile widths and reserve scroll space so fixed-bottom content
+   (footer copyright, etc.) is never hidden under the bar. */
+@media (max-width: 768px) {
+  .contact-bar { display: flex; }
+  body { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+}
+
+@media (forced-colors: active) {
+  .contact-bar { border-top: 1px solid CanvasText; background: Canvas; }
+  .contact-bar-btn { border-color: CanvasText; color: CanvasText; background: Canvas; }
+  .contact-bar-btn--primary { background: Highlight; color: HighlightText; }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
