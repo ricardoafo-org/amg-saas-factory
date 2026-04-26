@@ -978,6 +978,22 @@
     margin-top: 8px; font-size: 13px; font-weight: 600;
     color: var(--primary);
   }
+  /* Phone number tap target — visible underline on hover, never below 44px line-height. */
+  .visit-phone-link {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dashed currentColor;
+    transition: color var(--dur-fast, 160ms) var(--ease-out, ease-out);
+  }
+  .visit-phone-link:hover,
+  .visit-phone-link:focus-visible {
+    color: var(--primary);
+  }
+  .visit-phone-ctas {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    margin-top: 4px;
+  }
+  .visit-phone-ctas .dir-cta { margin-top: 0; }
   .hours { display: grid; gap: 6px; font-size: 14px; color: var(--fg-secondary); font-variant-numeric: tabular-nums; }
   .hours-row { display: flex; justify-content: space-between; }
   .hours-row.closed { color: var(--fg-muted); }

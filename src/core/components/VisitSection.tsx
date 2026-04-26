@@ -70,22 +70,40 @@ export function VisitSection({ config }: { config: LocalBusiness }) {
               <div>
                 <h4>Teléfono / WhatsApp</h4>
                 <p>
-                  {contact.phone}
+                  <a
+                    className="visit-phone-link"
+                    href={`tel:${contact.phone.replace(/\s/g, '')}`}
+                    aria-label={`Llamar al ${contact.phone}`}
+                  >
+                    {contact.phone}
+                  </a>
                   {' · '}respondemos en 15 min en horario laboral
                 </p>
-                {waNumber && (
+                <div className="visit-phone-ctas">
                   <a
                     className="dir-cta"
-                    href={`https://wa.me/${waNumber}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={`tel:${contact.phone.replace(/\s/g, '')}`}
+                    aria-label={`Llamar al ${contact.phone}`}
                   >
-                    Escribir por WhatsApp
+                    Llamar ahora
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
                   </a>
-                )}
+                  {waNumber && (
+                    <a
+                      className="dir-cta"
+                      href={`https://wa.me/${waNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Escribir por WhatsApp
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                      </svg>
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
 
