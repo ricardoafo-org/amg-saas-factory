@@ -1,17 +1,32 @@
 {
-  "name": "Talleres AMG",
-  "short_name": "AMG Taller",
-  "description": "Tu taller de confianza en Cartagena — Mecánica, ITV, Cambios de Aceite",
+  "name": "Talleres AMG · Cartagena",
+  "short_name": "Talleres AMG",
+  "description": "Especialistas en electrónica de automoción en Cartagena — diagnóstico ECU, ADAS, híbridos y eléctricos.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#e11d48",
+  "orientation": "portrait",
+  "background_color": "#fafaf5",
+  "theme_color": "#bf3a2e",
   "icons": [
     {
-      "src": "/logo.svg",
+      "src": "/logo-mark.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Reservar cita",
+      "short_name": "Reservar",
+      "url": "/?cta=reservar",
+      "description": "Abre el chat de reserva directamente"
+    },
+    {
+      "name": "Cómo trabajamos",
+      "short_name": "Proceso",
+      "url": "/proceso"
     }
   ],
   "categories": ["automotive", "business"],
