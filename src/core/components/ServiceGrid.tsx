@@ -70,9 +70,11 @@ function IconOBD() {
 
 // Bundle-canonical design layer — id, icon, duration label, and copy.
 // Prices are intentionally absent: they are computed at render from config (basePrice × ivaRate).
+// `tier` drives the left-border colour accent via [data-tier] rules in globals.css.
 export const BUNDLE_SERVICES = [
   {
     id: 'cambio-aceite',
+    tier: 'maintenance' as const,
     icon: <IconOil />,
     dur: '~ 45 min',
     title: 'Cambio de aceite y filtros',
@@ -81,6 +83,7 @@ export const BUNDLE_SERVICES = [
   },
   {
     id: 'frenos',
+    tier: 'safety' as const,
     icon: <IconBrakes />,
     dur: '~ 75 min',
     title: 'Revisión de frenos',
@@ -89,6 +92,7 @@ export const BUNDLE_SERVICES = [
   },
   {
     id: 'pre-itv',
+    tier: 'compliance' as const,
     icon: <IconItv />,
     dur: '~ 60 min',
     title: 'Pre-revisión ITV',
@@ -97,6 +101,7 @@ export const BUNDLE_SERVICES = [
   },
   {
     id: 'neumaticos',
+    tier: 'maintenance' as const,
     icon: <IconTyres />,
     dur: '~ 30 min',
     title: 'Neumáticos y equilibrado',
@@ -105,6 +110,7 @@ export const BUNDLE_SERVICES = [
   },
   {
     id: 'aire-acondicionado',
+    tier: 'comfort' as const,
     icon: <IconAC />,
     dur: '~ 40 min',
     title: 'Aire acondicionado',
@@ -113,6 +119,7 @@ export const BUNDLE_SERVICES = [
   },
   {
     id: 'diagnostico-obd',
+    tier: 'diagnostic' as const,
     icon: <IconOBD />,
     dur: '~ 20 min',
     title: 'Diagnóstico OBD',
@@ -173,6 +180,7 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
               <motion.article
                 key={svc.id}
                 className="svc-card"
+                data-tier={svc.tier}
                 variants={{
                   hidden: MOTION.serviceCard.initial,
                   visible: {

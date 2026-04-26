@@ -66,3 +66,19 @@ describe('TrustStrip — drift guard', () => {
     expect(src).not.toMatch(/display="4,9 \/ 5"/);
   });
 });
+
+describe('TrustStrip — Google G badge', () => {
+  it('renders the multicolour Google G SVG in cell 3 (4285F4 blue path present)', () => {
+    const html = renderToStaticMarkup(<TrustStrip {...baseProps} />);
+    // Google brand blue — confirms the inline SVG replaced the Star icon
+    expect(html).toContain('4285F4');
+  });
+
+  it('component source no longer imports Star from lucide-react', () => {
+    const src = readFileSync(
+      join(process.cwd(), 'src', 'core', 'components', 'TrustStrip.tsx'),
+      'utf8',
+    );
+    expect(src).not.toMatch(/\bStar\b/);
+  });
+});

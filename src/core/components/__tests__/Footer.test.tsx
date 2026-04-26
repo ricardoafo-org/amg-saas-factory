@@ -36,6 +36,11 @@ const fixture: LocalBusiness = {
   currency: 'EUR',
 };
 
+const fixtureWithLegal: LocalBusiness = {
+  ...fixture,
+  legal: { cif: 'B-99999999', registrationNumber: 'MU-0001', dpoEmail: 'dpo@example.com' },
+};
+
 const KNOWN_PAGE_ANCHOR_IDS = new Set([
   // ids declared on `/` in real components — keep this in sync if a section is renamed.
   'servicios',
@@ -122,5 +127,30 @@ describe('Footer — BUG-011 dead-link regression', () => {
         true,
       );
     }
+  });
+});
+
+describe('Footer — bottom-bar legal <dl>', () => {
+  it('renders a <dl class="ftr-meta"> in the bottom bar', () => {
+    const html = renderToStaticMarkup(<Footer config={fixtureWithLegal} />);
+    expect(html).toContain('class="ftr-meta"');
+  });
+
+  it('renders CIF dt/dd pair from config.legal', () => {
+    const html = renderToStaticMarkup(<Footer config={fixtureWithLegal} />);
+    expect(html).toContain('<dt>CIF</dt>');
+    expect(html).toContain('<dd>B-99999999</dd>');
+  });
+
+  it('renders Reg. Taller dt/dd pair from config.legal', () => {
+    const html = renderToStaticMarkup(<Footer config={fixtureWithLegal} />);
+    expect(html).toContain('<dt>Reg. Taller</dt>');
+    expect(html).toContain('<dd>MU-0001</dd>');
+  });
+
+  it('falls back to hardcoded literals when config.legal is absent', () => {
+    const html = renderToStaticMarkup(<Footer config={fixture} />);
+    expect(html).toContain('B30123456');
+    expect(html).toContain('30/456');
   });
 });
