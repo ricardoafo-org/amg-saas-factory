@@ -7,6 +7,11 @@ import type { ChatbotFlow } from '@/lib/chatbot/engine';
 import type { Service } from '@/core/types/adapter';
 import { ChatEngine } from '@/core/chatbot/ChatEngine';
 import { BookingStepper } from '@/core/chatbot/components/BookingStepper';
+import { BookingApp } from '@/core/chatbot/booking/BookingApp';
+
+// Feature flag: NEXT_PUBLIC_CHAT_V2=true mounts BookingApp instead of ChatEngine.
+// Defaults to false — ChatEngine keeps serving until PR-C flips the flag.
+const CHAT_V2 = process.env.NEXT_PUBLIC_CHAT_V2 === 'true';
 
 /**
  * FEAT-038 PR 10 — Heavy chatbot subtree.
@@ -106,11 +111,19 @@ export default function ChatPanel(props: Props) {
             <BookingStepper step={step} />
 
             <div className="flex-1 overflow-hidden flex flex-col">
-              <ChatEngine
-                {...engineProps}
-                onStepChange={handleStepChange}
-                initialService={preselectedService}
-              />
+              {CHAT_V2 ? (
+                <BookingApp
+                  {...engineProps}
+                  onStepChange={handleStepChange}
+                  initialService={preselectedService}
+                />
+              ) : (
+                <ChatEngine
+                  {...engineProps}
+                  onStepChange={handleStepChange}
+                  initialService={preselectedService}
+                />
+              )}
             </div>
 
             <div className="chat-foot shrink-0">

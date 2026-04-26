@@ -154,4 +154,14 @@ export const MOTION = {
     animate:    { opacity: [1, 0.4, 1] },
     transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' as const },
   },
+
+  /**
+   * BookingApp bubble enter — overshoot ease per spec acceptance row 8.
+   * Ease [0.34, 1.56, 0.64, 1] produces perceptible spring overshoot.
+   * Duration capped at 320 ms (DUR_SLOW) per spec constraint.
+   */
+  bubbleOvershoot: {
+    duration: DUR_SLOW,
+    ease: [0.34, 1.56, 0.64, 1] as [number, number, number, number],
+  },
 } as const;
