@@ -2,11 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE
 
-// QUARANTINED: ITV section reachability fails because the button is below
-// the fold on 375x667 (needs scrollIntoViewIfNeeded). Phone-link selector
-// /968/ no longer matches (number changed or hidden via responsive CSS).
-// Rewrite tracked as task #79. Live smoke gate is e2e/smoke.spec.ts.
-test.describe.skip('Mobile viewport [QUARANTINED — see task #79]', () => {
+test.describe('Mobile viewport', () => {
   test('homepage has no horizontal overflow on mobile', async ({ page }) => {
     await page.goto('/');
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
@@ -26,33 +22,40 @@ test.describe.skip('Mobile viewport [QUARANTINED — see task #79]', () => {
   test('service cards visible without horizontal scroll', async ({ page }) => {
     await page.goto('/');
     await expect(
-      page.locator('#servicios').getByRole('heading', { name: 'Cambio de Aceite' }),
+      page.locator('#servicios').getByRole('heading', { name: 'Cambio de aceite y filtros' }),
     ).toBeVisible();
   });
 
   test('phone link is visible on mobile', async ({ page }) => {
     await page.goto('/');
-    // Phone appears in hero CTA row
-    const phoneLink = page.getByRole('link', { name: /968/ }).first();
+    // Use href-based selector — robust against number changes and responsive CSS class changes
+    const phoneLink = page.locator('a[href^="tel:"]').first();
     await expect(phoneLink).toBeVisible();
   });
 
   test('WhatsApp link is visible on mobile', async ({ page }) => {
     await page.goto('/');
-    const waLink = page.getByRole('link', { name: /WhatsApp/i }).first();
+    // Use href-based selector for robustness
+    const waLink = page.locator('a[href*="wa.me"]').first();
     await expect(waLink).toBeVisible();
   });
 
   test('chatbot panel opens and renders on mobile', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: /Abrir asistente de reservas/i }).click();
-    // Panel should be visible — on mobile it uses bottom sheet style
-    await expect(page.getByRole('dialog', { name: /Asistente de reservas/i })).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('button', { name: /Iniciar conversación/i })).toBeVisible();
+    // Panel opens as bottom sheet on mobile
+    await expect(
+      page.getByRole('dialog', { name: /Asistente de reservas/i }),
+    ).toBeVisible({ timeout: 5000 });
+    // BookingApp opens directly at StepVehicle — first field is Matrícula
+    await expect(page.getByLabel(/Matrícula/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('ITV section is reachable on mobile', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('button', { name: /Calcular mi ITV/i })).toBeVisible();
+    // On 375 viewport, the mobile sticky button is the visible one
+    // Desktop button has hidden md:inline-flex, mobile sticky is always visible below md
+    const itvBtn = page.getByRole('button', { name: /Calcular cuándo/i }).first();
+    await expect(itvBtn).toBeVisible();
   });
 });

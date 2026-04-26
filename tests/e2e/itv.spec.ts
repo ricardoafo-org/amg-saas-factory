@@ -1,12 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ItvPage } from './pages/ItvPage';
 
-// QUARANTINED: tests reflect a pre-FEAT-038 ITV widget with a click-to-open
-// modal flow + "Calcular mi ITV" / "Resetear" / separate "Calcular" buttons,
-// none of which exist in the current DOM. The current ItvCountdown.tsx renders
-// the calculator inline with onChange computation (no submit button) and a
-// "Calcular cuándo" CTA on the left side. Rewrite tracked as task #80.
-test.describe.skip('ITV Countdown widget [QUARANTINED — see task #80]', () => {
+test.describe('ITV Countdown widget', () => {
   let itv: ItvPage;
 
   test.beforeEach(async ({ page }) => {
@@ -14,80 +9,89 @@ test.describe.skip('ITV Countdown widget [QUARANTINED — see task #80]', () => 
     await page.goto('/');
   });
 
-  test('shows calculate button initially', async ({ page }) => {
-    await expect(page.getByRole('button', { name: /Calcular mi ITV/i })).toBeVisible();
-  });
-
-  test('date input appears after clicking calculate', async ({ page }) => {
-    await itv.openWidget();
-    await itv.waitForDateInput();
+  test('inline calculator is visible on page load', async ({ page }) => {
+    // ItvCountdown renders the calculator inline — no click-to-open required
+    await expect(page.getByText('Matrícula')).toBeVisible();
     await expect(itv.getDateInput()).toBeVisible();
   });
 
-  test('shows guidance card with registration date hint', async ({ page }) => {
-    await itv.openWidget();
-    await expect(page.getByText(/primera matriculación/i).first()).toBeVisible({ timeout: 4000 });
+  test('"Calcular cuándo" CTA scrolls calculator into viewport', async ({ page }) => {
+    // Two buttons exist (desktop + mobile sticky); use .first() for robustness
+    await page.getByRole('button', { name: /Calcular cuándo/i }).first().click();
+    await expect(itv.getDateInput()).toBeInViewport({ timeout: 3000 });
   });
 
-  test('calculate button is disabled when no date entered', async ({ page }) => {
-    await itv.openWidget();
-    await itv.waitForDateInput();
-    // Calcular button should be disabled when dateInput is empty
-    await expect(page.getByRole('button', { name: /Calcular/i })).toBeDisabled();
+  test('plate validation shows format hint on invalid input', async ({ page }) => {
+    const plateInput = itv.getPlateInput();
+    await plateInput.fill('INVALID');
+    await plateInput.blur();
+    await expect(page.getByRole('alert')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('alert')).toContainText('Formato: 4 dígitos + 3 letras');
   });
 
-  test('shows result for a vehicle older than 10 years (ITV anual)', async ({ page }) => {
-    await itv.openWidget();
-    await itv.waitForDateInput();
-    await itv.enterDate('2012-03-15');
-    await itv.clickCalculate();
-
-    await expect(page.getByText(/ITV anual/i)).toBeVisible({ timeout: 3000 });
+  test('plate validation clears error for valid input', async ({ page }) => {
+    const plateInput = itv.getPlateInput();
+    // First trigger the error
+    await plateInput.fill('INVALID');
+    await plateInput.blur();
+    await expect(page.getByRole('alert')).toBeVisible({ timeout: 3000 });
+    // Now fix it — clear and enter a valid plate
+    await plateInput.fill('1234 ABC');
+    await plateInput.blur();
+    await expect(page.getByRole('alert')).not.toBeVisible({ timeout: 3000 });
   });
 
-  test('shows result for a vehicle under 4 years (Primera ITV)', async ({ page }) => {
-    await itv.openWidget();
-    await itv.waitForDateInput();
+  test('shows urgent result for vehicle with ITV due within 30 days', async ({ page }) => {
+    // Enter a date ~23 months ago so next-ITV = +2 years = ~1 month away (≤30 days)
+    const d = new Date();
+    d.setMonth(d.getMonth() - 23);
+    await itv.enterDate(d.toISOString().split('T')[0]);
 
-    const twoYearsAgo = new Date();
-    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-    await itv.enterDate(twoYearsAgo.toISOString().split('T')[0]);
-    await itv.clickCalculate();
-
-    await expect(page.getByText(/Primera ITV/i)).toBeVisible({ timeout: 3000 });
+    // Result box with role="status" appears
+    await expect(itv.getResultBox()).toBeVisible({ timeout: 5000 });
+    // Days count is present (1-2 digits for urgent branch ≤30)
+    await expect(itv.getResultBox()).toContainText(/\d+ días/);
   });
 
-  test('shows bienal result for 5-year-old vehicle', async ({ page }) => {
-    await itv.openWidget();
-    await itv.waitForDateInput();
+  test('shows normal result for vehicle with ITV far in the future', async ({ page }) => {
+    // Enter a date 1 month ago so next-ITV is ~23 months away (>30 days, 3+ digits)
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    await itv.enterDate(d.toISOString().split('T')[0]);
 
-    const fiveYearsAgo = new Date();
-    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-    await itv.enterDate(fiveYearsAgo.toISOString().split('T')[0]);
-    await itv.clickCalculate();
-
-    await expect(page.getByText(/ITV bienal/i)).toBeVisible({ timeout: 3000 });
+    await expect(itv.getResultBox()).toBeVisible({ timeout: 5000 });
+    // 3+ digit day count expected for ~700 days
+    await expect(itv.getResultBox()).toContainText(/\d{3,} días/);
   });
 
-  test('getResultType returns correct type for old vehicle', async ({ page }) => {
-    await itv.openWidget();
-    await itv.waitForDateInput();
-    await itv.enterDate('2010-01-01');
-    await itv.clickCalculate();
+  test('shows expired banner for vehicle with ITV overdue', async ({ page }) => {
+    // Enter a date 3 years ago — next-ITV = 1 year ago → expired
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 3);
+    await itv.enterDate(d.toISOString().split('T')[0]);
 
-    await expect(page.getByText(/ITV anual/i)).toBeVisible({ timeout: 3000 });
-    const type = await itv.getResultType();
-    expect(['anual', 'anual_overdue']).toContain(type);
+    const expiredBox = itv.getExpiredBox();
+    await expect(expiredBox).toBeVisible({ timeout: 5000 });
+    await expect(expiredBox).toContainText('ITV caducada');
+    await expect(page.getByRole('button', { name: /Reservar pre-ITV urgente/i })).toBeVisible();
   });
 
-  test('reset button returns widget to idle state', async ({ page }) => {
-    await itv.openWidget();
-    await itv.waitForDateInput();
-    await itv.enterDate('2012-03-15');
-    await itv.clickCalculate();
-    await expect(page.getByText(/ITV anual/i)).toBeVisible({ timeout: 3000 });
+  test('"Avísame" CTA dispatches amg:open-chat with serviceId pre-itv-reminder', async ({ page }) => {
+    // Listen for the custom event before clicking
+    const detailPromise = page.evaluate(
+      () =>
+        new Promise<{ serviceId: string }>((resolve) => {
+          window.addEventListener(
+            'amg:open-chat',
+            (e) => resolve((e as CustomEvent<{ serviceId: string }>).detail),
+            { once: true },
+          );
+        }),
+    );
 
-    await page.getByRole('button', { name: /Resetear/i }).click();
-    await expect(page.getByRole('button', { name: /Calcular mi ITV/i })).toBeVisible({ timeout: 3000 });
+    await page.getByRole('button', { name: /Avísame cuando queden 30 días/i }).click();
+
+    const detail = await detailPromise;
+    expect(detail.serviceId).toBe('pre-itv-reminder');
   });
 });
