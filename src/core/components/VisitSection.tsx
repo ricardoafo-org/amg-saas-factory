@@ -54,6 +54,8 @@ export function VisitSection({ config }: { config: LocalBusiness }) {
               <div>
                 <h4>Dirección</h4>
                 <p>{fullStreetLine}, {address.region}</p>
+                {/* TODO: move to clients/<tenant>/config.json as address.geoHint */}
+                <p className="visit-geo-hint">A 5 min de la salida 30 — AP-7</p>
                 <a className="dir-cta" href={mapsUrl} target="_blank" rel="noopener noreferrer">
                   Cómo llegar
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

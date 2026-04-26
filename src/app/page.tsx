@@ -3,7 +3,6 @@ import { Hero } from '@/core/components/Hero';
 import { ServiceGrid } from '@/core/components/ServiceGrid';
 import { ItvCountdown } from '@/core/components/ItvCountdown';
 import { Footer } from '@/core/components/Footer';
-import { TrustStrip } from '@/core/components/TrustStrip';
 import { Testimonials } from '@/core/components/Testimonials';
 import { VisitSection } from '@/core/components/VisitSection';
 import { UrgencyBand } from '@/core/components/UrgencyBand';
@@ -25,8 +24,9 @@ export default async function Home() {
   return (
     <>
       <Navbar config={config} />
-      <Hero config={config} nextSlot={nextSlot} />
-      <TrustStrip
+      <Hero
+        config={config}
+        nextSlot={nextSlot}
         yearsOperating={new Date().getFullYear() - config.foundingYear}
         reviewRating={config.reviewRating ?? 4.9}
         reviewCount={config.reviewCount ?? 0}

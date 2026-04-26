@@ -26,22 +26,24 @@ const baseConfig: LocalBusiness = {
   foundingYear: 1987,
 };
 
+const heroDefaults = { yearsOperating: 38, reviewRating: 4.9, reviewCount: 284 };
+
 describe('Hero — CTA stack', () => {
   it('renders the Reservar primary CTA wired to the chat open-action delegation', () => {
-    const html = renderToStaticMarkup(<Hero config={baseConfig} nextSlot={null} />);
+    const html = renderToStaticMarkup(<Hero config={baseConfig} nextSlot={null} {...heroDefaults} />);
     expect(html).toContain('data-action="open-chat"');
     expect(html).toContain('Reservar cita');
   });
 
   it('renders the Llamar tel: link from config.contact.phone', () => {
-    const html = renderToStaticMarkup(<Hero config={baseConfig} nextSlot={null} />);
+    const html = renderToStaticMarkup(<Hero config={baseConfig} nextSlot={null} {...heroDefaults} />);
     expect(html).toContain('href="tel:+34 604 273 678"');
     expect(html).toContain('Llamar ahora');
   });
 
   it('renders a WhatsApp CTA when contact.whatsapp is present, with non-digits stripped', () => {
     const html = renderToStaticMarkup(
-      <Hero config={{ ...baseConfig, contact: { ...baseConfig.contact, whatsapp: '+34 604 273 678' } }} nextSlot={null} />,
+      <Hero config={{ ...baseConfig, contact: { ...baseConfig.contact, whatsapp: '+34 604 273 678' } }} nextSlot={null} {...heroDefaults} />,
     );
     expect(html).toContain('href="https://wa.me/34604273678"');
     expect(html).toContain('WhatsApp');
@@ -49,16 +51,22 @@ describe('Hero — CTA stack', () => {
   });
 
   it('omits the WhatsApp CTA when contact.whatsapp is undefined', () => {
-    const html = renderToStaticMarkup(<Hero config={baseConfig} nextSlot={null} />);
+    const html = renderToStaticMarkup(<Hero config={baseConfig} nextSlot={null} {...heroDefaults} />);
     expect(html).not.toContain('wa.me');
     expect(html).not.toContain('WhatsApp');
   });
 
   it('WhatsApp link opens in a new tab with safe rel attributes', () => {
     const html = renderToStaticMarkup(
-      <Hero config={{ ...baseConfig, contact: { ...baseConfig.contact, whatsapp: '+34604273678' } }} nextSlot={null} />,
+      <Hero config={{ ...baseConfig, contact: { ...baseConfig.contact, whatsapp: '+34604273678' } }} nextSlot={null} {...heroDefaults} />,
     );
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
+  });
+
+  it('renders TrustStrip inside hero with yearsOperating count', () => {
+    const html = renderToStaticMarkup(<Hero config={baseConfig} nextSlot={null} {...heroDefaults} />);
+    expect(html).toContain('38');
+    expect(html).toContain('Nuestros números');
   });
 });
