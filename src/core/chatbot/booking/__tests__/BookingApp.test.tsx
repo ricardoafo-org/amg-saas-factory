@@ -95,22 +95,24 @@ describe('BookingApp', () => {
     expect(html).toMatch(/aria-label="Progreso de reserva"/);
   });
 
-  it('does NOT show cart placeholder in mobile layout', () => {
+  it('does NOT show CartPanel in mobile layout', () => {
     mockLayout = 'mobile';
     const html = renderToStaticMarkup(<BookingApp {...defaultProps()} />);
-    expect(html).not.toContain('Cart panel coming in PR-B');
+    // CartPanel is only shown on desktop — its heading is not in mobile HTML
+    expect(html).not.toContain('aria-label="Resumen de la reserva"');
   });
 
-  it('shows cart placeholder aside in desktop layout', () => {
+  it('shows CartPanel in desktop layout', () => {
     mockLayout = 'desktop';
     const html = renderToStaticMarkup(<BookingApp {...defaultProps()} />);
-    expect(html).toContain('Cart panel coming in PR-B');
+    // CartPanel renders with aria-label "Resumen de la reserva"
+    expect(html).toContain('aria-label="Resumen de la reserva"');
   });
 
-  it('cart placeholder has accessible label', () => {
+  it('CartPanel has Tu reserva heading in desktop layout', () => {
     mockLayout = 'desktop';
     const html = renderToStaticMarkup(<BookingApp {...defaultProps()} />);
-    expect(html).toContain('aria-label="Panel de carrito (próximamente)"');
+    expect(html).toContain('Tu reserva');
   });
 
   it('desktop layout uses grid (two-column)', () => {
@@ -153,8 +155,8 @@ describe('BookingApp', () => {
     // Both show step 0 content
     expect(htmlMobile).toContain('Matrícula');
     expect(htmlDesktop).toContain('Matrícula');
-    // Desktop additionally shows cart placeholder
-    expect(htmlDesktop).toContain('Cart panel coming in PR-B');
-    expect(htmlMobile).not.toContain('Cart panel coming in PR-B');
+    // Desktop shows CartPanel; mobile does not
+    expect(htmlDesktop).toContain('aria-label="Resumen de la reserva"');
+    expect(htmlMobile).not.toContain('aria-label="Resumen de la reserva"');
   });
 });
