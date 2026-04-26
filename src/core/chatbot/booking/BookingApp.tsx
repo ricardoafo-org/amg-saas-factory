@@ -5,6 +5,8 @@ import type { ChatbotFlow } from '@/lib/chatbot/engine';
 import type { Service } from '@/core/types/adapter';
 import { useContainerLayout } from '@/core/chatbot/booking/useContainerLayout';
 import { BookingStepper } from '@/core/chatbot/booking/BookingStepper';
+import { CartPanel } from '@/core/chatbot/booking/CartPanel';
+import { MobileCartPeek } from '@/core/chatbot/booking/MobileCartPeek';
 import { StepVehicle } from '@/core/chatbot/booking/steps/StepVehicle';
 import { StepServices } from '@/core/chatbot/booking/steps/StepServices';
 import { StepSlot } from '@/core/chatbot/booking/steps/StepSlot';
@@ -112,6 +114,24 @@ export function BookingApp({
 
   const isDesktop = layout === 'desktop';
 
+  // Derive cart contents from booking state — no new state field needed
+  const cartContents = {
+    vehicle: booking.vehicle
+      ? { plate: booking.vehicle.plate, model: booking.vehicle.model }
+      : undefined,
+    selectedServiceIds: booking.selectedServiceIds,
+    slot: booking.slot ? { slotISO: booking.slot.slotISO } : undefined,
+    guest: booking.guest ? { name: booking.guest.name } : undefined,
+  };
+
+  /**
+   * onEditFrom — maps a cart row click to a step jump.
+   * Respects existing completedSteps guard: only completed steps can be jumped to.
+   */
+  function handleEditFrom(targetStep: number) {
+    handleJumpTo(targetStep);
+  }
+
   return (
     <div
       ref={hostRef}
@@ -177,31 +197,27 @@ export function BookingApp({
           )}
         </div>
 
-        {/* Cart column — placeholder until PR-B */}
+        {/* Cart column — wired in PR-B */}
         {isDesktop && (
-          <aside
-            className="border-l flex flex-col items-center justify-center"
-            style={{
-              borderColor: 'var(--border)',
-              background: 'var(--card)',
-              minWidth: 260,
-              maxWidth: 360,
-            }}
-            aria-label="Panel de carrito (próximamente)"
-          >
-            <p
-              style={{
-                fontSize: 12,
-                color: 'var(--fg-muted)',
-                textAlign: 'center',
-                padding: '1rem',
-              }}
-            >
-              Cart panel coming in PR-B
-            </p>
-          </aside>
+          <CartPanel
+            cart={cartContents}
+            services={services}
+            ivaRate={ivaRate}
+            onEditFrom={handleEditFrom}
+          />
         )}
       </div>
+
+      {/* Mobile cart peek — floating pill at < 768 px host width */}
+      {!isDesktop && (
+        <MobileCartPeek
+          cart={cartContents}
+          services={services}
+          ivaRate={ivaRate}
+          currentStep={step}
+          onEditFrom={handleEditFrom}
+        />
+      )}
     </div>
   );
 }

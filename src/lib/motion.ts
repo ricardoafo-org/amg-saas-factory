@@ -164,4 +164,25 @@ export const MOTION = {
     duration: DUR_SLOW,
     ease: [0.34, 1.56, 0.64, 1] as [number, number, number, number],
   },
+
+  /**
+   * Typing-dots loop — 3-dot opacity stagger, repeat infinite.
+   * Each dot animates opacity 0.3 → 1 → 0.3 with 0.15s stagger between dots.
+   * Use with nth-child(1|2|3) delay offsets.
+   */
+  typingDots: {
+    animate:    { opacity: [0.3, 1, 0.3] },
+    transition: { duration: 0.9, repeat: Infinity, ease: 'easeInOut' as const },
+    stagger:    0.15,
+  },
+
+  /**
+   * Cart row enter — slide-in from left with fade.
+   * opacity 0→1, x -8→0, DUR_BASE, EASE_OUT.
+   */
+  cartRowEnter: {
+    initial:    { opacity: 0, x: -8 },
+    animate:    { opacity: 1, x: 0 },
+    transition: { duration: DUR_BASE, ease: EASE_OUT },
+  },
 } as const;

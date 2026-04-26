@@ -1829,6 +1829,44 @@
   .contact-bar-btn--primary { background: Highlight; color: HighlightText; }
 }
 
+/* ==========================================================================
+   FEAT-039 PR-B — CartPanel + MobileCartPeek utilities
+   ========================================================================== */
+
+/* Tabular-nums helper for price figures — used in CartPanel, MobileCartPeek,
+   slot time display. Tailwind v4 includes a `tabular-nums` utility but we
+   also expose it as a class for non-Tailwind contexts. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Glass card surface — frosted card with border. Used in CartPanel aside. */
+.glass {
+  background: color-mix(in oklch, var(--color-card) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in oklch, var(--color-border) 60%, transparent);
+}
+
+/* Stronger glass — for bottom-sheet overlay in MobileCartPeek. */
+.glass-strong {
+  background: color-mix(in oklch, var(--color-card) 95%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid color-mix(in oklch, var(--color-border) 80%, transparent);
+}
+
+/* BMW-M tri-stripe accent — horizontal accent bar used in CartPanel header.
+   Red / M-dark-blue / Red proportions (33.33% each). */
+.tri-stripe {
+  height: 3px;
+  background: linear-gradient(to right,
+    var(--color-brand-red)        0%,     var(--color-brand-red)        33.33%,
+    var(--color-brand-m-darkblue) 33.33%, var(--color-brand-m-darkblue) 66.66%,
+    var(--color-brand-red)        66.66%, var(--color-brand-red)        100%);
+  flex-shrink: 0;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
