@@ -17,15 +17,15 @@ export function Footer({ config }: { config: LocalBusiness }) {
           </p>
         </div>
 
-        {/* Servicios column */}
+        {/* Servicios column — each link opens the chat preselected to that service. */}
         <div>
           <h4>Servicios</h4>
-          <a href="#servicios">Cambio de aceite</a>
-          <a href="#servicios">Frenos</a>
-          <a href="#servicios">Pre-ITV</a>
-          <a href="#servicios">Neumáticos</a>
-          <a href="#servicios">Aire acondicionado</a>
-          <a href="#servicios">Diagnóstico OBD</a>
+          <button type="button" data-action="open-chat" data-service-id="cambio-aceite">Cambio de aceite</button>
+          <button type="button" data-action="open-chat" data-service-id="frenos">Frenos</button>
+          <button type="button" data-action="open-chat" data-service-id="pre-itv">Pre-ITV</button>
+          <button type="button" data-action="open-chat" data-service-id="neumaticos">Neumáticos</button>
+          <button type="button" data-action="open-chat" data-service-id="aire-acondicionado">Aire acondicionado</button>
+          <button type="button" data-action="open-chat" data-service-id="diagnostico-obd">Diagnóstico OBD</button>
         </div>
 
         {/* Taller column */}
