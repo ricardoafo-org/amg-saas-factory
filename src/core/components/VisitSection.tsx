@@ -2,9 +2,16 @@ import Image from 'next/image';
 import type { LocalBusiness } from '@/core/types/adapter';
 
 export function VisitSection({ config }: { config: LocalBusiness }) {
-  const { contact } = config;
+  const { address, contact } = config;
   const waNumber = contact.whatsapp?.replace(/\D/g, '');
-  const mapsUrl = contact.googleMapsUrl ?? 'https://maps.google.com';
+  const mapsUrl =
+    contact.googleMapsUrl ??
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      `${address.street} ${address.postalCode} ${address.city}`,
+    )}`;
+
+  const fullStreetLine = `${address.street}, ${address.postalCode} ${address.city}`;
+  const heading = `${address.street} · ${address.city}.`;
 
   return (
     <section className="sect" id="visitanos" style={{ paddingTop: 0 }}>
@@ -13,7 +20,7 @@ export function VisitSection({ config }: { config: LocalBusiness }) {
         <div className="sect-head">
           <div>
             <p className="sect-pre">Visítanos</p>
-            <h2>Calle Mayor 42 · a dos pasos del Ayuntamiento.</h2>
+            <h2>{heading}</h2>
           </div>
         </div>
 
@@ -43,7 +50,7 @@ export function VisitSection({ config }: { config: LocalBusiness }) {
               </div>
               <div>
                 <h4>Dirección</h4>
-                <p>Calle Mayor 42, 30201 Cartagena, Murcia</p>
+                <p>{fullStreetLine}, {address.region}</p>
                 <a className="dir-cta" href={mapsUrl} target="_blank" rel="noopener noreferrer">
                   Cómo llegar
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

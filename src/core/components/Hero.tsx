@@ -1,12 +1,11 @@
-import Link from 'next/link';
 import Image from 'next/image';
-import { Phone, Clock, ShieldCheck, CalendarCheck } from 'lucide-react';
+import { Phone, Clock, ShieldCheck } from 'lucide-react';
 import type { LocalBusiness } from '@/core/types/adapter';
 import type { AvailableSlot } from '@/actions/slots';
 import { HeroStripes, HeroUnderlineDraw } from '@/core/components/client/HeroMotion';
 
 export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: AvailableSlot | null }) {
-  const { businessName, contact, foundingYear } = config;
+  const { contact, foundingYear } = config;
   const year = foundingYear ?? 1987;
 
   const nextSlotLabel = nextSlot
@@ -17,39 +16,6 @@ export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: Av
 
   return (
     <>
-      {/* ── Sticky header (bundle lines 14-32) ── */}
-      <header className="hdr">
-        <div className="hdr-inner">
-          <Link href="/" className="hdr-logo" aria-label={businessName}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt={businessName} height="34" />
-          </Link>
-
-          <nav className="hdr-nav" aria-label="Navegación principal">
-            <a href="#servicios">Servicios</a>
-            <a href="#itv">ITV</a>
-            <a href="#taller">El taller</a>
-            <a href="#visitanos">Visítanos</a>
-          </nav>
-
-          <div className="hdr-right">
-            <a className="hdr-phone" href={`tel:${contact.phone}`}>
-              <Phone width={16} height={16} aria-hidden />
-              <span>{contact.phone}</span>
-            </a>
-            <button
-              type="button"
-              data-action="open-chat"
-              aria-label="Reservar cita"
-              className="open-chat-trigger btn btn-primary btn-sm"
-            >
-              <CalendarCheck width={14} height={14} aria-hidden />
-              Reservar cita
-            </button>
-          </div>
-        </div>
-      </header>
-
       {/* ── Hero section (bundle lines 34-82) ── */}
       <section className="hero paper" id="inicio">
         <div className="hero-inner">
