@@ -1,0 +1,105 @@
+name: tst — bootstrap PB superuser + open public read
+
+# One-shot recovery workflow. Created because tst PocketBase has no
+# applied access-rule migrations: availability_slots, services, and config
+# all have listRule = null, blocking anonymous reads. The runtime
+# server-action (getAvailableSlots) hits PB anonymously via cookie auth,
+# gets 403, and the booking flow dies at step 3 with
+# "No se han podido cargar los huecos disponibles."
+#
+# This workflow:
+#   1. SSHes to the tst VPS using the same secrets as deploy-tst.yml
+#   2. Inside the running pocketbase container, upserts a superuser using
+#      the PB CLI (only auth-less path to bootstrap creds on a populated DB)
+#   3. Authenticates against the public PB endpoint with those new creds
+#   4. PATCHes availability_slots / services / config so listRule = ""
+#      (public read), viewRule = "" (public read)
+#   5. Prints the new credentials at the end of the run log so the
+#      operator can store them in a password manager.
+#
+# Run via: GitHub UI → Actions → "tst — bootstrap PB superuser" → Run workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      admin_email:
+        description: 'Superuser email to create or update on tst PB'
+        required: true
+        default: 'admin@talleresentamg.es'
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    name: Bootstrap PB superuser + open booking-flow listRules
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: SSH into tst VPS and apply fix
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.TST_SSH_HOST }}
+          username: ${{ secrets.TST_SSH_USER }}
+          key: ${{ secrets.TST_SSH_KEY }}
+          envs: ADMIN_EMAIL
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /srv/amg
+
+            ADMIN_EMAIL='${{ inputs.admin_email }}'
+            ADMIN_PASS=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+
+            echo "==> [1/4] Upserting PB superuser inside the pocketbase container"
+            docker compose -f docker-compose.tst.yml exec -T pocketbase \
+              /pb/pocketbase superuser upsert "${ADMIN_EMAIL}" "${ADMIN_PASS}"
+
+            echo ""
+            echo "==> [2/4] Authenticating via public PB endpoint"
+            AUTH_RESPONSE=$(curl -fsS -X POST \
+              'https://tst.178-104-237-14.sslip.io/pb/api/collections/_superusers/auth-with-password' \
+              -H 'Content-Type: application/json' \
+              -d '{"identity":"'"${ADMIN_EMAIL}"'","password":"'"${ADMIN_PASS}"'"}')
+            TOKEN=$(echo "${AUTH_RESPONSE}" | grep -o '"token":"[^"]*"' | head -1 | cut -d'"' -f4)
+            if [ -z "${TOKEN}" ]; then
+              echo "FAIL: could not extract token from auth response:"
+              echo "${AUTH_RESPONSE}"
+              exit 1
+            fi
+            echo "    auth OK"
+
+            echo ""
+            echo "==> [3/4] Opening public read on booking-flow collections"
+            for COLL in availability_slots services config; do
+              echo "    --- ${COLL} ---"
+              RESP=$(curl -sS -X PATCH \
+                "https://tst.178-104-237-14.sslip.io/pb/api/collections/${COLL}" \
+                -H "Authorization: Bearer ${TOKEN}" \
+                -H 'Content-Type: application/json' \
+                -d '{"listRule":"","viewRule":""}')
+              echo "${RESP}" | grep -o '"name":"[^"]*"\|"listRule":"[^"]*"\|"viewRule":"[^"]*"' || echo "${RESP}"
+            done
+
+            echo ""
+            echo "==> [4/4] Smoke check — anonymous read on availability_slots"
+            HTTP=$(curl -s -o /tmp/probe.json -w "%{http_code}" \
+              'https://tst.178-104-237-14.sslip.io/pb/api/collections/availability_slots/records?perPage=1')
+            echo "    HTTP ${HTTP}"
+            head -c 500 /tmp/probe.json
+            echo ""
+            if [ "${HTTP}" != "200" ]; then
+              echo "FAIL: anonymous read still blocked (got HTTP ${HTTP}). Rule update did not stick."
+              exit 1
+            fi
+
+            echo ""
+            echo "================================================================"
+            echo "  Bootstrap complete."
+            echo "  PB superuser:  ${ADMIN_EMAIL}"
+            echo "  PB password:   ${ADMIN_PASS}"
+            echo ""
+            echo "  Save this password to a manager NOW — it is shown only once."
+            echo "  This run log is private to repo collaborators, but anyone with"
+            echo "  read access can see it. Rotate via this workflow if leaked."
+            echo "================================================================"
