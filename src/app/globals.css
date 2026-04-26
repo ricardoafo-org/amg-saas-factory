@@ -1,5 +1,32 @@
 @import "tailwindcss";
 
+/* ──────────────────────────────────────────────────────────────────────
+   FEAT-038 PR 5 — Cross-document View Transitions.
+   Opts every same-origin navigation into a smooth transition. Unsupported
+   browsers (Firefox today) ignore the at-rule and navigate normally.
+   ────────────────────────────────────────────────────────────────────── */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.01ms;
+  }
+}
+
+/* Named transition targets — match selectors land elsewhere in this file
+   (.hero, .nav .open-chat-trigger, .pcb-hero); declared together here for
+   discoverability. */
+.pcb-hero { view-transition-name: pcb-hero; }
+
 /* ==========================================================================
    Talleres AMG — v2 design system (light-first, workshop industrial)
    Tokens align with talleres-amg-design-system/colors_and_type.css.
@@ -491,6 +518,8 @@
     padding-block: 8px;
   }
   .nav-logo { display: inline-flex; align-items: center; }
+  /* FEAT-038 PR 5 — navbar CTA persists across navigations. */
+  .nav .open-chat-trigger { view-transition-name: nav-cta; }
   .nav-links {
     display: flex; gap: 28px;
     font-size: 14px; color: var(--fg-secondary); font-weight: 500;
@@ -561,6 +590,8 @@
     padding: 72px 24px 88px;
     position: relative;
     overflow: hidden;
+    /* FEAT-038 PR 5 — cross-document transition target. */
+    view-transition-name: hero;
   }
   .hero-inner {
     max-width: 1200px; margin: 0 auto;
