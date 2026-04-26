@@ -76,6 +76,12 @@
   --shadow-lg:     0 12px 28px oklch(0.18 0.01 60 / 0.08), 0 4px 10px oklch(0.18 0.01 60 / 0.05);
   --shadow-dialog: 0 24px 60px oklch(0.18 0.01 60 / 0.15), 0 8px 20px oklch(0.18 0.01 60 / 0.08);
   --shadow-focus:  0 0 0 3px oklch(0.56 0.20 25 / 0.22);
+
+  /* ── FEAT-038 PR 3 · type & easing tokens ─────────────────────────── */
+  /* Heat-from-the-component on .svc-card hover (8% amber over card). */
+  --surface-card-hover: color-mix(in oklch, var(--color-card) 92%, var(--color-brand-amber) 8%);
+  /* PCB chip silver — semantic alias for --color-brand-silver. */
+  --color-pcb-chip: oklch(0.78 0.005 80);
 }
 
 /* ── Design-source raw vars (for utility CSS portability) ── */
@@ -119,7 +125,10 @@
   --tracking-wider:     0.12em;
   --tracking-widest:    0.2em;
 
-  --ease-out:    cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* FEAT-038 PR 3 — Two curves, two jobs:
+     --ease-out  = material-standard  (button presses, form focus, micro-interactions)
+     --ease-mech = expo-out mechanical (page-entry, scroll, hover reveals, suspension) */
+  --ease-out:    cubic-bezier(0.4, 0, 0.2, 1);
   --ease-soft:   cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   --ease-mech:   cubic-bezier(0.16, 1, 0.3, 1);
@@ -169,6 +178,14 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     font-feature-settings: "ss01", "cv11";
+  }
+
+  /* FEAT-038 PR 3 — explicit ss01 on every mono usage so the digit "1"
+     renders flat-top and the "4" closed (machined feel). The body rule
+     above already enables ss01, but anchoring it on mono surfaces it
+     against any third-party reset. */
+  code, kbd, samp, pre, .font-mono, [class*="font-mono"] {
+    font-feature-settings: "ss01" 1;
   }
 
   ::selection { background: var(--color-primary); color: var(--color-primary-foreground); }
@@ -521,6 +538,10 @@
     letter-spacing: -0.035em;
     margin: 0 0 24px;
     color: var(--fg);
+    /* FEAT-038 PR 3 — explicit display optical-size at headline scale.
+       `auto` is too conservative on Geist; pin to 72 so the headline reads
+       as display, not body bumped up. */
+    font-variation-settings: "opsz" 72;
   }
 
   /* ── Hero layout ────────────────────────────────────────────────────── */
@@ -712,6 +733,8 @@
   }
   .svc-card:hover {
     transform: translateY(-2px);
+    /* FEAT-038 PR 3 — heat from the component (8% amber over card). */
+    background: var(--surface-card-hover);
     box-shadow: var(--shadow-lg);
     border-color: var(--border-strong);
   }
