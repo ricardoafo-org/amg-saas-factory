@@ -127,16 +127,18 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
             setLoadingSlots(false);
             if (available.length > 0) {
               addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
+              // Slots visible — stay on this node so handleSlotSelect drives the next step.
+              if (node.next) setCurrentNodeId(node.next);
             } else {
               addBotMessage(`No hay huecos disponibles — llámanos al ${phone}`, 300);
-            }
-            if (node.next) {
-              setCurrentNodeId(node.next);
+              // No slots — advance into the contact-collection branch via goToNode so
+              // the next node's message + input actually render. BUG-012.
+              if (node.next) goToNode(node.next, newVars);
             }
           })
           .catch(() => {
             setLoadingSlots(false);
-            if (node.next) setCurrentNodeId(node.next);
+            if (node.next) goToNode(node.next, newVars);
           });
       }, 900);
       return;
@@ -156,7 +158,10 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
             addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
           } else {
             addBotMessage(`No hay huecos disponibles — llámanos al ${phone}`, 300);
-            if (node.next) setCurrentNodeId(node.next);
+            // BUG-012: previously setCurrentNodeId(node.next) — left the next
+            // node un-rendered (no message, no input). Use goToNode so the
+            // contact-collection branch actually advances.
+            if (node.next) goToNode(node.next, vars);
           }
         })
         .catch(() => {
@@ -169,7 +174,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
             addBotMessage('Aquí tienes las próximas fechas disponibles. ¿Cuál te viene mejor?', 300);
           } else {
             addBotMessage(`Sin conexión — llámanos al ${phone}`, 300);
-            if (node.next) setCurrentNodeId(node.next);
+            if (node.next) goToNode(node.next, vars);
           }
         });
       return;
