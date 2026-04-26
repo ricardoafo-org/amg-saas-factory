@@ -1116,20 +1116,59 @@
   transform-origin: center bottom;
 }
 
+/* One-shot fire on first paint (every page load), with asymmetric crank-angle. */
+.amg-logo .piston-l {
+  animation: amg-piston-fire 420ms var(--ease-mech) 200ms 1 both;
+}
+.amg-logo .piston-r {
+  animation: amg-piston-fire 420ms var(--ease-mech) 280ms 1 both;
+}
+.amg-logo .ring-sweep-l {
+  animation: amg-ring-sweep 360ms var(--ease-mech) 200ms 1 both;
+}
+.amg-logo .ring-sweep-r {
+  animation: amg-ring-sweep 360ms var(--ease-mech) 280ms 1 both;
+}
+
+/* Hover re-trigger using a duplicate name so the animation restarts. */
 @media (hover: hover) {
   .amg-logo:hover .piston-l {
-    animation: amg-piston-fire 360ms var(--ease-mech) both;
+    animation-name: amg-piston-fire, amg-piston-fire;
+    animation-duration: 360ms;
+    animation-delay: 0ms;
   }
   .amg-logo:hover .piston-r {
-    animation: amg-piston-fire 360ms var(--ease-mech) 80ms both;
+    animation-name: amg-piston-fire, amg-piston-fire;
+    animation-duration: 360ms;
+    animation-delay: 80ms;
   }
   .amg-logo:hover .ring-sweep-l {
-    animation: amg-ring-sweep 320ms var(--ease-mech) both;
+    animation-name: amg-ring-sweep, amg-ring-sweep;
+    animation-duration: 320ms;
+    animation-delay: 0ms;
   }
   .amg-logo:hover .ring-sweep-r {
-    animation: amg-ring-sweep 320ms var(--ease-mech) 80ms both;
+    animation-name: amg-ring-sweep, amg-ring-sweep;
+    animation-duration: 320ms;
+    animation-delay: 80ms;
   }
 }
+
+/* prefers-reduced-motion — kill both the one-shot and the hover re-trigger. */
+@media (prefers-reduced-motion: reduce) {
+  .amg-logo .piston-l,
+  .amg-logo .piston-r,
+  .amg-logo .ring-sweep-l,
+  .amg-logo .ring-sweep-r {
+    animation: none;
+  }
+}
+
+/* Lockup ribbon — service-stripe palette (amber / paper / signal-red). */
+.amg-logo-ribbon { margin-bottom: 0.25rem; }
+.amg-logo-stripe--amber { background: var(--color-brand-amber); }
+.amg-logo-stripe--paper { background: var(--color-brand-paper); }
+.amg-logo-stripe--red   { background: var(--color-brand-red); }
 
 /* AMG logo — Windows High Contrast Mode: collapse fills to system colours. */
 @media (forced-colors: active) {
@@ -1259,7 +1298,9 @@
   .amg-logo rect,
   .amg-logo text,
   .amg-logo polygon { fill: CanvasText; stroke: CanvasText; }
-  .amg-logo .amg-logo-stripe { fill: Highlight; }
+  .amg-logo-ribbon .amg-logo-stripe--amber,
+  .amg-logo-ribbon .amg-logo-stripe--paper { background: CanvasText !important; }
+  .amg-logo-ribbon .amg-logo-stripe--red { background: Highlight !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
