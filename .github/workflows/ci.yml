@@ -91,6 +91,56 @@ jobs:
         if: always()
         run: npm audit --omit=dev --audit-level=high || true
 
-  # NOTE: E2E (Playwright) job removed in chore/ci-pipeline-cleanup.
-  # Re-introduce it alongside FEAT-036 (QA framework rebuild) when PocketBase
-  # seeding + local-green are wired into the CI environment. Tracked there.
+  # E2E smoke (Playwright) — Phase 5 of FEAT-041.
+  # Runs the 3 PB-free canonical scenarios from FEAT-041 Section 7:
+  #   - ITV calculator           (e2e/itv.spec.ts)
+  #   - Mobile contact bar       (e2e/mobile.spec.ts)
+  #   - Visit / homepage wiring  (e2e/homepage.spec.ts)
+  # Booking happy path + Footer click-every-CTA require seeded PocketBase —
+  # tracked as task #78 (CI/CD P0.5).
+  #
+  # Sharding: 4 parallel jobs × workers=100% per shard (≈16x parallelism on
+  # GH-hosted 4-CPU runners). Per FEAT-041 Layer 6 parallelism contract.
+  e2e-smoke:
+    name: E2E smoke (shard ${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Playwright system deps (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Run smoke suite
+        run: |
+          npx playwright test \
+            e2e/itv.spec.ts \
+            e2e/mobile.spec.ts \
+            e2e/homepage.spec.ts \
+            --project=chromium \
+            --shard=${{ matrix.shard }}/4
+      - name: Upload trace on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-trace-shard-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 7
+
