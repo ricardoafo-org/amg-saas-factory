@@ -822,6 +822,14 @@
   }
   .svc-card:hover::before { transform: scaleX(1); }
   .svc-card:hover .svc-icon { background: var(--primary); color: var(--primary-fg); }
+  /* ── Service card tier colour accents ───────────────────────────────── */
+  /* A subtle 3px left-border signals the service category at a glance.   */
+  .svc-card[data-tier] { border-left-width: 3px; border-left-style: solid; }
+  .svc-card[data-tier="maintenance"] { border-left-color: #10b981; }
+  .svc-card[data-tier="safety"]      { border-left-color: #ef4444; }
+  .svc-card[data-tier="compliance"]  { border-left-color: #3b82f6; }
+  .svc-card[data-tier="comfort"]     { border-left-color: #8b5cf6; }
+  .svc-card[data-tier="diagnostic"]  { border-left-color: #f59e0b; }
   .svc-icon {
     width: 44px; height: 44px;
     border-radius: var(--radius-md);
@@ -1199,6 +1207,14 @@
     color: oklch(1 0 0 / 0.5);
     font-weight: 500;
   }
+  /* ── Footer heading icons ────────────────────────────────────────────── */
+  .ftr-heading {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ftr-heading svg {
+    flex: none;
+    color: oklch(1 0 0 / 0.35);
+  }
   .ftr-inner a,
   .ftr-inner button {
     display: block;
@@ -1229,6 +1245,22 @@
     font-size: 12px;
     color: oklch(1 0 0 / 0.5);
   }
+  /* ── Footer bottom-bar legal <dl> ───────────────────────────────────── */
+  .ftr-meta {
+    display: flex; gap: 16px;
+    margin: 0; padding: 0;
+    list-style: none;
+  }
+  .ftr-meta > div { display: contents; }
+  .ftr-meta dt {
+    color: oklch(1 0 0 / 0.35);
+  }
+  .ftr-meta dd {
+    font-weight: 600;
+    margin: 0 16px 0 4px;
+    color: oklch(1 0 0 / 0.7);
+  }
+  .ftr-meta dd:last-of-type { margin-right: 0; }
   @media (max-width: 900px) { .ftr-inner { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 560px) { .ftr-inner { grid-template-columns: 1fr; } }
 
