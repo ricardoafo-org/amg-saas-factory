@@ -1278,6 +1278,10 @@
 
 .rule-marker {
   animation: rule-marker-sweep 5.6s cubic-bezier(0.22, 0.61, 0.36, 1) 200ms 1 both;
+  animation-play-state: paused;
+}
+.rule-divider[data-in-view="true"] .rule-marker {
+  animation-play-state: running;
 }
 .rule-marker-line {
   stroke: var(--color-brand-red);
