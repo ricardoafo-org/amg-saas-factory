@@ -77,6 +77,7 @@ export const BUNDLE_SERVICES = [
     dur: '~ 45 min',
     title: 'Cambio de aceite y filtros',
     desc: 'Aceite, filtro de aceite y revisión de niveles. Te enseñamos las piezas cambiadas antes de tirarlas.',
+    includes: 'aceite, filtro de aceite, revisión de niveles',
   },
   {
     id: 'frenos',
@@ -84,6 +85,7 @@ export const BUNDLE_SERVICES = [
     dur: '~ 75 min',
     title: 'Revisión de frenos',
     desc: 'Inspección de pastillas, discos y líquido. Presupuesto en el acto antes de empezar a sustituir nada.',
+    includes: 'inspección de pastillas y discos, líquido, presupuesto',
   },
   {
     id: 'pre-itv',
@@ -91,6 +93,7 @@ export const BUNDLE_SERVICES = [
     dur: '~ 60 min',
     title: 'Pre-revisión ITV',
     desc: 'Revisamos todo lo que miran en la ITV. Si algo falla, te lo decimos y lo arreglamos antes de ir.',
+    includes: 'luces, frenos, suspensión, gases, holguras',
   },
   {
     id: 'neumaticos',
@@ -98,6 +101,7 @@ export const BUNDLE_SERVICES = [
     dur: '~ 30 min',
     title: 'Neumáticos y equilibrado',
     desc: 'Trabajamos con Michelin, Continental, Hankook. Válvulas, equilibrado y alineación incluidos.',
+    includes: 'válvulas, equilibrado, alineación',
   },
   {
     id: 'aire-acondicionado',
@@ -105,6 +109,7 @@ export const BUNDLE_SERVICES = [
     dur: '~ 40 min',
     title: 'Aire acondicionado',
     desc: 'Carga de gas, cambio de filtro de habitáculo y diagnóstico de fugas con lámpara UV.',
+    includes: 'carga de gas, filtro de habitáculo, diagnóstico de fugas',
   },
   {
     id: 'diagnostico-obd',
@@ -112,6 +117,7 @@ export const BUNDLE_SERVICES = [
     dur: '~ 20 min',
     title: 'Diagnóstico OBD',
     desc: 'Lectura y borrado de códigos de avería. Primera consulta gratis al contratar la reparación.',
+    includes: 'lectura y borrado de códigos, primera consulta gratis',
   },
 ] as const;
 
@@ -184,6 +190,7 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
                 {/* Title + description */}
                 <h3>{svc.title}</h3>
                 <p>{svc.desc}</p>
+                <p className="svc-includes"><strong>Incluye:</strong> {svc.includes}</p>
 
                 {/* Warranty disclosure pill — RD 1457/1986 conformance */}
                 <span className="svc-warranty">

@@ -3,8 +3,17 @@ import { Phone, Clock, ShieldCheck, MessageCircle } from 'lucide-react';
 import type { LocalBusiness } from '@/core/types/adapter';
 import type { AvailableSlot } from '@/actions/slots';
 import { HeroStripes, HeroUnderlineDraw } from '@/core/components/client/HeroMotion';
+import { TrustStrip } from '@/core/components/TrustStrip';
 
-export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: AvailableSlot | null }) {
+type HeroProps = {
+  config: LocalBusiness;
+  nextSlot: AvailableSlot | null;
+  yearsOperating: number;
+  reviewRating: number;
+  reviewCount: number;
+};
+
+export function Hero({ config, nextSlot, yearsOperating, reviewRating, reviewCount }: HeroProps) {
   const { contact, foundingYear: year } = config;
   const waNumber = contact.whatsapp?.replace(/\D/g, '');
 
@@ -112,6 +121,13 @@ export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: Av
             </div>
           </div>
         </div>
+
+        {/* Trust numbers — rendered inside hero so they land above the fold */}
+        <TrustStrip
+          yearsOperating={yearsOperating}
+          reviewRating={reviewRating}
+          reviewCount={reviewCount}
+        />
       </section>
     </>
   );

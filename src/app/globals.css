@@ -749,6 +749,13 @@
     font: 500 11px var(--font-mono); color: var(--fg-muted);
     letter-spacing: 0.06em; text-transform: uppercase;
   }
+  /* "Incluye:" sub-line — item #71 */
+  .svc-includes {
+    font-size: 12px;
+    color: var(--fg-muted);
+    line-height: 1.4;
+    margin-top: 4px;
+  }
   /* Warranty disclosure pill — RD 1457/1986 conformance signal. */
   .svc-warranty {
     display: inline-flex; align-items: center; gap: 6px;
@@ -1023,6 +1030,14 @@
     display: inline-flex; align-items: center; gap: 6px;
     margin-top: 8px; font-size: 13px; font-weight: 600;
     color: var(--primary);
+  }
+  /* Geo-proximity hint — item #73 */
+  .visit-geo-hint {
+    font-size: 12px !important;
+    color: var(--fg-muted) !important;
+    font-style: italic;
+    margin-top: 2px !important;
+    line-height: 1.4;
   }
   /* Phone number tap target — visible underline on hover, never below 44px line-height. */
   .visit-phone-link {

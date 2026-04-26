@@ -226,7 +226,7 @@ export function ItvCountdown() {
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <button
               type="button"
-              className="btn btn-primary btn-lg"
+              className="btn btn-primary btn-lg hidden md:inline-flex"
               onClick={scrollToCalc}
             >
               Calcular cuándo
@@ -237,6 +237,17 @@ export function ItvCountdown() {
               onClick={openPreItv}
             >
               Reservar pre-ITV
+            </button>
+          </div>
+
+          {/* Mobile-only sticky CTA — visible below md, fixed to viewport bottom */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 px-4 pb-[env(safe-area-inset-bottom)] z-30 bg-gradient-to-t from-background via-background to-transparent pt-4">
+            <button
+              type="button"
+              className="btn btn-primary btn-lg w-full"
+              onClick={scrollToCalc}
+            >
+              Calcular cuándo
             </button>
           </div>
         </div>
