@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import type { LocalBusiness } from '@/core/types/adapter';
 
 export function Footer({ config }: { config: LocalBusiness }) {
@@ -30,18 +31,18 @@ export function Footer({ config }: { config: LocalBusiness }) {
         {/* Taller column */}
         <div>
           <h4>Taller</h4>
-          <a href="#nosotros">Sobre nosotros</a>
-          <a href="#nosotros">Cómo trabajamos</a>
-          <a href="#visitanos">Visítanos</a>
+          <Link href="/sobre-nosotros">Sobre nosotros</Link>
+          <Link href="/como-trabajamos">Cómo trabajamos</Link>
+          <Link href="/#visitanos">Visítanos</Link>
         </div>
 
         {/* Legal column */}
         <div>
           <h4>Legal</h4>
-          <a href="/aviso-legal">Aviso legal</a>
-          <a href="/politica-de-privacidad">Privacidad</a>
-          <a href="/politica-de-cookies">Cookies</a>
-          <a href="/reclamaciones">Reclamaciones</a>
+          <Link href="/aviso-legal">Aviso legal</Link>
+          <Link href="/politica-de-privacidad">Privacidad</Link>
+          <Link href="/politica-de-cookies">Cookies</Link>
+          <Link href="/reclamaciones">Reclamaciones</Link>
         </div>
       </div>
 
