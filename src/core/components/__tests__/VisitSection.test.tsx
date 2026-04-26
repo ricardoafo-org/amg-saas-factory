@@ -73,6 +73,38 @@ describe('VisitSection — BUG-014 regression', () => {
     expect(html).toContain('Calle');
   });
 
+  it('renders a tel: link on the visible phone number (V1 — tap-to-call)', () => {
+    const html = renderToStaticMarkup(<VisitSection config={makeFixture()} />);
+    // Phone is wrapped in <a href="tel:..."> with non-digits-and-+-stripped target.
+    expect(html).toContain('href="tel:+34999999999"');
+    expect(html).toContain('aria-label="Llamar al +34 999 999 999"');
+  });
+
+  it('renders an inline "Llamar ahora" CTA next to "Escribir por WhatsApp"', () => {
+    const html = renderToStaticMarkup(<VisitSection config={makeFixture()} />);
+    expect(html).toContain('Llamar ahora');
+    expect(html).toContain('Escribir por WhatsApp');
+    // Both CTAs share the .visit-phone-ctas container so they wrap together on mobile.
+    expect(html).toContain('visit-phone-ctas');
+  });
+
+  it('omits the WhatsApp CTA when whatsapp is undefined but keeps the Llamar CTA', () => {
+    const html = renderToStaticMarkup(
+      <VisitSection
+        config={makeFixture({
+          contact: {
+            phone: '+34 999 999 999',
+            email: 'a@b.c',
+            googleMapsUrl: 'https://maps.example.test/x',
+          },
+        })}
+      />,
+    );
+    expect(html).toContain('Llamar ahora');
+    expect(html).not.toContain('Escribir por WhatsApp');
+    expect(html).not.toContain('wa.me');
+  });
+
   it('renders the Cartagena-locale tagline derived from address (no Madrid leak)', () => {
     const html = renderToStaticMarkup(
       <VisitSection
