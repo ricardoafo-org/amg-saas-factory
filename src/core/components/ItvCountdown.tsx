@@ -278,6 +278,22 @@ export function ItvCountdown() {
               max={new Date().toISOString().split('T')[0]}
               onChange={(e) => setLastItv(e.target.value)}
             />
+            {/* Audit medium: "no me acuerdo" off-ramp routes the user to the
+                chatbot, where we can look up the previous ITV by plate and
+                guide them through pre-ITV booking. */}
+            <button
+              type="button"
+              className="itv-no-date-hint"
+              onClick={() =>
+                window.dispatchEvent(
+                  new CustomEvent('amg:open-chat', {
+                    detail: { serviceId: 'pre-itv', plate: matricula, reason: 'no-date' },
+                  }),
+                )
+              }
+            >
+              ¿No recuerdas la fecha? Te ayudamos a buscarla
+            </button>
           </div>
 
           {/* Field 3: Tipo de vehículo */}

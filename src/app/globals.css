@@ -872,6 +872,29 @@
     box-shadow: var(--shadow-focus);
     border-color: var(--primary);
   }
+  .itv-no-date-hint {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    color: var(--primary);
+    font: 600 12px var(--font-sans);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-style: dashed;
+    text-decoration-color: color-mix(in srgb, var(--primary) 50%, transparent);
+    cursor: pointer;
+  }
+  .itv-no-date-hint:hover {
+    text-decoration-style: solid;
+    text-decoration-color: var(--primary);
+  }
+  .itv-no-date-hint:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
   .itv-result {
     margin-top: 18px; padding: 16px;
     background: var(--warning-muted);
