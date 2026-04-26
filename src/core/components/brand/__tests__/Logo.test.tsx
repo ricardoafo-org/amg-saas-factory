@@ -45,23 +45,24 @@ describe('Logo — FEAT-038 Direction A (punch-stamp)', () => {
     expect(html).not.toContain('filter="url(#amg-stamp)"');
   });
 
-  it('omits the stripe ribbon in wordmark variant (default)', () => {
-    const html = renderToStaticMarkup(<Logo />);
-    expect(html).not.toContain('amg-logo-ribbon');
+  it('omits the lockup ribbon in every variant — stripe lives on .nav', () => {
+    const wordmark = renderToStaticMarkup(<Logo />);
+    const lockup = renderToStaticMarkup(<Logo variant="lockup" />);
+    expect(wordmark).not.toContain('amg-logo-ribbon');
+    expect(lockup).not.toContain('amg-logo-ribbon');
+    expect(lockup).not.toContain('amg-logo-stripe');
   });
 
-  it('does not duplicate Hero "Cartagena · Desde …" copy in the lockup', () => {
+  it('does not render Hero "Cartagena · Desde …" copy in any variant', () => {
     const html = renderToStaticMarkup(<Logo variant="lockup" />);
     expect(html).not.toContain('Cartagena');
     expect(html).not.toContain('Est.');
   });
 
-  it('renders the lockup ribbon with brand-correct stripe palette (amber / paper / red)', () => {
-    const html = renderToStaticMarkup(<Logo variant="lockup" />);
-    expect(html).toContain('amg-logo-ribbon');
-    expect(html).toContain('amg-logo-stripe--amber');
-    expect(html).toContain('amg-logo-stripe--paper');
-    expect(html).toContain('amg-logo-stripe--red');
+  it('rotates pistons so tops converge to the apex (reads as A, not V/H)', () => {
+    const html = renderToStaticMarkup(<Logo />);
+    expect(html).toMatch(/rotate\(18\s+32\s+100\)/);
+    expect(html).toMatch(/rotate\(-18\s+76\s+100\)/);
   });
 
   it('honours custom ariaLabel for non-default placements', () => {
@@ -90,9 +91,12 @@ describe('globals.css — Logo Direction A motion + ribbon', () => {
     );
   });
 
-  it('declares the brand stripe palette tokens for the ribbon', () => {
-    expect(CSS).toMatch(/\.amg-logo-stripe--amber\s*\{[^}]*var\(--color-brand-amber\)/);
-    expect(CSS).toMatch(/\.amg-logo-stripe--paper\s*\{[^}]*var\(--color-brand-paper\)/);
-    expect(CSS).toMatch(/\.amg-logo-stripe--red\s*\{[^}]*var\(--color-brand-red\)/);
+  it('moves the brand tri-stripe to the navbar bottom edge (red/blue/red)', () => {
+    expect(CSS).toMatch(/\.nav::after\s*\{[\s\S]*?linear-gradient[\s\S]*?--color-brand-red[\s\S]*?--color-brand-m-darkblue[\s\S]*?--color-brand-red/);
+  });
+
+  it('drops the legacy amg-logo-ribbon stylesheet block', () => {
+    expect(CSS).not.toContain('.amg-logo-ribbon');
+    expect(CSS).not.toContain('.amg-logo-stripe');
   });
 });

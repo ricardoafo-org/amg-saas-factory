@@ -5,7 +5,7 @@ type LogoVariant = 'wordmark' | 'lockup';
 interface LogoProps {
   variant?: LogoVariant;
   size?: number;
-  /** Reserved for future ribbon/SEO callers. Not rendered as visible text. */
+  /** Reserved for future SEO callers. Not rendered as visible text. */
   establishedYear?: number;
   className?: string;
   ariaLabel?: string;
@@ -14,21 +14,7 @@ interface LogoProps {
 const VIEWBOX_WIDTH = 340;
 const VIEWBOX_HEIGHT = 112;
 
-/**
- * FEAT-038 — Logo "Direction A": punch-stamp / cast-iron casting-mark treatment.
- *
- * Pistons-A glyph remains the central metaphor (mechanic shop heritage) but the
- * fill picks up an inner-shadow + outer chamfer to read as a stamped/cast mark
- * rather than a flat sticker. Pistons fire once on mount via a CSS one-shot
- * animation; hover re-triggers it. `prefers-reduced-motion` freezes both.
- *
- * Lockup variant adds a tri-stripe service ribbon beside the wordmark using the
- * brand palette (amber / paper / signal-red). The previous "Cartagena · ES ·
- * Est." side-text is removed because the Hero eyebrow already carries it
- * (duplication caught in QA).
- */
 export function Logo({
-  variant = 'wordmark',
   size = 48,
   className,
   ariaLabel = 'Talleres AMG',
@@ -44,7 +30,7 @@ export function Logo({
 
   return (
     <div
-      className={['amg-logo amg-logo--stamp inline-flex items-center', variant === 'lockup' ? 'gap-3' : '', className]
+      className={['amg-logo amg-logo--stamp inline-flex items-center', className]
         .filter(Boolean)
         .join(' ')}
       style={wrapperStyle}
@@ -78,8 +64,10 @@ export function Logo({
           </filter>
         </defs>
 
-        {/* ============ LETTER A (pistons-A) — x: 10..98 ============ */}
-        <g transform="rotate(-14 32 100)">
+        {/* ============ LETTER A (pistons-A) — x: 10..98
+            Tops converge to apex (positive on left, negative on right) so
+            the silhouette reads as A, not V/H. */}
+        <g transform="rotate(18 32 100)">
           <g className="piston-l">
             <path
               className={glyphClass}
@@ -105,7 +93,7 @@ export function Logo({
           </g>
         </g>
 
-        <g transform="rotate(14 76 100)">
+        <g transform="rotate(-18 76 100)">
           <g className="piston-r">
             <path
               className={glyphClass}
@@ -158,27 +146,6 @@ export function Logo({
         />
       </svg>
 
-      {variant === 'lockup' && (
-        <div className="flex flex-col justify-center leading-none">
-          <div
-            aria-hidden="true"
-            className="amg-logo-ribbon flex h-1.5 w-9 overflow-hidden rounded-[1px]"
-          >
-            <span
-              className="amg-logo-stripe amg-logo-stripe--amber h-full flex-1"
-              style={{ background: 'var(--color-brand-amber)' }}
-            />
-            <span
-              className="amg-logo-stripe amg-logo-stripe--paper h-full flex-1"
-              style={{ background: 'var(--color-brand-paper)' }}
-            />
-            <span
-              className="amg-logo-stripe amg-logo-stripe--red h-full flex-1"
-              style={{ background: 'var(--color-brand-red)' }}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

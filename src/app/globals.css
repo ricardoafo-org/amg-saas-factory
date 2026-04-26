@@ -498,6 +498,19 @@
     border-bottom: 1px solid var(--border);
     transition: box-shadow var(--dur-base) var(--ease-mech);
   }
+  /* Brand tri-stripe service-band sits flush against the navbar's bottom edge.
+     Same red/blue/red palette as .amg-band and HeroStripes — single source of
+     stripe truth across the brand. */
+  .nav::after {
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: -3px;
+    height: 3px;
+    background: linear-gradient(to right,
+      var(--color-brand-red)         0%,     var(--color-brand-red)        33.33%,
+      var(--color-brand-m-darkblue)  33.33%, var(--color-brand-m-darkblue) 66.66%,
+      var(--color-brand-red)         66.66%, var(--color-brand-red)        100%);
+    pointer-events: none;
+  }
   .nav[data-scrolled="true"] {
     box-shadow: 0 1px 0 0 color-mix(in oklch, var(--fg) 6%, transparent);
   }
@@ -1164,12 +1177,6 @@
   }
 }
 
-/* Lockup ribbon — service-stripe palette (amber / paper / signal-red). */
-.amg-logo-ribbon { margin-bottom: 0.25rem; }
-.amg-logo-stripe--amber { background: var(--color-brand-amber); }
-.amg-logo-stripe--paper { background: var(--color-brand-paper); }
-.amg-logo-stripe--red   { background: var(--color-brand-red); }
-
 /* AMG logo — Windows High Contrast Mode: collapse fills to system colours. */
 @media (forced-colors: active) {
   .amg-logo .glyph,
@@ -1298,9 +1305,7 @@
   .amg-logo rect,
   .amg-logo text,
   .amg-logo polygon { fill: CanvasText; stroke: CanvasText; }
-  .amg-logo-ribbon .amg-logo-stripe--amber,
-  .amg-logo-ribbon .amg-logo-stripe--paper { background: CanvasText !important; }
-  .amg-logo-ribbon .amg-logo-stripe--red { background: Highlight !important; }
+  .nav { border-bottom: 2px solid Highlight; }
 }
 
 @media (prefers-reduced-motion: reduce) {
