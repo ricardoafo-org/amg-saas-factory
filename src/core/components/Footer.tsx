@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { LocalBusiness } from '@/core/types/adapter';
 
 export function Footer({ config }: { config: LocalBusiness }) {
-  const { businessName } = config;
+  const { businessName, foundingYear, address } = config;
 
   return (
     <footer className="ftr">
@@ -13,7 +13,7 @@ export function Footer({ config }: { config: LocalBusiness }) {
         <div className="ftr-brand">
           <Image src="/logo.svg" alt={businessName} width={120} height={38} style={{ height: 38, width: 'auto' }} />
           <p>
-            Taller mecánico familiar en Cartagena. Desde 1987 cuidamos los coches del barrio como si fueran nuestros.
+            Taller mecánico familiar en {address.city}. Desde {foundingYear} cuidamos los coches del barrio como si fueran nuestros.
           </p>
         </div>
 

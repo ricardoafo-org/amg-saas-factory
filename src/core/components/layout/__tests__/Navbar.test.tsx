@@ -15,6 +15,7 @@ const fixture: LocalBusiness = {
   tenantId: 'fixture',
   businessName: 'Talleres Fixture',
   industry: 'automotive',
+  foundingYear: 1987,
   address: {
     street: 'Calle X',
     city: 'CiudadX',

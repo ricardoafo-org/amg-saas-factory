@@ -17,6 +17,7 @@ const fixture: LocalBusiness = {
   tenantId: 't',
   businessName: 'Talleres AMG',
   industry: 'automotive',
+  foundingYear: 1987,
   address: {
     street: 'X',
     city: 'X',

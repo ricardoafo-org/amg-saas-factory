@@ -23,6 +23,7 @@ const makeFixture = (overrides: Partial<LocalBusiness> = {}): LocalBusiness => (
   tenantId: 'fixture',
   businessName: 'Talleres Fixture',
   industry: 'automotive',
+  foundingYear: 1987,
   address: {
     street: 'Calle Inventada, 123',
     city: 'CiudadFicticia',

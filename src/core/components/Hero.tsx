@@ -5,8 +5,7 @@ import type { AvailableSlot } from '@/actions/slots';
 import { HeroStripes, HeroUnderlineDraw } from '@/core/components/client/HeroMotion';
 
 export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: AvailableSlot | null }) {
-  const { contact, foundingYear } = config;
-  const year = foundingYear ?? 1987;
+  const { contact, foundingYear: year } = config;
   const waNumber = contact.whatsapp?.replace(/\D/g, '');
 
   const nextSlotLabel = nextSlot
