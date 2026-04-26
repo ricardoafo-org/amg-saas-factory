@@ -3,10 +3,12 @@ id: BUG-013
 title: "€0 prices on 3 services — config IDs don't match ServiceGrid/chatbot flow"
 severity: sev-1
 severity-rubric-citation: Functional axis F1 — IVA breakdown wrong; F6 — config-stored value overridden/missing
-status: wip
+status: fixed
+fixed: 2026-04-25
 filed: 2026-04-25
 filed-by: manual
 branch: fix/BUG-009-and-013-iva-and-catalog
+merged-pr: 29
 ---
 
 ## Summary

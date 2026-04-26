@@ -3,12 +3,14 @@ id: BUG-009
 title: Double IVA charge — services display "IVA included" then booking adds IVA again
 severity: sev-1
 severity-rubric-citation: Functional axis F1 — IVA breakdown wrong (hardcoded gross-vs-net mismatch); compounded by Functional axis F6 — config-stored ivaRate overridden by hardcoded UI prices
-status: wip
+status: fixed
+fixed: 2026-04-25
 filed: 2026-04-25
 filed-by: manual
 triaged: 2026-04-25
 triaged-by: bug-triager
-branch: fix/BUG-009-double-iva
+branch: fix/BUG-009-and-013-iva-and-catalog
+merged-pr: 29
 ---
 
 ## Triage Summary

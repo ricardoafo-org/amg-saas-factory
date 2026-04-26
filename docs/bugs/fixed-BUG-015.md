@@ -2,10 +2,12 @@
 id: BUG-015
 title: Filter injection in saveAppointment — payload.serviceIds interpolated raw into PocketBase filter
 severity: critical
-status: wip
+status: fixed
+fixed: 2026-04-25
 filed: 2026-04-25
 filed-by: security-auditor (surfaced on PR #29)
 branch: fix/BUG-015
+merged-pr: 31
 ---
 
 ## Summary

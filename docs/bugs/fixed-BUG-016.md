@@ -2,10 +2,12 @@
 id: BUG-016
 title: Raw filter interpolation across remaining server actions (SEV-1 audit follow-up to BUG-015)
 severity: critical
-status: wip
+status: fixed
+fixed: 2026-04-25
 filed: 2026-04-25
 filed-by: orchestrator (follow-up to BUG-015 / PR #31)
 branch: fix/BUG-016-filter-injection-audit
+merged-pr: 33
 ---
 
 ## Summary
