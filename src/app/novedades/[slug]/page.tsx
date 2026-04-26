@@ -16,8 +16,9 @@ export function generateStaticParams() {
   return CASE_STUDIES.map((c) => ({ slug: c.slug }));
 }
 
-export function generateMetadata({ params }: { params: Params }) {
-  const study = CASE_STUDIES.find((c) => c.slug === params.slug);
+export async function generateMetadata({ params }: { params: Promise<Params> }) {
+  const { slug } = await params;
+  const study = CASE_STUDIES.find((c) => c.slug === slug);
   if (!study) return { title: 'Caso no encontrado — Talleres AMG' };
   return {
     title: `${study.headline} — Talleres AMG · Cartagena`,
@@ -26,8 +27,9 @@ export function generateMetadata({ params }: { params: Params }) {
   };
 }
 
-export default function CaseStudyPage({ params }: { params: Params }) {
-  const study = CASE_STUDIES.find((c) => c.slug === params.slug);
+export default async function CaseStudyPage({ params }: { params: Promise<Params> }) {
+  const { slug } = await params;
+  const study = CASE_STUDIES.find((c) => c.slug === slug);
   if (!study) notFound();
 
   const config = loadClientConfig(TENANT_ID);

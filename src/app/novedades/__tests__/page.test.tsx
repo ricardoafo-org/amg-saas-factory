@@ -80,10 +80,11 @@ describe('/novedades/[slug] — FEAT-038 PR 8 contract', () => {
     expect(params.every((p) => typeof p.slug === 'string' && p.slug.length > 0)).toBe(true);
   });
 
-  it('renders a full case study with the Article JSON-LD wired', () => {
-    const html = renderToStaticMarkup(
-      <CaseStudyPage params={{ slug: CASE_STUDIES[0]!.slug }} />,
-    );
+  it('renders a full case study with the Article JSON-LD wired', async () => {
+    const element = await CaseStudyPage({
+      params: Promise.resolve({ slug: CASE_STUDIES[0]!.slug }),
+    });
+    const html = renderToStaticMarkup(element);
     const ldMatch = html.match(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/);
     expect(ldMatch).toBeTruthy();
     const ld = JSON.parse(ldMatch![1]!);
@@ -99,9 +100,9 @@ describe('/novedades/[slug] — FEAT-038 PR 8 contract', () => {
     }
   });
 
-  it('throws on unknown slugs (notFound path)', () => {
-    expect(() =>
-      renderToStaticMarkup(<CaseStudyPage params={{ slug: 'no-existe' }} />),
-    ).toThrow('NOT_FOUND');
+  it('throws on unknown slugs (notFound path)', async () => {
+    await expect(
+      CaseStudyPage({ params: Promise.resolve({ slug: 'no-existe' }) }),
+    ).rejects.toThrow('NOT_FOUND');
   });
 });
