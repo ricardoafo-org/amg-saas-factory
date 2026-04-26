@@ -92,14 +92,15 @@ jobs:
         run: npm audit --omit=dev --audit-level=high || true
 
   # E2E smoke (Playwright) — Phase 5 of FEAT-041.
-  # Runs the PB-free canonical scenarios from FEAT-041 Section 7:
-  #   - ITV calculator           (e2e/itv.spec.ts)
-  #   - Visit / homepage wiring  (e2e/homepage.spec.ts)
-  # Deferred:
-  #   - Mobile contact bar (mobile.spec.ts has pre-existing failures —
-  #     task #79 fixes ITV scroll + phone selector before re-adding)
-  #   - Booking happy path + Footer click-every-CTA need seeded PocketBase —
-  #     task #78 (CI/CD P0.5)
+  # Runs e2e/smoke.spec.ts — a curated suite written against the current DOM
+  # (post-FEAT-038/039) covering: brand title, hero copy, contact channels
+  # (WhatsApp + tel:), FAB reachability, services grid, ITV calculator inputs,
+  # Visit Google Maps URL contract.
+  # The legacy specs (itv.spec.ts, homepage.spec.ts, mobile.spec.ts) are
+  # test.describe.skip()'d because they target a pre-redesign UI — rewrite is
+  # tracked as task #80 (homepage/itv) and task #79 (mobile contact bar).
+  # Booking happy path + footer click-every-CTA need seeded PocketBase —
+  # task #78 (CI/CD P0.5).
   #
   # Sharding: 4 parallel jobs × workers=100% per shard (≈16x parallelism on
   # GH-hosted 4-CPU runners). Per FEAT-041 Layer 6 parallelism contract.
@@ -133,8 +134,7 @@ jobs:
       - name: Run smoke suite
         run: |
           npx playwright test \
-            e2e/itv.spec.ts \
-            e2e/homepage.spec.ts \
+            e2e/smoke.spec.ts \
             --project=chromium \
             --shard=${{ matrix.shard }}/4
       - name: Upload trace on failure
