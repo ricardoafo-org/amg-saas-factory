@@ -885,6 +885,29 @@
     font-variant-numeric: tabular-nums;
   }
   .itv-result-lab { font-size: 13px; color: var(--fg-secondary); margin-top: 2px; }
+  /* Audit row I2: expired ITV gets a stronger framing — red surface, ring, and
+     larger inline CTA distinct from the calmer warning result. */
+  .itv-result.itv-result--expired {
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+    color: var(--primary);
+    border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 6%, transparent);
+  }
+  .itv-result.itv-result--expired .itv-result-big {
+    color: var(--primary);
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .itv-result.itv-result--expired .itv-result-lab {
+    color: var(--fg);
+  }
+  @media (forced-colors: active) {
+    .itv-result.itv-result--expired {
+      background: Canvas; color: CanvasText;
+      border: 2px solid CanvasText; box-shadow: none;
+    }
+  }
   @media (max-width: 900px) {
     .itv-wrap { grid-template-columns: 1fr; padding: 36px 28px; }
   }
