@@ -1013,14 +1013,25 @@
     color: oklch(1 0 0 / 0.5);
     font-weight: 500;
   }
-  .ftr-inner a {
+  .ftr-inner a,
+  .ftr-inner button {
     display: block;
     color: oklch(1 0 0 / 0.75);
     font-size: 14px;
     padding: 4px 0;
     transition: color var(--dur-fast) var(--ease-out);
   }
-  .ftr-inner a:hover { color: oklch(1 0 0); }
+  .ftr-inner button {
+    background: transparent;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    color: oklch(1 0 0 / 0.75);
+  }
+  .ftr-inner a:hover,
+  .ftr-inner button:hover,
+  .ftr-inner button:focus-visible { color: oklch(1 0 0); }
   .ftr-brand img { filter: invert(1) brightness(1.8); height: 38px; margin-bottom: 14px; display: block; }
   .ftr-brand p { color: oklch(1 0 0 / 0.65); font-size: 14px; line-height: 1.55; max-width: 320px; margin: 0; }
   .ftr-bottom {

@@ -63,7 +63,9 @@ describe('Footer — BUG-011 dead-link regression', () => {
   const hrefs = extractHrefs(html);
 
   it('renders some footer links', () => {
-    expect(hrefs.length).toBeGreaterThan(5);
+    // Service rows are now data-action="open-chat" buttons (audit row F1) and do
+    // not contribute hrefs — the remaining hrefs are taller (3) + legal (4).
+    expect(hrefs.length).toBeGreaterThanOrEqual(7);
   });
 
   it('contains no dead #nosotros anchors (target id never existed)', () => {
@@ -81,6 +83,31 @@ describe('Footer — BUG-011 dead-link regression', () => {
       const id = a.replace(/^\/?#/, '');
       expect(KNOWN_PAGE_ANCHOR_IDS.has(id)).toBe(true);
     }
+  });
+
+  it('every service row is a data-action="open-chat" button with a service id (F1)', () => {
+    // Audit row F1: clicking a footer service link should open the chat preselected
+    // to that service. Each service row carries data-service-id matching the
+    // BUNDLE_SERVICES catalog.
+    const expected = [
+      'cambio-aceite',
+      'frenos',
+      'pre-itv',
+      'neumaticos',
+      'aire-acondicionado',
+      'diagnostico-obd',
+    ];
+    for (const id of expected) {
+      expect(html).toContain(`data-action="open-chat"`);
+      expect(html).toContain(`data-service-id="${id}"`);
+    }
+  });
+
+  it('no footer service row links via href to #servicios anymore', () => {
+    // Drift guard — if a future edit reverts service rows back to <a href="#servicios">
+    // this test fails before the PR can land.
+    const serviciosAnchors = hrefs.filter((h) => h === '#servicios' || h === '/#servicios');
+    expect(serviciosAnchors).toEqual([]);
   });
 
   it('every internal route href maps to an app-router page.tsx file', () => {
