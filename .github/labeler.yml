@@ -10,7 +10,7 @@
 "area:nlp":
   - changed-files:
       - any-glob-to-any-file:
-          - "src/core/nlp/**"
+          - "src/lib/nlp/**"
 
 "area:ui":
   - changed-files:
@@ -40,8 +40,6 @@
   - changed-files:
       - any-glob-to-any-file:
           - "src/**/consent*"
-          - "src/**/cookie*"
-          - "src/**/privacy*"
           - ".claude/skills/es-compliance/**"
 
 "area:schema":
@@ -64,14 +62,12 @@
 "area:email":
   - changed-files:
       - any-glob-to-any-file:
-          - "src/**/email/**"
-          - "src/**/resend*"
+          - "src/emails/**"
 
 "area:sms":
   - changed-files:
       - any-glob-to-any-file:
           - "src/**/sms/**"
-          - "src/**/twilio*"
 
 "type:docs":
   - changed-files:
