@@ -2,6 +2,7 @@
 
 import { getPb } from '@/lib/pb';
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 
 type CookieConsentData = {
   analytics: boolean;
@@ -16,7 +17,7 @@ type CookieConsentData = {
  */
 export async function logCookieConsent(data: CookieConsentData): Promise<void> {
   try {
-    const config = loadClientConfig(process.env['TENANT_ID'] ?? 'talleres-amg');
+    const config = loadClientConfig(getTenantId());
     const pb = await getPb();
 
     await pb.collection('cookie_consents').create({

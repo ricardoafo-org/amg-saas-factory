@@ -4,10 +4,11 @@ import { notFound } from 'next/navigation';
 import { Navbar } from '@/core/components/layout/Navbar';
 import { Footer } from '@/core/components/Footer';
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 import { CASE_STUDIES } from '../cases';
 import { buildArticleJsonLd } from '@/lib/seo/json-ld';
 
-const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
+const TENANT_ID = getTenantId();
 const SITE = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://talleres-amg.test';
 
 interface Params { slug: string }

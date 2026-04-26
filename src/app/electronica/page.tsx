@@ -3,6 +3,7 @@ import { PcbHero } from '@/core/components/brand/PcbHero';
 import { Navbar } from '@/core/components/layout/Navbar';
 import { Footer } from '@/core/components/Footer';
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 
 export const metadata = {
   title: 'Electrónica del automóvil — Talleres AMG · Cartagena',
@@ -11,7 +12,7 @@ export const metadata = {
   robots: { index: true, follow: true },
 };
 
-const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
+const TENANT_ID = getTenantId();
 
 const SUB_SERVICES = [
   {

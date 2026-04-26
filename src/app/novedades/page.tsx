@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { Navbar } from '@/core/components/layout/Navbar';
 import { Footer } from '@/core/components/Footer';
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 import { CASE_STUDIES } from './cases';
 
 export const metadata = {
@@ -12,7 +13,7 @@ export const metadata = {
   robots: { index: true, follow: true },
 };
 
-const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
+const TENANT_ID = getTenantId();
 
 export default function NovedadesPage() {
   const config = loadClientConfig(TENANT_ID);

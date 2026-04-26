@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 
 export const metadata = {
   title: 'Sobre nosotros — Talleres AMG',
@@ -9,7 +10,7 @@ export const metadata = {
 };
 
 export default function SobreNosotrosPage() {
-  const config = loadClientConfig('talleres-amg');
+  const config = loadClientConfig(getTenantId());
   const { businessName, foundingYear, address } = config;
   const year = foundingYear ?? 1987;
 

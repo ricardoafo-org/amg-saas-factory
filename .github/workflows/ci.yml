@@ -8,6 +8,12 @@ permissions:
   contents: read
   pull-requests: read
 
+# TENANT_ID is required by the app (see src/lib/tenant.ts) — getTenantId()
+# throws at module init if unset to prevent silent cross-tenant fallback.
+# Apply to all jobs that run app code (build, type-check, tests).
+env:
+  TENANT_ID: talleres-amg
+
 jobs:
   type-check:
     name: Type-check

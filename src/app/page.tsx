@@ -11,10 +11,11 @@ import { ChatWidget } from '@/core/components/ChatWidget';
 import { MobileContactBar } from '@/core/components/MobileContactBar';
 import { RuleDivider } from '@/core/components/brand/RuleDivider';
 import { loadClientConfig, loadChatbotFlow } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 import type { ChatbotFlow } from '@/lib/chatbot/engine';
 import { getNextAvailableSlot } from '@/actions/slots';
 
-const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
+const TENANT_ID = getTenantId();
 
 export default async function Home() {
   const config = loadClientConfig(TENANT_ID);

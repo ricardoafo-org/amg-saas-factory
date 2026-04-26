@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 import { getPb } from '@/lib/pb';
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
 import { AppointmentConfirmation } from '@/emails/AppointmentConfirmation';
@@ -17,7 +18,7 @@ async function getClientIp(): Promise<string> {
   } catch { return 'unknown'; }
 }
 
-const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
+const TENANT_ID = getTenantId();
 const clientConfig = loadClientConfig(TENANT_ID);
 
 type AppointmentPayload = {

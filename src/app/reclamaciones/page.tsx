@@ -1,4 +1,5 @@
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 
 export const metadata = {
   title: 'Hojas de Reclamaciones — Talleres AMG',
@@ -8,7 +9,7 @@ export const metadata = {
 };
 
 export default function ReclamacionesPage() {
-  const config = loadClientConfig('talleres-amg');
+  const config = loadClientConfig(getTenantId());
   const { businessName, address, contact } = config;
 
   return (

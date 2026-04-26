@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 
 export const metadata = {
   title: 'Cómo trabajamos — Talleres AMG',
@@ -32,7 +33,7 @@ const STEPS = [
 ];
 
 export default function ComoTrabajamosPage() {
-  const config = loadClientConfig('talleres-amg');
+  const config = loadClientConfig(getTenantId());
   const { ivaRate } = config;
   const ivaPct = Math.round(ivaRate * 100);
 
