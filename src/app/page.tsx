@@ -27,7 +27,7 @@ export default async function Home() {
       <Navbar config={config} />
       <Hero config={config} nextSlot={nextSlot} />
       <TrustStrip
-        yearsOperating={new Date().getFullYear() - (config.foundingYear ?? 1987)}
+        yearsOperating={new Date().getFullYear() - config.foundingYear}
         reviewRating={config.reviewRating ?? 4.9}
         reviewCount={config.reviewCount ?? 0}
       />

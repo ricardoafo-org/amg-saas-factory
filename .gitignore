@@ -46,3 +46,9 @@ public/swe-worker-*.js.map
 
 # Stray local outputs
 /ssh-keygen
+
+# Local scratch — design specs, diagnostic scripts, audit notes (never commit)
+tmp/
+
+# Claude Code scheduled-task lock — runtime state, not source
+.claude/scheduled_tasks.lock

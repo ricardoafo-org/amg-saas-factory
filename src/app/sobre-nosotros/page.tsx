@@ -1,18 +1,20 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { loadClientConfig } from '@/lib/config';
 import { getTenantId } from '@/lib/tenant';
 
-export const metadata = {
-  title: 'Sobre nosotros — Talleres AMG',
-  description:
-    'Taller mecánico familiar en Cartagena desde 1987. Conoce nuestra historia, nuestro equipo y nuestra forma de cuidar tu coche.',
-  robots: { index: true, follow: true },
-};
+export function generateMetadata(): Metadata {
+  const { businessName, foundingYear, address } = loadClientConfig(getTenantId());
+  return {
+    title: `Sobre nosotros — ${businessName}`,
+    description: `Taller mecánico familiar en ${address.city} desde ${foundingYear}. Conoce nuestra historia, nuestro equipo y nuestra forma de cuidar tu coche.`,
+    robots: { index: true, follow: true },
+  };
+}
 
 export default function SobreNosotrosPage() {
   const config = loadClientConfig(getTenantId());
-  const { businessName, foundingYear, address } = config;
-  const year = foundingYear ?? 1987;
+  const { businessName, foundingYear: year, address } = config;
 
   return (
     <main className="min-h-screen bg-background">

@@ -29,7 +29,7 @@ export type LocalBusiness = {
   businessName: string;
   industry: Industry;
   tagline?: string;
-  foundingYear?: number;
+  foundingYear: number;
   reviewRating?: number;
   reviewCount?: number;
   customersServed?: number;
