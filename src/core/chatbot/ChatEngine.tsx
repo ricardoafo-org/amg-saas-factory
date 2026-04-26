@@ -206,6 +206,9 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
       });
       if (slotId) await bookSlot(slotId, tenantId).catch(() => null);
       onStepChange?.(4); // step 4 = done in 5-step stepper
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('amg:booking-confirmed'));
+      }
       if (node.next) goToNode(node.next, vars);
       else setDone(true);
     } catch {

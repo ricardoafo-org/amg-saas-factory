@@ -4,6 +4,7 @@ import { GeistMono } from 'geist/font/mono';
 import { Archivo, Archivo_Black } from 'next/font/google';
 import { ThemeProvider } from 'next-themes';
 import { CookieBanner } from '@/core/components/CookieBanner';
+import { InstallPrompt } from '@/core/components/pwa/InstallPrompt';
 import { loadClientConfig } from '@/lib/config';
 import './globals.css';
 
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false}>
           {children}
           <CookieBanner />
+          <InstallPrompt />
         </ThemeProvider>
       </body>
     </html>
