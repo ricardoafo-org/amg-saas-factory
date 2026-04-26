@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { Phone, Clock, ShieldCheck } from 'lucide-react';
+import { Phone, Clock, ShieldCheck, MessageCircle } from 'lucide-react';
 import type { LocalBusiness } from '@/core/types/adapter';
 import type { AvailableSlot } from '@/actions/slots';
 import { HeroStripes, HeroUnderlineDraw } from '@/core/components/client/HeroMotion';
@@ -7,6 +7,7 @@ import { HeroStripes, HeroUnderlineDraw } from '@/core/components/client/HeroMot
 export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: AvailableSlot | null }) {
   const { contact, foundingYear } = config;
   const year = foundingYear ?? 1987;
+  const waNumber = contact.whatsapp?.replace(/\D/g, '');
 
   const nextSlotLabel = nextSlot
     ? new Date(nextSlot.slotDate + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long' }) +
@@ -57,6 +58,18 @@ export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: Av
                 <Phone width={16} height={16} aria-hidden />
                 Llamar ahora
               </a>
+              {waNumber && (
+                <a
+                  className="btn btn-secondary btn-lg hero-cta-whatsapp"
+                  href={`https://wa.me/${waNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Escribir por WhatsApp"
+                >
+                  <MessageCircle width={16} height={16} aria-hidden />
+                  WhatsApp
+                </a>
+              )}
             </div>
 
             {/* Meta row — 3 icon items */}
