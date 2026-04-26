@@ -132,7 +132,11 @@ It supersedes FEAT-036 (QA framework rebuild) and FEAT-022 (QA full suite) — b
 - **Trigger**: PR only. Blocks merge on failure.
 - **Status**: removed from CI (per `ci.yml:94` comment) — must reintroduce.
 - **Canonical critical-path suite** (see Section 7 below).
-- **Performance budget**: under 4 minutes for all scenarios combined. If we exceed it, prune scenarios — don't parallelize as a first move.
+- **Performance budget**: under 4 minutes for all scenarios combined.
+- **Parallelism strategy**:
+  - **Local**: `playwright.config.ts` sets `workers: '100%'` and `fullyParallel: true` — use every available core. The dev server runs alongside, so on low-RAM machines a developer can override with `npx playwright test --workers=4` if needed.
+  - **CI**: GitHub-hosted runners are 4-CPU. Shard the suite across N parallel jobs via a matrix strategy rather than cranking workers per job past 100%. Target shard config: 4 shards × `workers: '100%'` per shard. Use `--shard=${{ matrix.shard }}/${{ matrix.total }}`. This is the implementation contract for task #66 — do NOT add the Playwright job without sharding.
+- **When to prune vs parallelize**: parallelism is the first lever. Only prune scenarios if a) sharding still exceeds the 4-minute budget, or b) a scenario is flaky and not load-bearing for any SEV-1 path.
 
 ### Layer 7 — Post-deploy health check
 
@@ -295,6 +299,7 @@ These five cover: booking flow (Scenario 1), domain logic (Scenario 2), mobile U
 ### Phase 5 — E2E reintroduction (1 PR)
 - Reintroduce Playwright job in `ci.yml` as task #66 currently tracks
 - Implement the 5 canonical scenarios from Section 7
+- **Configure 4-shard matrix** with `workers: '100%'` per shard — see Layer 6 parallelism strategy. Total ≈ 16x parallelism vs single-job execution.
 - Set 4-min budget; fail PR if exceeded
 
 ### Phase 6 — Post-deploy gate (1 PR — task #67)
