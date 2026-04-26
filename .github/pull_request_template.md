@@ -69,11 +69,28 @@ The orchestrator runs these BEFORE opening the PR. Implementer does NOT open the
 
 - [ ] Verified on tst after merge
 
-## Test plan
+## Manual verification
 
-<!-- How did you verify this works? What to click/do to validate manually -->
+<!--
+REQUIRED. List exact steps you clicked through in a browser to confirm
+the user-visible outcome works. "I ran the tests" is NOT manual
+verification. Include screenshots or a recording of the feature working.
+Empty list means "no manual verification was done" — write `None.`
+ONLY when the change is not user-facing (pure docs/CI/infra).
+-->
 1.
 2.
+
+## Regression test
+
+<!--
+REQUIRED for bug fixes and user-facing changes. State:
+  - File path of the test that catches this bug class
+  - Confirmation it fails on `main` and passes on this branch
+For pure refactors / docs / chore: write `Not applicable — <one-line reason>`.
+-->
+- Test file:
+- Fails on main / passes on branch: yes / no
 
 ## Screenshots (UI changes only)
 
