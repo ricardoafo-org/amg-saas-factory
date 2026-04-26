@@ -1244,6 +1244,101 @@
   .amg-logo .amg-logo-stripe { fill: Highlight; }
 }
 
+/* ── PR 7 — /proceso editorial typography ── */
+.proceso-page {
+  background: var(--bg);
+  color: var(--fg);
+  padding-block: 64px;
+}
+.proceso-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-inline: 24px;
+}
+.proceso-header { margin-bottom: 48px; }
+.proceso-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-brand-amber);
+  margin-bottom: 12px;
+}
+.proceso-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  line-height: 1.05;
+  letter-spacing: var(--tracking-tightest);
+  font-variation-settings: "opsz" 72;
+  margin: 0 0 16px;
+}
+.proceso-title em {
+  font-style: normal;
+  background: linear-gradient(180deg, transparent 60%, color-mix(in oklch, var(--color-brand-amber) 60%, transparent) 60%);
+  padding-inline: 4px;
+}
+.proceso-lead {
+  font-size: 1.15rem;
+  color: var(--fg-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+.proceso-section {
+  margin-block: 40px;
+  scroll-margin-top: 80px;
+}
+.proceso-section h2 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 1.2;
+  letter-spacing: var(--tracking-tight);
+  margin: 0 0 16px;
+}
+.proceso-section p {
+  margin: 0 0 14px;
+  line-height: 1.65;
+  color: var(--fg);
+}
+.proceso-section code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--muted);
+  color: var(--fg);
+}
+.proceso-figure {
+  margin-block: 32px;
+  text-align: center;
+}
+.proceso-photo {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  display: block;
+}
+.proceso-figure figcaption {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: var(--tracking-wide);
+  color: var(--fg-muted);
+}
+.proceso-cta {
+  margin-top: 56px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card-hover);
+}
+.proceso-link {
+  color: var(--color-brand-red);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.proceso-link:hover { color: var(--color-brand-red-dark); }
+
 /* ── PR 8 — /novedades index + case study ── */
 .novedades-page, .case-page { background: var(--bg); color: var(--fg); padding-block: 64px; }
 .novedades-inner { max-width: 1120px; margin: 0 auto; padding-inline: 24px; }
