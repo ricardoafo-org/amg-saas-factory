@@ -1091,6 +1091,60 @@
   }
 }
 
+/* ──────────────────────────────────────────────────────────────────────
+   FEAT-038 PR 4 — PCB hero stylised illustration.
+   Trace paths draw on entry via stroke-dashoffset; HUD annotations fade
+   in with a stagger. Pure CSS — no JS island required.
+   ────────────────────────────────────────────────────────────────────── */
+.pcb-hero { contain: layout paint; }
+
+.pcb-hero .pcb-trace path {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: pcb-trace-draw 1.4s var(--ease-mech, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+}
+.pcb-hero .pcb-trace-data path { animation-delay: 120ms; }
+.pcb-hero .pcb-trace-power path { animation-delay: 60ms; }
+
+.pcb-hero .pcb-chip {
+  opacity: 0;
+  animation: pcb-fade-in 600ms var(--ease-mech, cubic-bezier(0.16, 1, 0.3, 1)) 700ms forwards;
+}
+.pcb-hero .pcb-hud text,
+.pcb-hero .pcb-hud line {
+  opacity: 0;
+  animation: pcb-fade-in 500ms var(--ease-mech, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+}
+.pcb-hero .pcb-hud text:nth-of-type(1),
+.pcb-hero .pcb-hud line:nth-of-type(1) { animation-delay: 1100ms; }
+.pcb-hero .pcb-hud text:nth-of-type(2),
+.pcb-hero .pcb-hud line:nth-of-type(2) { animation-delay: 1250ms; }
+.pcb-hero .pcb-hud text:nth-of-type(3),
+.pcb-hero .pcb-hud line:nth-of-type(3) { animation-delay: 1400ms; }
+.pcb-hero .pcb-hud text:nth-of-type(4),
+.pcb-hero .pcb-hud line:nth-of-type(4) { animation-delay: 1550ms; }
+
+@keyframes pcb-trace-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes pcb-fade-in {
+  to { opacity: 1; }
+}
+
+/* Forced colours — copper-on-near-black is invisible in Windows HCM.
+   Remap every stroke + fill to system tokens. */
+@media (forced-colors: active) {
+  .pcb-hero rect,
+  .pcb-hero path,
+  .pcb-hero line,
+  .pcb-hero text,
+  .pcb-hero circle {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+  .pcb-hero .pcb-trace path { stroke: CanvasText; }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
