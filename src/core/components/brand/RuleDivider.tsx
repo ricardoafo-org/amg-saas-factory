@@ -1,23 +1,42 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+
 interface RuleDividerProps {
   className?: string;
 }
 
-/**
- * FEAT-038 — Engineering rule section divider.
- *
- * Replaces PcbMotif. Server Component. Renders a caliper-style baseline with
- * mono-numeral tick labels (0/25/50/75/100 mm) and a registration tick that
- * sweeps left→right once on mount. Tokenised colours, no inline hex.
- *
- *   baseline   → --fg (color-mix to soften)
- *   labels     → --fg-muted, font-mono
- *   tick       → --color-brand-red (registration mark)
- *
- * Animation: `rule-marker-sweep` runs once, killed under prefers-reduced-motion.
- */
 export function RuleDivider({ className }: RuleDividerProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setInView(true);
+            obs.disconnect();
+            return;
+          }
+        }
+      },
+      { rootMargin: '0px 0px -10% 0px', threshold: 0.25 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   return (
     <div
+      ref={ref}
+      data-in-view={inView ? 'true' : 'false'}
       className={['rule-divider', className].filter(Boolean).join(' ')}
       aria-hidden="true"
     >

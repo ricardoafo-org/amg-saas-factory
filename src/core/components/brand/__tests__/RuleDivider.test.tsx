@@ -60,6 +60,10 @@ describe('RuleDivider — FEAT-038 contract', () => {
     );
     expect(src.length).toBeLessThanOrEqual(4096);
   });
+
+  it('starts with data-in-view="false" so the SSR markup does not bake the animation as already-played', () => {
+    expect(html).toContain('data-in-view="false"');
+  });
 });
 
 describe('globals.css — FEAT-038 RuleDivider polish', () => {
@@ -88,6 +92,13 @@ describe('globals.css — FEAT-038 RuleDivider polish', () => {
   it('respects prefers-reduced-motion by stilling the marker', () => {
     expect(CSS).toMatch(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.rule-marker[\s\S]*?animation:\s*none/,
+    );
+  });
+
+  it('pauses the marker animation by default and runs it only when the divider is in view', () => {
+    expect(CSS).toMatch(/\.rule-marker\s*\{[^}]*animation-play-state:\s*paused/);
+    expect(CSS).toMatch(
+      /\.rule-divider\[data-in-view="true"\]\s+\.rule-marker\s*\{[^}]*animation-play-state:\s*running/,
     );
   });
 });
