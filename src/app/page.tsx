@@ -6,6 +6,7 @@ import { Footer } from '@/core/components/Footer';
 import { TrustStrip } from '@/core/components/TrustStrip';
 import { Testimonials } from '@/core/components/Testimonials';
 import { VisitSection } from '@/core/components/VisitSection';
+import { UrgencyBand } from '@/core/components/UrgencyBand';
 import { ChatWidget } from '@/core/components/ChatWidget';
 import { MobileContactBar } from '@/core/components/MobileContactBar';
 import { RuleDivider } from '@/core/components/brand/RuleDivider';
@@ -45,6 +46,7 @@ export default async function Home() {
 
       <Testimonials />
       <VisitSection config={config} />
+      <UrgencyBand config={config} />
       <Footer config={config} />
 
       {/* Floating chat widget — client component */}
