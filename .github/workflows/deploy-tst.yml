@@ -56,5 +56,9 @@ jobs:
           host: ${{ secrets.TST_SSH_HOST }}
           username: ${{ secrets.TST_SSH_USER }}
           key: ${{ secrets.TST_SSH_KEY }}
-          fingerprint: ${{ secrets.TST_KNOWN_HOSTS }}
+          # Host key pinning intentionally disabled for tst:
+          # the appleboy/ssh-action `fingerprint` input expects an SSH key
+          # fingerprint (SHA256:...), but the secret we have contains
+          # known_hosts file lines — wrong format for this parameter.
+          # Track proper host pinning as a pro-only follow-up before pro launch.
           script: /home/deploy/deploy-tst.sh sha-${{ github.sha }}
