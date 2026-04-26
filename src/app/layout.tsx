@@ -6,6 +6,7 @@ import { ThemeProvider } from 'next-themes';
 import { CookieBanner } from '@/core/components/CookieBanner';
 import { InstallPrompt } from '@/core/components/pwa/InstallPrompt';
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 import './globals.css';
 
 const archivoBlack = Archivo_Black({
@@ -22,7 +23,7 @@ const archivo = Archivo({
   variable: '--font-archivo',
 });
 
-const TENANT_ID = process.env['TENANT_ID'] ?? 'talleres-amg';
+const TENANT_ID = getTenantId();
 const config = loadClientConfig(TENANT_ID);
 
 export const metadata: Metadata = {

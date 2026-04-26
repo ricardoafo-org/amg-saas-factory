@@ -12,6 +12,13 @@ WORKDIR /app
 ARG NEXT_PUBLIC_COMMIT_SHA
 ENV NEXT_PUBLIC_COMMIT_SHA=${NEXT_PUBLIC_COMMIT_SHA}
 
+# TENANT_ID is required at build time — the app reads tenant config during
+# next build (loadClientConfig is called from layout.tsx and page.tsx).
+# Default keeps the build green when not passed; override per-tenant in
+# multi-tenant builds. Mirrors the runtime env var read by getTenantId().
+ARG TENANT_ID=talleres-amg
+ENV TENANT_ID=${TENANT_ID}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 

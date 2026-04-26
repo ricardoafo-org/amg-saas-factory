@@ -1,4 +1,5 @@
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 
 export const metadata = {
   title: 'Política de Cookies — Talleres AMG',
@@ -7,7 +8,7 @@ export const metadata = {
 };
 
 export default function CookiePolicyPage() {
-  const config = loadClientConfig('talleres-amg');
+  const config = loadClientConfig(getTenantId());
   const { businessName, contact } = config;
   const dpoEmail = config.legal?.dpoEmail ?? contact.email;
 

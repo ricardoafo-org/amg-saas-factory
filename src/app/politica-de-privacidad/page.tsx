@@ -1,4 +1,5 @@
 import { loadClientConfig } from '@/lib/config';
+import { getTenantId } from '@/lib/tenant';
 
 export const metadata = {
   title: 'Política de Privacidad — Talleres AMG',
@@ -7,7 +8,7 @@ export const metadata = {
 };
 
 export default function PrivacyPolicyPage() {
-  const config = loadClientConfig('talleres-amg');
+  const config = loadClientConfig(getTenantId());
   const { businessName, address, contact, legal } = config;
   const cif = legal?.cif ?? 'B-30123456';
   const regNumber = legal?.registrationNumber ?? 'MU-1234';
