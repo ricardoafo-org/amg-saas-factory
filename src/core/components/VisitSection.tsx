@@ -1,8 +1,11 @@
 import Image from 'next/image';
 import type { LocalBusiness } from '@/core/types/adapter';
+import { groupHours } from '@/lib/hours';
+import { VisitOpenStatus } from './VisitOpenStatus';
 
 export function VisitSection({ config }: { config: LocalBusiness }) {
-  const { address, contact } = config;
+  const { address, contact, operatingHours } = config;
+  const hourGroups = groupHours(operatingHours);
   const waNumber = contact.whatsapp?.replace(/\D/g, '');
   const mapsUrl =
     contact.googleMapsUrl ??
@@ -70,22 +73,40 @@ export function VisitSection({ config }: { config: LocalBusiness }) {
               <div>
                 <h4>Teléfono / WhatsApp</h4>
                 <p>
-                  {contact.phone}
+                  <a
+                    className="visit-phone-link"
+                    href={`tel:${contact.phone.replace(/\s/g, '')}`}
+                    aria-label={`Llamar al ${contact.phone}`}
+                  >
+                    {contact.phone}
+                  </a>
                   {' · '}respondemos en 15 min en horario laboral
                 </p>
-                {waNumber && (
+                <div className="visit-phone-ctas">
                   <a
                     className="dir-cta"
-                    href={`https://wa.me/${waNumber}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={`tel:${contact.phone.replace(/\s/g, '')}`}
+                    aria-label={`Llamar al ${contact.phone}`}
                   >
-                    Escribir por WhatsApp
+                    Llamar ahora
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d="M5 12h14M12 5l7 7-7 7"/>
                     </svg>
                   </a>
-                )}
+                  {waNumber && (
+                    <a
+                      className="dir-cta"
+                      href={`https://wa.me/${waNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Escribir por WhatsApp
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                      </svg>
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -98,20 +119,22 @@ export function VisitSection({ config }: { config: LocalBusiness }) {
                 </svg>
               </div>
               <div style={{ flex: 1 }}>
-                <h4>Horario</h4>
+                <div className="visit-hours-head">
+                  <h4>Horario</h4>
+                  <VisitOpenStatus operatingHours={operatingHours} />
+                </div>
                 <div className="hours">
-                  <div className="hours-row">
-                    <span>Lunes — Viernes</span>
-                    <span>8:00 — 19:00</span>
-                  </div>
-                  <div className="hours-row">
-                    <span>Sábado</span>
-                    <span>9:00 — 14:00</span>
-                  </div>
-                  <div className="hours-row closed">
-                    <span>Domingo</span>
-                    <span>Cerrado</span>
-                  </div>
+                  {hourGroups.map((g) => (
+                    <div
+                      key={g.label}
+                      className={`hours-row${g.kind === 'closed' ? ' closed' : ''}`}
+                    >
+                      <span>{g.label}</span>
+                      <span>
+                        {g.kind === 'open' ? `${g.open} — ${g.close}` : 'Cerrado'}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
