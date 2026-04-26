@@ -2,14 +2,22 @@
 id: BUG-010
 title: Chat UI does not match Claude Design v2 redesign
 severity: high
-status: open
+status: closed
 filed: 2026-04-25
 filed-by: manual
-last-updated: 2026-04-25
+last-updated: 2026-04-26
+closed: 2026-04-26
+promoted-to: FEAT-039
 branch: fix/BUG-010-chat-design-regression
 design-spec-source: https://api.anthropic.com/v1/design/h/Hfp2OjQUQOytX3p4uln6vw
 local-design-bundle: tmp/design-spec/
 ---
+
+> **Promoted to [FEAT-039 — BookingApp redesign](../specs/FEAT-039-booking-app-redesign.md).**
+>
+> This was a missing architecture, not a regression. Rebuild tracked under FEAT-039
+> with a 3-PR sequence behind the `NEXT_PUBLIC_CHAT_V2` flag. The original triage
+> report below remains as the gap analysis the spec was derived from.
 
 ## Summary
 
