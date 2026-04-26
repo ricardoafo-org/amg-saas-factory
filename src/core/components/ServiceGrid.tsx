@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { ShieldCheck } from 'lucide-react';
 import type { Service } from '@/core/types/adapter';
 import { MOTION } from '@/lib/motion';
 
@@ -184,6 +185,12 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
                 <h3>{svc.title}</h3>
                 <p>{svc.desc}</p>
 
+                {/* Warranty disclosure pill — RD 1457/1986 conformance */}
+                <span className="svc-warranty">
+                  <ShieldCheck width={12} height={12} aria-hidden />
+                  Garantía 3 meses
+                </span>
+
                 {/* Footer: price + CTA */}
                 <div className="svc-foot">
                   <div>
@@ -199,7 +206,7 @@ export function ServiceGrid({ services, ivaRate, locale = 'es-ES', currency = 'E
                     className="btn btn-primary btn-sm"
                     aria-label={`Reservar ${svc.title}`}
                   >
-                    Pedir
+                    Reservar
                   </button>
                 </div>
               </motion.article>
