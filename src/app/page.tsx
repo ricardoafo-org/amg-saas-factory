@@ -23,7 +23,11 @@ export default async function Home() {
     <>
       <Navbar config={config} />
       <Hero config={config} nextSlot={nextSlot} />
-      <TrustStrip />
+      <TrustStrip
+        yearsOperating={new Date().getFullYear() - (config.foundingYear ?? 1987)}
+        reviewRating={config.reviewRating ?? 4.9}
+        reviewCount={config.reviewCount ?? 0}
+      />
       <RuleDivider />
       <ServiceGrid
         services={config.services}

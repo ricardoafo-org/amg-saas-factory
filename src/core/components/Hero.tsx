@@ -73,7 +73,7 @@ export function Hero({ config, nextSlot }: { config: LocalBusiness; nextSlot: Av
               </div>
               <div className="hero-meta-item">
                 <Clock width={16} height={16} aria-hidden />
-                <span><strong>Abierto hoy</strong> · 8:00 — 19:00</span>
+                <span><strong>Abierto hoy</strong> · 8:00 — 18:00</span>
               </div>
             </div>
           </div>
