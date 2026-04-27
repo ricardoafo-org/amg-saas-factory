@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Appointment",
+  "description": "A booking. Stores NET base_amount + iva_rate; gross is computed at render (rubric F1). Linked to a slot via slot_id; service breakdown in service_ids (json array of service IDs).",
+  "x-pb-collection": {
+    "type": "base",
+    "name": "appointments"
+  },
+  "type": "object",
+  "required": [
+    "tenant_id",
+    "slot_id",
+    "service_ids",
+    "customer_name",
+    "customer_email",
+    "customer_phone",
+    "status"
+  ],
+  "properties": {
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "slot_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "service_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "customer_name": { "type": "string", "minLength": 2, "maxLength": 100 },
+    "customer_email": { "type": "string", "format": "email" },
+    "customer_phone": { "type": "string", "minLength": 6, "maxLength": 30 },
+    "matricula": { "type": "string", "maxLength": 20 },
+    "fuel_type": {
+      "type": "string",
+      "enum": ["gasolina", "diesel", "electrico", "hibrido"]
+    },
+    "km_current": { "type": "number", "minimum": 0 },
+    "km_last_oil_change": { "type": "number", "minimum": 0 },
+    "oil_type": {
+      "type": "string",
+      "enum": ["mineral", "semi_sintetico", "sintetico"]
+    },
+    "first_registration_date": { "type": "string" },
+    "scheduled_at": { "type": "string", "format": "date-time" },
+    "service_type": { "type": "string", "maxLength": 100 },
+    "notes": { "type": "string", "maxLength": 2000 },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "confirmed", "completed", "cancelled"]
+    },
+    "base_amount": { "type": "number", "minimum": 0 },
+    "iva_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+    "total_amount": { "type": "number", "minimum": 0 },
+    "email_sent": { "type": "boolean" },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE INDEX idx_appointments_tenant_scheduled ON appointments (tenant_id, scheduled_at)",
+    "CREATE INDEX idx_appointments_tenant_status ON appointments (tenant_id, status)",
+    "CREATE INDEX idx_appointments_tenant_email ON appointments (tenant_id, customer_email)",
+    "CREATE INDEX idx_appointments_slot ON appointments (slot_id)"
+  ],
+  "x-pb-rules": {
+    "listRule": "tenant_id = @request.auth.tenant_id",
+    "viewRule": "tenant_id = @request.auth.tenant_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+}

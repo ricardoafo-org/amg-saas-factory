@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Service",
+  "description": "Service catalog entry. base_price is NET (rubric F1) — gross is computed at render via tenant config iva_rate. duration is minutes.",
+  "x-pb-collection": {
+    "type": "base",
+    "name": "services"
+  },
+  "type": "object",
+  "required": ["tenant_id", "name", "base_price", "duration"],
+  "properties": {
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "description": { "type": "string", "maxLength": 500 },
+    "base_price": { "type": "number", "minimum": 0 },
+    "duration": { "type": "number", "minimum": 5 },
+    "category": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Free-form category tag — kept as text so tenant can add without schema migration."
+    },
+    "active": { "type": "boolean" },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE INDEX idx_services_tenant_active ON services (tenant_id, active)",
+    "CREATE INDEX idx_services_tenant_category ON services (tenant_id, category)"
+  ],
+  "x-pb-rules": {
+    "listRule": "tenant_id = @request.auth.tenant_id || active = true",
+    "viewRule": "tenant_id = @request.auth.tenant_id || active = true",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+}

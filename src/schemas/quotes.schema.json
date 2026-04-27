@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Quote",
+  "description": "Customer quote (presupuesto). subtotal NET + iva_rate → total (rubric F1). items is a JSON array of {description, qty, unit_price_net}. source distinguishes chatbot-generated vs admin-manual.",
+  "x-pb-collection": {
+    "type": "base",
+    "name": "quotes"
+  },
+  "type": "object",
+  "required": ["tenant_id", "status", "source"],
+  "properties": {
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "customer_name": { "type": "string", "maxLength": 100 },
+    "customer_email": { "type": "string", "format": "email" },
+    "customer_phone": { "type": "string", "maxLength": 30 },
+    "vehicle_description": { "type": "string", "maxLength": 200 },
+    "vehicle_plate": { "type": "string", "maxLength": 20 },
+    "problem_description": { "type": "string", "maxLength": 2000 },
+    "service_type": { "type": "string", "maxLength": 100 },
+    "items": {
+      "type": "array",
+      "description": "Quote line items. Each: {description, qty, unit_price_net}.",
+      "items": { "type": "object" }
+    },
+    "subtotal": { "type": "number", "minimum": 0 },
+    "iva_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+    "total": { "type": "number", "minimum": 0 },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "sent", "accepted", "rejected"]
+    },
+    "valid_until": { "type": "string", "format": "date" },
+    "notes": { "type": "string", "maxLength": 2000 },
+    "pdf_url": { "type": "string", "format": "uri" },
+    "source": {
+      "type": "string",
+      "enum": ["chatbot", "manual"]
+    },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE INDEX idx_quotes_tenant_status ON quotes (tenant_id, status)",
+    "CREATE INDEX idx_quotes_tenant_created ON quotes (tenant_id, created)",
+    "CREATE INDEX idx_quotes_tenant_email ON quotes (tenant_id, customer_email)"
+  ],
+  "x-pb-rules": {
+    "listRule": "tenant_id = @request.auth.tenant_id",
+    "viewRule": "tenant_id = @request.auth.tenant_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+}

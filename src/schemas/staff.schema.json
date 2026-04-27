@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Staff",
+  "description": "PocketBase auth collection for shop staff. Cookie pb_auth carries staff JWT; middleware.ts gates /admin/** by this. Distinct from customer_users (FEAT-056).",
+  "x-pb-collection": {
+    "type": "auth",
+    "name": "staff",
+    "auth": {
+      "allowEmailAuth": true,
+      "minPasswordLength": 8,
+      "identityFields": ["email"]
+    }
+  },
+  "type": "object",
+  "required": ["tenant_id", "role", "email"],
+  "properties": {
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "email": { "type": "string", "format": "email" },
+    "role": {
+      "type": "string",
+      "enum": ["owner", "technician", "admin"]
+    },
+    "display_name": { "type": "string", "maxLength": 100 },
+    "phone": { "type": "string", "maxLength": 30 },
+    "active": { "type": "boolean" },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE INDEX idx_staff_tenant_active ON staff (tenant_id, active)",
+    "CREATE INDEX idx_staff_tenant_role ON staff (tenant_id, role)"
+  ],
+  "x-pb-rules": {
+    "listRule": "id = @request.auth.id",
+    "viewRule": "id = @request.auth.id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+}

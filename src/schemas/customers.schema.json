@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Customer",
+  "description": "CRM record for a customer. Email is the natural key per tenant. Linked from appointments and (in Week 3 / FEAT-056) from customer_users for self-service auth.",
+  "x-pb-collection": {
+    "type": "base",
+    "name": "customers"
+  },
+  "type": "object",
+  "required": ["tenant_id", "name", "email"],
+  "properties": {
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+    "email": { "type": "string", "format": "email" },
+    "phone": { "type": "string", "minLength": 6, "maxLength": 30 },
+    "notes": { "type": "string", "maxLength": 2000 },
+    "first_seen": { "type": "string", "format": "date" },
+    "last_seen": { "type": "string", "format": "date" },
+    "total_visits": { "type": "number", "minimum": 0 },
+    "total_spent": { "type": "number", "minimum": 0 },
+    "preferred_contact": {
+      "type": "string",
+      "enum": ["sms", "email", "whatsapp"]
+    },
+    "marketing_consent": { "type": "boolean" },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE INDEX idx_customers_tenant ON customers (tenant_id)",
+    "CREATE UNIQUE INDEX idx_customers_tenant_email ON customers (tenant_id, email)",
+    "CREATE INDEX idx_customers_tenant_phone ON customers (tenant_id, phone)"
+  ],
+  "x-pb-rules": {
+    "listRule": "tenant_id = @request.auth.tenant_id",
+    "viewRule": "tenant_id = @request.auth.tenant_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+}

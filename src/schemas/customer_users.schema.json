@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CustomerUser",
+  "description": "PocketBase auth collection for self-service customers (FEAT-056, Week 3). Magic-link primary, password optional (decision 2026-04-28-customer-auth-pattern). customer_id links to the existing CRM customers row (claim flow). Cookie cust_auth carries this JWT, scoped separately from staff pb_auth.",
+  "x-pb-collection": {
+    "type": "auth",
+    "name": "customer_users",
+    "auth": {
+      "allowEmailAuth": true,
+      "minPasswordLength": 10,
+      "identityFields": ["email"]
+    }
+  },
+  "type": "object",
+  "required": ["tenant_id", "email"],
+  "properties": {
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "email": { "type": "string", "format": "email" },
+    "customer_id": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Optional link to customers CRM record. Set on signup auto-create or via claim flow."
+    },
+    "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+    "phone": { "type": "string", "minLength": 6, "maxLength": 30 },
+    "email_verified": { "type": "boolean" },
+    "last_login_at": { "type": "string", "format": "date-time" },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE INDEX idx_customer_users_tenant ON customer_users (tenant_id)",
+    "CREATE UNIQUE INDEX idx_customer_users_tenant_email ON customer_users (tenant_id, email)",
+    "CREATE INDEX idx_customer_users_customer ON customer_users (customer_id)"
+  ],
+  "x-pb-rules": {
+    "listRule": "id = @request.auth.id",
+    "viewRule": "id = @request.auth.id",
+    "createRule": null,
+    "updateRule": "id = @request.auth.id",
+    "deleteRule": null
+  }
+}

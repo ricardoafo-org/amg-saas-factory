@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MagicLinkToken",
+  "description": "Single-use email tokens for customer_users magic-link auth (FEAT-056). Token is the random secret embedded in the email link; expires_at enforces TTL; used_at marks consumption. Tokens are deleted by a janitor pass after consumption + TTL window for audit.",
+  "x-pb-collection": {
+    "type": "base",
+    "name": "magic_link_tokens"
+  },
+  "type": "object",
+  "required": ["tenant_id", "token", "email", "purpose", "expires_at"],
+  "properties": {
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "token": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 128,
+      "description": "URL-safe random secret. SHA-256 of underlying randomness recommended (do not store the raw secret if avoidable)."
+    },
+    "email": { "type": "string", "format": "email" },
+    "purpose": {
+      "type": "string",
+      "enum": ["login", "verify_email", "password_reset", "claim_account"]
+    },
+    "customer_user_id": { "type": "string", "maxLength": 50 },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "used_at": { "type": "string", "format": "date-time" },
+    "ip_address": { "type": "string", "maxLength": 45 },
+    "user_agent": { "type": "string", "maxLength": 500 },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE UNIQUE INDEX idx_magic_link_token ON magic_link_tokens (token)",
+    "CREATE INDEX idx_magic_link_tenant_email ON magic_link_tokens (tenant_id, email)",
+    "CREATE INDEX idx_magic_link_expires ON magic_link_tokens (expires_at)"
+  ],
+  "x-pb-rules": {
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+}

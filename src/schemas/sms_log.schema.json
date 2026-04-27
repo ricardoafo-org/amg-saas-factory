@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SmsLog",
+  "description": "Outbound SMS dispatch log (Twilio). One row per send attempt. provider_id is the Twilio SID for status callback reconciliation.",
+  "x-pb-collection": {
+    "type": "base",
+    "name": "sms_log"
+  },
+  "type": "object",
+  "required": ["tenant_id", "to_phone", "message", "status"],
+  "properties": {
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "to_phone": { "type": "string", "minLength": 6, "maxLength": 30 },
+    "message": { "type": "string", "minLength": 1, "maxLength": 1600 },
+    "status": {
+      "type": "string",
+      "enum": ["sent", "delivered", "failed"]
+    },
+    "provider_id": { "type": "string", "maxLength": 100 },
+    "appointment_id": { "type": "string", "maxLength": 50 },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE INDEX idx_sms_log_tenant_created ON sms_log (tenant_id, created)",
+    "CREATE INDEX idx_sms_log_tenant_status ON sms_log (tenant_id, status)",
+    "CREATE INDEX idx_sms_log_provider ON sms_log (provider_id)"
+  ],
+  "x-pb-rules": {
+    "listRule": "tenant_id = @request.auth.tenant_id",
+    "viewRule": "tenant_id = @request.auth.tenant_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+}

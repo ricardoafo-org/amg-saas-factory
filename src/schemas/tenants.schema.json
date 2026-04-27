@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tenant",
+  "description": "A SaaS tenant (one auto-repair shop). Single-tenant in practice today; the column is preserved as a passive scope key for future onboarding.",
+  "x-pb-collection": {
+    "type": "base",
+    "name": "tenants"
+  },
+  "type": "object",
+  "required": ["name", "slug", "industry"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+    "slug": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 50,
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "industry": {
+      "type": "string",
+      "enum": ["automotive", "barbershop", "clinic", "restaurant", "other"]
+    },
+    "active": { "type": "boolean" },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE UNIQUE INDEX idx_tenants_slug ON tenants (slug)"
+  ],
+  "x-pb-rules": {
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+}
