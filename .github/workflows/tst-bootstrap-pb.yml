@@ -42,43 +42,53 @@ jobs:
           host: ${{ secrets.TST_SSH_HOST }}
           username: ${{ secrets.TST_SSH_USER }}
           key: ${{ secrets.TST_SSH_KEY }}
-          envs: ADMIN_EMAIL
+          # NOTE: `set -e` only — NO `-o pipefail`. Patterns like
+          #   `tr -dc ... </dev/urandom | head -c 24`
+          # generate SIGPIPE on `tr` (urandom is infinite, head closes early).
+          # With pipefail, that SIGPIPE becomes pipeline-exit 141, set -e
+          # exits the whole script. Previous run failed at exit 141 here.
           script_stop: true
           script: |
-            set -euo pipefail
+            set -e
             cd /srv/amg
 
             ADMIN_EMAIL='${{ inputs.admin_email }}'
-            ADMIN_PASS=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+            # Bounded entropy source: openssl rand -hex 16 emits exactly 32
+            # hex chars and exits cleanly — no SIGPIPE risk.
+            ADMIN_PASS=$(openssl rand -hex 16)
 
-            echo "==> [1/4] Upserting PB superuser inside the pocketbase container"
+            echo "==> [1/4] Upsert PB superuser inside the pocketbase container"
             docker compose -f docker-compose.tst.yml exec -T pocketbase \
               /pb/pocketbase superuser upsert "${ADMIN_EMAIL}" "${ADMIN_PASS}"
+            echo "    upsert OK"
 
             echo ""
-            echo "==> [2/4] Authenticating via public PB endpoint"
+            echo "==> [2/4] Authenticate via public PB endpoint"
             AUTH_RESPONSE=$(curl -fsS -X POST \
               'https://tst.178-104-237-14.sslip.io/pb/api/collections/_superusers/auth-with-password' \
               -H 'Content-Type: application/json' \
               -d '{"identity":"'"${ADMIN_EMAIL}"'","password":"'"${ADMIN_PASS}"'"}')
-            TOKEN=$(echo "${AUTH_RESPONSE}" | grep -o '"token":"[^"]*"' | head -1 | cut -d'"' -f4)
+            # sed -n .. /p reads to EOF — no SIGPIPE concerns
+            TOKEN=$(printf '%s' "${AUTH_RESPONSE}" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
             if [ -z "${TOKEN}" ]; then
-              echo "FAIL: could not extract token from auth response:"
+              echo "FAIL: could not extract token from auth response"
               echo "${AUTH_RESPONSE}"
               exit 1
             fi
             echo "    auth OK"
 
             echo ""
-            echo "==> [3/4] Opening public read on booking-flow collections"
+            echo "==> [3/4] Open public read on booking-flow collections"
             for COLL in availability_slots services config; do
               echo "    --- ${COLL} ---"
-              RESP=$(curl -sS -X PATCH \
+              # Body discarded; we trust curl's --fail and the smoke probe below
+              curl -fsS -X PATCH \
                 "https://tst.178-104-237-14.sslip.io/pb/api/collections/${COLL}" \
                 -H "Authorization: Bearer ${TOKEN}" \
                 -H 'Content-Type: application/json' \
-                -d '{"listRule":"","viewRule":""}')
-              echo "${RESP}" | grep -o '"name":"[^"]*"\|"listRule":"[^"]*"\|"viewRule":"[^"]*"' || echo "${RESP}"
+                -d '{"listRule":"","viewRule":""}' \
+                -o /dev/null
+              echo "    ${COLL} OK"
             done
 
             echo ""
@@ -86,7 +96,7 @@ jobs:
             HTTP=$(curl -s -o /tmp/probe.json -w "%{http_code}" \
               'https://tst.178-104-237-14.sslip.io/pb/api/collections/availability_slots/records?perPage=1')
             echo "    HTTP ${HTTP}"
-            head -c 500 /tmp/probe.json
+            cat /tmp/probe.json
             echo ""
             if [ "${HTTP}" != "200" ]; then
               echo "FAIL: anonymous read still blocked (got HTTP ${HTTP}). Rule update did not stick."
@@ -100,6 +110,6 @@ jobs:
             echo "  PB password:   ${ADMIN_PASS}"
             echo ""
             echo "  Save this password to a manager NOW — it is shown only once."
-            echo "  This run log is private to repo collaborators, but anyone with"
-            echo "  read access can see it. Rotate via this workflow if leaked."
+            echo "  Run logs are private to repo collaborators. Rotate via this"
+            echo "  workflow if leaked."
             echo "================================================================"
