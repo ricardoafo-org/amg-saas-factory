@@ -150,7 +150,7 @@ jobs:
             --shard=${{ matrix.shard }}/4
       - name: Upload trace on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-trace-shard-${{ matrix.shard }}
           path: test-results/
@@ -207,14 +207,14 @@ jobs:
           if [[ -f pb.pid ]]; then kill "$(cat pb.pid)" 2>/dev/null || true; fi
       - name: Upload PocketBase log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pocketbase-log
           path: pb.log
           retention-days: 7
       - name: Upload trace on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-trace-admin
           path: test-results/
