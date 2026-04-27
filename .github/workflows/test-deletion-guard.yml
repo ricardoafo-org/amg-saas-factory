@@ -34,7 +34,7 @@ jobs:
 
       - name: Checkout repository
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Fetch full history so git diff can compare against the base branch
           fetch-depth: 0
