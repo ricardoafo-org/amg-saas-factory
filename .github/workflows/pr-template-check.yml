@@ -26,8 +26,16 @@ jobs:
   pr-template-check:
     name: PR template — required sections
     runs-on: ubuntu-latest
-    # Skip Dependabot — it uses its own PR template
-    if: github.actor != 'dependabot[bot]'
+    # Skip Dependabot — it uses its own PR template, not ours.
+    # Use the PR AUTHOR (pull_request.user.login), not the trigger actor:
+    # github.actor is only "dependabot[bot]" on the initial open. Later
+    # synchronize events (rebases by github-actions[bot], etc.) reset
+    # github.actor and re-run the check against dependabot's body, which
+    # never matches our template — guaranteed false-fail.
+    if: >-
+      github.event_name == 'merge_group' ||
+      (github.event.pull_request.user.login != 'dependabot[bot]'
+       && github.event.pull_request.user.login != 'dependabot-preview[bot]')
     steps:
       - name: Skip on merge queue (PR description was already validated)
         if: github.event_name == 'merge_group'
