@@ -26,6 +26,24 @@ fi
 echo "==> Creating superuser"
 "$PB_BIN" superuser upsert "$POCKETBASE_ADMIN_EMAIL" "$POCKETBASE_ADMIN_PASSWORD"
 
+# Hand-written migrations reference env-specific PB collection IDs (e.g.
+# pbc_1720224894) generated when collections were originally created via
+# the PB Admin UI on the dev workstation. The matching `_created_*.js`
+# files are gitignored (per .gitignore line 19), so on a fresh CI DB the
+# migrations have nothing to patch and PocketBase startup fails with
+# "failed to apply migration ...: sql: no rows in result set".
+#
+# In CI, db-setup.js is the source of truth for collections and fields
+# (talks to the running PB API). Move pb_migrations/ aside so PocketBase
+# does not auto-apply them on first boot.
+#
+# Production tst is not affected — that PB is built into a Docker image
+# (separate concern, durable fix tracked in the PB-infra PR).
+if [[ -d pb_migrations ]]; then
+  echo "==> Disabling pb_migrations/ for CI (migrations reference env-specific IDs)"
+  mv pb_migrations pb_migrations.ci-disabled
+fi
+
 echo "==> Starting PocketBase (background)"
 "$PB_BIN" serve --http=127.0.0.1:8090 > pb.log 2>&1 &
 echo $! > pb.pid
