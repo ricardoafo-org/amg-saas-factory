@@ -3,6 +3,10 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # GitHub merge queue creates ephemeral branches (gh-readonly-queue/main/...).
+  # Without this trigger, queued PRs hang forever waiting for a check that
+  # never runs. See repo Settings → Branches → main → "Require merge queue".
+  merge_group:
 
 permissions:
   contents: read
