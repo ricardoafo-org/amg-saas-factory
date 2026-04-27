@@ -6,7 +6,6 @@ import { X } from 'lucide-react';
 import type { ChatbotFlow } from '@/lib/chatbot/engine';
 import type { Service } from '@/core/types/adapter';
 import { ChatEngine } from '@/core/chatbot/ChatEngine';
-import { BookingStepper } from '@/core/chatbot/components/BookingStepper';
 import { BookingApp } from '@/core/chatbot/booking/BookingApp';
 
 // Feature flag: NEXT_PUBLIC_CHAT_V2 mounts BookingApp.
@@ -47,7 +46,7 @@ type Props = {
 export default function ChatPanel(props: Props) {
   const { open, preselectedService, onClose, ...engineProps } = props;
   const drawerRef = useRef<HTMLDivElement>(null);
-  const [step, setStep] = useState(0);
+  const [, setStep] = useState(0);
 
   useEffect(() => {
     if (open) drawerRef.current?.focus();
@@ -108,8 +107,6 @@ export default function ChatPanel(props: Props) {
                 <X className="h-4 w-4" />
               </button>
             </div>
-
-            <BookingStepper step={step} />
 
             <div className="flex-1 overflow-hidden flex flex-col">
               {CHAT_V2 ? (

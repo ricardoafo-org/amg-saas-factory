@@ -3,6 +3,10 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # GitHub merge queue creates ephemeral branches (gh-readonly-queue/main/...).
+  # Without this trigger, queued PRs hang forever waiting for a check that
+  # never runs. See repo Settings → Branches → main → "Require merge queue".
+  merge_group:
 
 permissions:
   contents: read
@@ -137,10 +141,11 @@ jobs:
       - name: Install Playwright system deps (cache hit)
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-      - name: Run smoke suite
+      - name: Run smoke + regression suites
         run: |
           npx playwright test \
             tests/e2e/smoke.spec.ts \
+            tests/e2e/regression/ \
             --project=chromium \
             --shard=${{ matrix.shard }}/4
       - name: Upload trace on failure
@@ -148,6 +153,70 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-trace-shard-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 7
+
+  # E2E admin (Playwright + seeded PocketBase).
+  # Boots a real PocketBase backend, seeds tenant/config/services + a staff
+  # owner record, then runs the admin specs (login, today, quotes). Test
+  # admin credentials are non-secret CI fixtures — see env block below.
+  e2e-admin:
+    name: E2E admin (seeded PocketBase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TENANT_ID: talleres-amg
+      POCKETBASE_URL: http://127.0.0.1:8090
+      POCKETBASE_ADMIN_EMAIL: ci-superuser@amg-test.local
+      POCKETBASE_ADMIN_PASSWORD: CiSuperuserPassword123!
+      STAFF_OWNER_EMAIL: admin@amg-test.local
+      STAFF_OWNER_PASSWORD: TestPassword123!
+      TEST_ADMIN_EMAIL: admin@amg-test.local
+      TEST_ADMIN_PASSWORD: TestPassword123!
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Playwright system deps (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Boot + seed PocketBase
+        run: bash scripts/ci-seed-pocketbase.sh
+      - name: Run admin specs
+        run: |
+          npx playwright test \
+            tests/e2e/admin-auth.spec.ts \
+            tests/e2e/admin-today.spec.ts \
+            tests/e2e/admin-quotes.spec.ts \
+            --project=chromium
+      - name: Stop PocketBase
+        if: always()
+        run: |
+          if [[ -f pb.pid ]]; then kill "$(cat pb.pid)" 2>/dev/null || true; fi
+      - name: Upload PocketBase log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pocketbase-log
+          path: pb.log
+          retention-days: 7
+      - name: Upload trace on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-trace-admin
           path: test-results/
           retention-days: 7
 

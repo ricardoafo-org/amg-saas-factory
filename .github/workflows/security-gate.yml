@@ -13,6 +13,9 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # Required for GitHub merge queue: queued PRs run on ephemeral branches
+  # via the merge_group event. Skipping this trigger blocks the queue.
+  merge_group:
 
 permissions:
   contents: read
@@ -49,6 +52,10 @@ jobs:
 
       - name: Run security gate (push to main — full src/ scan)
         if: github.event_name == 'push'
+        run: bash scripts/ci-security-gate.sh
+
+      - name: Run security gate (merge queue — full src/ scan)
+        if: github.event_name == 'merge_group'
         run: bash scripts/ci-security-gate.sh
 
       - name: Comment summary on PR (on failure)

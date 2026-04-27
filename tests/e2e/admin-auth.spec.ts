@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 
+const SEEDED = !!process.env['TEST_ADMIN_EMAIL'];
+
 test.describe('Admin authentication', () => {
   test('redirects unauthenticated user from /admin/today to login', async ({ page }) => {
     await page.goto('/admin/today');
@@ -32,7 +34,8 @@ test.describe('Admin authentication', () => {
     await login.expectError();
   });
 
-  test.skip('successful login redirects to dashboard — requires seeded admin user', async ({ page }) => {
+  test('successful login redirects to dashboard', async ({ page }) => {
+    test.skip(!SEEDED, 'requires seeded admin user (TEST_ADMIN_EMAIL not set)');
     const login = new AdminLoginPage(page);
     await login.goto();
     await login.login(

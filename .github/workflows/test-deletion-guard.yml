@@ -14,6 +14,10 @@ name: test-deletion-guard
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  # Merge queue support: the diff-against-base logic has no meaning on a
+  # queued ephemeral branch, but the queue blocks until this required
+  # check reports a status. Steps below short-circuit on merge_group.
+  merge_group:
 
 permissions:
   contents: read
@@ -24,13 +28,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Skip on merge queue (deletion guard ran when the PR was opened)
+        if: github.event_name == 'merge_group'
+        run: echo "merge_group event — test deletions were validated when the PR was opened. Passing through."
+
       - name: Checkout repository
+        if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
         with:
           # Fetch full history so git diff can compare against the base branch
           fetch-depth: 0
 
       - name: Detect deleted test files and require spec change
+        if: github.event_name == 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
