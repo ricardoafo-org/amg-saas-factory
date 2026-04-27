@@ -11,7 +11,8 @@ This spec configures branch protection, merge queue, and required-status-checks 
 1. [ ] `gh api repos/ricardoafo-org/amg-saas-factory/branches/main/protection` returns `required_status_checks.contexts` containing all 12 check names listed in the configuration JSON below.
 2. [ ] `gh api repos/ricardoafo-org/amg-saas-factory/branches/main/protection` returns `required_linear_history.enabled = true`.
 3. [ ] Merge queue is enabled on `main` with `merge_method = squash` (repo policy: rebase merging disabled, squash is the only allowed method), `min_entries_to_merge = 1`, `max_entries_to_build = 3`, `grouping_strategy = ALLGREEN`.
-4. [ ] Pull request reviews required: `required_approving_review_count = 1`, `dismiss_stale_reviews = true`.
+4. [ ] `required_deployments` rule on the ruleset gates merging on the `tst` GitHub Environment — PRs cannot merge into main until the latest tst deployment is green. Closes the "stale main" gap (a PR could otherwise merge while a previous deploy is still running or failed). Requires `tst` environment to be registered (done by PR #96).
+5. [ ] Pull request reviews required: `required_approving_review_count = 1`, `dismiss_stale_reviews = true`.
 5. [ ] `enforce_admins = true` — admins cannot bypass the protection rules.
 6. [ ] A test PR with a deliberate `* 1.21` literal in `src/` is **blocked from merging** by `security-gate` and admin cannot force-merge.
 7. [ ] PR #85 lands cleanly through the new gates (`ci` + `security-gate` + `health-check` all green; merge queue serializes; `gh pr merge --squash --auto` works).
@@ -86,6 +87,80 @@ This spec configures branch protection, merge queue, and required-status-checks 
   "restrictions": null
 }
 ```
+
+### Ruleset (id 15533204) — applied 2026-04-27
+
+Repository ruleset `main protection` provides the merge queue and deploy-success rules that branch protection alone can't express:
+
+```json
+{
+  "name": "main protection",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"] } },
+  "rules": [
+    { "type": "deletion" },
+    { "type": "non_fast_forward" },
+    { "type": "required_linear_history" },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 1,
+        "dismiss_stale_reviews_on_push": true,
+        "require_last_push_approval": true,
+        "required_review_thread_resolution": true,
+        "allowed_merge_methods": ["squash"]
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "required_status_checks": [
+          /* same 12 checks as branch protection */
+        ]
+      }
+    },
+    {
+      "type": "required_deployments",
+      "parameters": { "required_deployment_environments": ["tst"] }
+    },
+    {
+      "type": "merge_queue",
+      "parameters": {
+        "merge_method": "SQUASH",
+        "max_entries_to_merge": 5,
+        "min_entries_to_merge": 1,
+        "max_entries_to_build": 3,
+        "min_entries_to_merge_wait_minutes": 5,
+        "grouping_strategy": "ALLGREEN",
+        "check_response_timeout_minutes": 60
+      }
+    }
+  ],
+  "bypass_actors": [
+    {
+      "actor_type": "OrganizationAdmin",
+      "bypass_mode": "pull_request"
+    }
+  ]
+}
+```
+
+### Workflow cleanup performed 2026-04-27
+
+- **Deleted** `.github/workflows/tst-bootstrap-pb.yml` (PR #98) — one-shot SEV-1 recovery hack, no longer needed.
+- **Deleted** orphan `CodeQL` workflow record (id 266066341) by clearing its 5 historical runs — file path `.github/workflows/codeql.yml` had been removed previously but the workflow record persisted as "disabled" in the Actions UI. Cleared to reduce confusion. The active GitHub-managed code scanning at `dynamic/github-code-scanning/codeql` is preserved.
+
+Final active workflows:
+1. CI (`.github/workflows/ci.yml`)
+2. Deploy to tst (`.github/workflows/deploy-tst.yml`)
+3. Auto-label PRs (`.github/workflows/labeler.yml`)
+4. PR Template Check (`.github/workflows/pr-template-check.yml`)
+5. Security Gate (`.github/workflows/security-gate.yml`)
+6. test-deletion-guard (`.github/workflows/test-deletion-guard.yml`)
+7. Dependabot Updates (GitHub-managed)
+8. CodeQL (GitHub-managed code scanning)
 
 **Excluded from required (intentional):**
 - `npm audit (critical)` — informational; current deps have 5 high-severity in resend chain (per memory `project_npm_audit_vulns`).
