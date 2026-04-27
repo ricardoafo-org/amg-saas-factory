@@ -1,4 +1,11 @@
-name: Deploy to tst
+name: CD
+
+# Continuous Deployment workflow.
+#
+# Today: auto-deploys to `tst` environment on every push to main.
+# Future: will gain `deploy-pro` job (gated by GitHub Environment `pro`
+# with required-reviewers + release-tag trigger). See
+# docs/decisions/2026-04-27-production-cd-plan.md for the target shape.
 
 on:
   push:
@@ -19,8 +26,8 @@ permissions:
   packages: write
 
 jobs:
-  build-and-deploy:
-    name: Build image · Push GHCR · Deploy via SSH
+  deploy-tst:
+    name: Deploy to tst
     runs-on: ubuntu-latest
     # Tracks this deploy under the `tst` GitHub Environment.
     # Gives the merge queue a "tst deployment must succeed" gate via
@@ -83,9 +90,9 @@ jobs:
   # an SSR error or hydration crash on `/` won't fail it. We also probe `/`
   # for SSR markers (length + brand text). For full hydration coverage we
   # need Playwright against deployed tst — tracked separately.
-  health-check:
-    name: Health check (tst)
-    needs: build-and-deploy
+  health-check-tst:
+    name: Health check tst
+    needs: deploy-tst
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
