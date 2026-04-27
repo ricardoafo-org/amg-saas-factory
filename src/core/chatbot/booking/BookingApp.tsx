@@ -57,6 +57,7 @@ export function BookingApp({
   policyHash,
   services = [],
   ivaRate,
+  initialService,
   onStepChange,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -64,7 +65,13 @@ export function BookingApp({
 
   const [step, setStep] = useState(STEP_VEHICLE);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  const [booking, setBooking] = useState<BookingState>({});
+  // Seed selectedServiceIds when the user opened the chat from a specific
+  // service card (e.g. "Reservar" on Cambio de aceite). Without this, the
+  // event payload from ChatWidget is silently dropped and StepServices
+  // renders with nothing pre-selected.
+  const [booking, setBooking] = useState<BookingState>(
+    initialService ? { selectedServiceIds: [initialService] } : {},
+  );
   const [done, setDone] = useState(false);
 
   const goToStep = useCallback(
@@ -167,7 +174,11 @@ export function BookingApp({
             <StepVehicle onComplete={handleVehicleComplete} />
           )}
           {!done && step === STEP_SERVICES && (
-            <StepServices services={services} onComplete={handleServicesComplete} />
+            <StepServices
+              services={services}
+              initialSelection={booking.selectedServiceIds}
+              onComplete={handleServicesComplete}
+            />
           )}
           {!done && step === STEP_SLOT && (
             <StepSlot tenantId={tenantId} onComplete={handleSlotComplete} />

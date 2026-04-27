@@ -11,6 +11,12 @@ type ServicesData = {
 
 type Props = {
   services: Service[];
+  /**
+   * Pre-selected service IDs — flows in from BookingApp when the user opened
+   * the chat from a specific service card. Empty/undefined means user starts
+   * from a clean slate.
+   */
+  initialSelection?: string[];
   onComplete: (data: ServicesData) => void;
 };
 
@@ -19,8 +25,8 @@ type Props = {
  * Renderiza paquetes (category='paquete') y servicios à la carte.
  * PR-A no conecta al carrito — recoge IDs seleccionados y llama a onComplete.
  */
-export function StepServices({ services, onComplete }: Props) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+export function StepServices({ services, initialSelection, onComplete }: Props) {
+  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelection ?? []);
   const [error, setError] = useState<string | null>(null);
 
   const packages = services.filter((s) => s.category === 'paquete');
