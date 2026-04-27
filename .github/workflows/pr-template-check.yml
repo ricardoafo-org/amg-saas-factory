@@ -12,6 +12,11 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
     branches: [main]
+  # Merge queue support: this check has no meaning on a queued ephemeral
+  # branch (no PR description), but if it's a required check the queue
+  # will block until it reports a status. The first step short-circuits
+  # cleanly on merge_group events.
+  merge_group:
 
 permissions:
   contents: read
@@ -24,7 +29,12 @@ jobs:
     # Skip Dependabot — it uses its own PR template
     if: github.actor != 'dependabot[bot]'
     steps:
+      - name: Skip on merge queue (PR description was already validated)
+        if: github.event_name == 'merge_group'
+        run: echo "merge_group event — PR template was validated when the PR was opened. Passing through."
+
       - name: Validate PR description
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v8
         with:
           script: |
