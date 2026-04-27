@@ -1,5 +1,29 @@
 name: CI
 
+# All PR-time gates live in this workflow.
+# Branch protection requires a SINGLE status check: `CI success` (the
+# wrap-up job at the bottom). Adding a new gate? Add a job + put it in
+# `ci-success.needs` — branch protection JSON does not need to change.
+#
+# Execution order (cheapest first, expensive depends on cheap):
+#   Tier 1 — parallel, fast (~30s-2min each):
+#     • type-check, lint, flows-validate
+#     • pr-template-check, test-deletion-guard  (PR hygiene)
+#     • security-gate
+#     • npm-audit (informational, NOT in ci-success.needs)
+#     • unit-tests
+#   Tier 2 — depends on Tier 1, expensive build (~3min):
+#     • next-build (needs: type-check, lint — fail fast on style/type errors)
+#   Tier 3 — depends on Tier 2, longest (~5-8min):
+#     • e2e-smoke (4 shards, needs: next-build)
+#     • e2e-admin (currently broken, NOT in ci-success.needs)
+#   Wrap-up:
+#     • ci-success (needs: all required jobs)
+#
+# Why ordered: a broken type-check used to run the full 8-minute E2E suite
+# before failing. Now it fails in ~30s. Net cost: ~30s extra latency on a
+# successful PR; gain: 8 minutes saved on every failed PR.
+
 on:
   pull_request:
     branches: [main]
@@ -10,17 +34,19 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write  # security-gate posts failure comment; pr-template-check reads body
 
 # TENANT_ID is required by the app (see src/lib/tenant.ts) — getTenantId()
 # throws at module init if unset to prevent silent cross-tenant fallback.
-# Apply to all jobs that run app code (build, type-check, tests).
 env:
   TENANT_ID: talleres-amg
 
 jobs:
+  # ============================================================
+  # Quality
+  # ============================================================
   type-check:
-    name: Type-check
+    name: Type check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -32,7 +58,8 @@ jobs:
       - run: npm run type-check
 
   next-build:
-    name: Next build (catches PageProps / route-level type errors)
+    name: Next build
+    needs: [type-check, lint]  # Tier 2 — fail fast on style/type errors before paying for build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -85,37 +112,233 @@ jobs:
       - run: npm ci
       - run: npm run flows:validate
 
-  npm-audit:
-    name: npm audit (critical)
+  # ============================================================
+  # Security
+  # ============================================================
+  # Codifies HIGH/CRITICAL findings (tenant-isolation IDOR, filter injection,
+  # hardcoded secrets) and compliance (LOPDGDD, IVA, tenant data) so violations
+  # are caught BEFORE merge. PR scope: changed TS/TSX. Merge queue: full src/.
+  security-gate:
+    name: Security gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
         with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - name: Audit production dependencies (fail on critical)
-        run: npm audit --omit=dev --audit-level=critical
-      - name: Report high-severity findings (informational)
-        if: always()
-        run: npm audit --omit=dev --audit-level=high || true
+          fetch-depth: 0  # need history to diff against base for PR scope
 
-  # E2E smoke (Playwright) — Phase 5 of FEAT-041.
-  # Runs tests/e2e/smoke.spec.ts — a curated suite written against the current DOM
-  # (post-FEAT-038/039) covering: brand title, hero copy, contact channels
-  # (WhatsApp + tel:), FAB reachability, services grid, ITV calculator inputs,
-  # Visit Google Maps URL contract.
-  # The legacy specs (itv.spec.ts, homepage.spec.ts, mobile.spec.ts) are
-  # test.describe.skip()'d because they target a pre-redesign UI — rewrite is
-  # tracked as task #80 (homepage/itv) and task #79 (mobile contact bar).
-  # Booking happy path + footer click-every-CTA need seeded PocketBase —
-  # task #78 (CI/CD P0.5).
+      - name: Determine changed files (PR scope)
+        id: changed
+        if: github.event_name == 'pull_request'
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          files=$(git diff --name-only "$base" "$head" -- 'src/**/*.ts' 'src/**/*.tsx' | tr '\n' ' ')
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+          echo "Changed TS/TSX files: $files"
+
+      - name: Run security gate (PR — changed files only)
+        if: github.event_name == 'pull_request'
+        run: |
+          if [[ -z "${{ steps.changed.outputs.files }}" ]]; then
+            echo "No TS/TSX changed — gate skipped."
+            exit 0
+          fi
+          bash scripts/ci-security-gate.sh --files "${{ steps.changed.outputs.files }}"
+
+      - name: Run security gate (merge queue — full src/ scan)
+        if: github.event_name == 'merge_group'
+        run: bash scripts/ci-security-gate.sh
+
+      - name: Comment summary on PR (on failure)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = [
+              '### Security Gate FAILED',
+              '',
+              'One or more deterministic security checks blocked this PR.',
+              'See the **Security gate** job log above for the file:line breakdown.',
+              '',
+              'These checks codify HIGH/CRITICAL findings (tenant isolation, filter injection, hardcoded secrets) and compliance rules (LOPDGDD, IVA, tenant data).',
+              'Run them locally with:',
+              '',
+              '```sh',
+              'bash scripts/ci-security-gate.sh',
+              '```',
+              '',
+              'Do not bypass this gate without a documented exception in the PR description.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+  # ============================================================
+  # PR hygiene
+  # ============================================================
+  # Validates PR body has Summary, Spec Deviations, Reviewer Reports, etc.
+  # Skips dependabot (it uses its own template). Skips merge_group (no body).
   #
-  # Sharding: 4 parallel jobs × workers=100% per shard (≈16x parallelism on
-  # GH-hosted 4-CPU runners). Per FEAT-041 Layer 6 parallelism contract.
+  # CRITICAL: dependabot guard MUST use pull_request.user.login, NOT
+  # github.actor. github.actor flips to "github-actions[bot]" on synchronize
+  # events (rebases) and the check would false-fail. See PR #97.
+  pr-template-check:
+    name: PR template
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'merge_group' ||
+      (github.event.pull_request.user.login != 'dependabot[bot]'
+       && github.event.pull_request.user.login != 'dependabot-preview[bot]')
+    steps:
+      - name: Skip on merge queue (PR description was already validated)
+        if: github.event_name == 'merge_group'
+        run: echo "merge_group event — PR template was validated when the PR was opened. Passing through."
+
+      - name: Validate PR description
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const required = [
+              { heading: '## Summary',              label: 'Summary' },
+              { heading: '## Spec Deviations',      label: 'Spec Deviations' },
+              { heading: '## Reviewer Reports',     label: 'Reviewer Reports' },
+              { heading: '## Auto-merge',           label: 'Auto-merge' },
+              { heading: '## Quality gates',        label: 'Quality gates' },
+              { heading: '## Manual verification',  label: 'Manual verification' },
+              { heading: '## Regression test',      label: 'Regression test' },
+            ];
+
+            const missing = [];
+            const empty   = [];
+
+            for (const section of required) {
+              const idx = body.indexOf(section.heading);
+              if (idx === -1) {
+                missing.push(section.label);
+                continue;
+              }
+
+              const after = body.slice(idx + section.heading.length);
+              const nextHeadingIdx = after.search(/\n##\s/m);
+              const sectionBody = (nextHeadingIdx === -1 ? after : after.slice(0, nextHeadingIdx)).trim();
+
+              const stripped = sectionBody.replace(/<!--[\s\S]*?-->/g, '').trim();
+
+              if (stripped.length === 0) {
+                empty.push(section.label);
+              }
+            }
+
+            if (missing.length === 0 && empty.length === 0) {
+              core.info('PR template — all required sections present and non-empty.');
+              return;
+            }
+
+            const lines = [
+              '### PR template check FAILED',
+              '',
+              'The PR description is missing required structure. Update the PR body so it follows `.github/pull_request_template.md`.',
+              '',
+            ];
+            if (missing.length > 0) {
+              lines.push(`Missing sections: ${missing.map(s => '`' + s + '`').join(', ')}`);
+            }
+            if (empty.length > 0) {
+              lines.push(`Empty sections (write \`None\` if there is nothing to report): ${empty.map(s => '`' + s + '`').join(', ')}`);
+            }
+            lines.push('');
+            lines.push('This check exists because PRs without explicit Spec Deviations and Reviewer Reports lead to incidents like the FEAT-031 filter-injection that auto-merged before review.');
+
+            core.setFailed(lines.join('\n'));
+
+  # Fails (CI red, blocks merge) if any *.test.ts|tsx or *.spec.ts|tsx file is
+  # DELETED in a PR without an accompanying docs/specs/FEAT-XXX*.md change.
+  # Uses --name-status so renames (R) are NOT treated as deletions (D).
+  test-deletion-guard:
+    name: Test deletion guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip on merge queue (deletion guard ran when the PR was opened)
+        if: github.event_name == 'merge_group'
+        run: echo "merge_group event — test deletions were validated when the PR was opened. Passing through."
+
+      - name: Checkout repository
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # diff against base
+
+      - name: Detect deleted test files and require spec change
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_REF="${{ github.base_ref }}"
+          echo "Base ref: $BASE_REF"
+
+          git fetch origin "$BASE_REF" --depth=1
+
+          DIFF=$(git diff --name-status "origin/${BASE_REF}...HEAD")
+          echo "--- diff (name-status) ---"
+          echo "$DIFF"
+          echo "---"
+
+          DELETED_TESTS=$(echo "$DIFF" \
+            | grep -E '^D\s+.*\.(test|spec)\.(ts|tsx)$' \
+            | awk '{print $2}' \
+            || true)
+
+          if [ -z "$DELETED_TESTS" ]; then
+            echo "No test files deleted in this PR. Guard passed."
+            exit 0
+          fi
+
+          echo "Deleted test files found:"
+          echo "$DELETED_TESTS"
+
+          SPEC_CHANGES=$(echo "$DIFF" \
+            | grep -E '\bdocs/specs/FEAT-[0-9]+[^[:space:]]*\.md$' \
+            | awk '{print $2}' \
+            || true)
+
+          if [ -z "$SPEC_CHANGES" ]; then
+            echo ""
+            echo "============================================================"
+            echo "ERROR: Test deletion without a spec change."
+            echo ""
+            echo "The following test file(s) were deleted in this PR:"
+            echo "$DELETED_TESTS" | sed 's/^/  - /'
+            echo ""
+            echo "Deleting a test file requires an accompanying change to a"
+            echo "docs/specs/FEAT-XXX*.md file that documents why the test"
+            echo "is being retired (e.g. FEAT-099-retire-foo.md)."
+            echo ""
+            echo "If you renamed the test file, verify the rename was committed"
+            echo "as a git rename (R status) rather than a delete+add pair."
+            echo "============================================================"
+            exit 1
+          fi
+
+          echo "Spec change(s) found alongside test deletion — guard passed."
+          echo "Spec files changed:"
+          echo "$SPEC_CHANGES" | sed 's/^/  - /'
+          exit 0
+
+  # ============================================================
+  # E2E
+  # ============================================================
+  # E2E smoke (Playwright). Sharded 4× for parallelism (~16x on GH-hosted
+  # 4-CPU runners with workers=100% per shard). Runs tests/e2e/smoke.spec.ts
+  # + tests/e2e/regression/.
   e2e-smoke:
     name: E2E smoke (shard ${{ matrix.shard }}/4)
+    needs: next-build  # Tier 3 — don't burn 4×8min runners if build is broken
     runs-on: ubuntu-latest
     timeout-minutes: 8
     strategy:
@@ -156,12 +379,12 @@ jobs:
           path: test-results/
           retention-days: 7
 
-  # E2E admin (Playwright + seeded PocketBase).
-  # Boots a real PocketBase backend, seeds tenant/config/services + a staff
-  # owner record, then runs the admin specs (login, today, quotes). Test
-  # admin credentials are non-secret CI fixtures — see env block below.
+  # E2E admin (Playwright + seeded PocketBase). Currently failing because
+  # admin login is broken (will be fixed in Week 2 of FEAT-053). NOT in
+  # ci-success.needs — does not block merges. Re-add when admin login works.
   e2e-admin:
-    name: E2E admin (seeded PocketBase)
+    name: E2E admin
+    needs: next-build  # Tier 3
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -220,3 +443,60 @@ jobs:
           path: test-results/
           retention-days: 7
 
+  # ============================================================
+  # Informational (NOT in ci-success.needs — does not block merge)
+  # ============================================================
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Audit production dependencies (fail on critical)
+        run: npm audit --omit=dev --audit-level=critical
+      - name: Report high-severity findings (informational)
+        if: always()
+        run: npm audit --omit=dev --audit-level=high || true
+
+  # ============================================================
+  # Wrap-up — single required status check for branch protection
+  # ============================================================
+  # Status check aggregation pattern (GitHub-recommended for matrix builds
+  # and any CI with many parallel jobs). Branch protection requires only
+  # `CI success`; this job reports green only if every upstream job in
+  # `needs:` succeeded.
+  #
+  # To add a new required gate: add a job above + add it to `needs:`.
+  # No branch protection JSON edit required.
+  ci-success:
+    name: CI success
+    needs:
+      - type-check
+      - next-build
+      - lint
+      - unit-tests
+      - flows-validate
+      - security-gate
+      - pr-template-check
+      - test-deletion-guard
+      - e2e-smoke
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all required jobs succeeded
+        env:
+          NEEDS_RESULTS: ${{ toJson(needs) }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] \
+             || [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "::error::One or more required jobs failed or were cancelled."
+            echo "Job results:"
+            echo "${NEEDS_RESULTS}"
+            exit 1
+          fi
+          echo "All required jobs passed."
