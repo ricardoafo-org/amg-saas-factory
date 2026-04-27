@@ -50,9 +50,9 @@ The orchestrator runs these BEFORE opening the PR. Implementer does NOT open the
 
 ## Quality gates
 
-- [ ] `npm run type-check` → zero exit
+- [ ] `npm run type-check` → zero exit (zero TS errors)
+- [ ] `npm run lint` → zero exit (**zero errors AND zero warnings** — runs `--max-warnings=0`)
 - [ ] `npm test` → all pass
-- [ ] `npm run lint` → zero errors
 - [ ] `bash scripts/ci-security-gate.sh` → PASS (deterministic security checks)
 - [ ] `npm run flows:validate` → valid (if chatbot flow changed)
 - [ ] `npm run e2e` → all pass (if UI / routes changed)

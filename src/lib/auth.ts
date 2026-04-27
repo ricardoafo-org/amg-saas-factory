@@ -14,12 +14,13 @@ export async function getTenantCtx(): Promise<TenantContext> {
     redirect('/login');
   }
 
-  const tenantId = pb.authStore.record?.tenant_id as string | undefined;
-  if (!tenantId) {
+  const record = pb.authStore.record;
+  const tenantId = record?.tenant_id as string | undefined;
+  if (!record || !tenantId) {
     throw new Error('Authenticated user has no tenant_id — check collection schema');
   }
 
-  return { pb, tenantId, userId: pb.authStore.record!.id };
+  return { pb, tenantId, userId: record.id };
 }
 
 /**

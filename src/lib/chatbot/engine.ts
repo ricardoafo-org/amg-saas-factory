@@ -43,7 +43,7 @@ async function resolveTokens(
 
   const placeholders = configKeys.map((_, i) => `key = {:k${i}}`).join(' || ');
   const params: Record<string, string> = { tenantId };
-  configKeys.forEach((k, i) => { params[`k${i}`] = k!; });
+  configKeys.forEach((k, i) => { if (k) params[`k${i}`] = k; });
   const filter = pb.filter(`tenant_id = {:tenantId} && (${placeholders})`, params);
   const records = await pb.collection('config').getList(1, 50, { filter });
   const configMap = Object.fromEntries(records.items.map(r => [r['key'], r['value']]));

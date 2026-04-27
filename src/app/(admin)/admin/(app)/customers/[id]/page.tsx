@@ -22,7 +22,7 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_MAP[status] ?? STATUS_MAP['pending']!;
+  const cfg = STATUS_MAP[status] ?? STATUS_MAP['pending'];
   return (
     <span
       className={cn(

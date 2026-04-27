@@ -67,7 +67,7 @@ export default async function CommsPage() {
             </div>
             <ul className="divide-y divide-border">
               {logEntries.map((entry) => {
-                const cfg = STATUS_CONFIG[entry.status] ?? STATUS_CONFIG['sent']!;
+                const cfg = STATUS_CONFIG[entry.status] ?? STATUS_CONFIG['sent'];
                 return (
                   <li
                     key={entry.id}

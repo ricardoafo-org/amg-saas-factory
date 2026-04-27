@@ -85,8 +85,7 @@ export function RevenueBarChart({ data }: Props) {
                   fill="var(--accent)"
                   rx={2}
                   className="cursor-pointer transition-opacity hover:opacity-80"
-                  onMouseEnter={(e) => {
-                    const rect = e.currentTarget.closest('svg')!.getBoundingClientRect();
+                  onMouseEnter={() => {
                     setTooltip({
                       x: x + barWidth / 2,
                       y: totalY - 8,
@@ -104,8 +103,7 @@ export function RevenueBarChart({ data }: Props) {
                   fill="var(--primary)"
                   rx={2}
                   className="cursor-pointer transition-opacity hover:opacity-80"
-                  onMouseEnter={(e) => {
-                    const rect = e.currentTarget.closest('svg')!.getBoundingClientRect();
+                  onMouseEnter={() => {
                     setTooltip({
                       x: x + barWidth / 2,
                       y: totalY - 8,

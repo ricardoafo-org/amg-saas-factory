@@ -168,10 +168,6 @@ test.describe('Network resilience', () => {
     await page.getByRole('button', { name: /Gasolina/i }).click();
 
     // Wait for slots or phone fallback
-    const hasNameInput = await page
-      .getByPlaceholder(/Escribe aquí/i)
-      .isVisible()
-      .catch(() => false);
     const hasPhoneFallback = await page
       .getByText(/llámanos/i)
       .isVisible()

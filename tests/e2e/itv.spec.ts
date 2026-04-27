@@ -41,7 +41,7 @@ test.describe('ITV Countdown widget', () => {
     await expect(page.getByRole('alert')).not.toBeVisible({ timeout: 3000 });
   });
 
-  test('shows urgent result for vehicle with ITV due within 30 days', async ({ page }) => {
+  test('shows urgent result for vehicle with ITV due within 30 days', async () => {
     // Enter a date ~23 months ago so next-ITV = +2 years = ~1 month away (≤30 days)
     const d = new Date();
     d.setMonth(d.getMonth() - 23);
@@ -53,7 +53,7 @@ test.describe('ITV Countdown widget', () => {
     await expect(itv.getResultBox()).toContainText(/\d+ días/);
   });
 
-  test('shows normal result for vehicle with ITV far in the future', async ({ page }) => {
+  test('shows normal result for vehicle with ITV far in the future', async () => {
     // Enter a date 1 month ago so next-ITV is ~23 months away (>30 days, 3+ digits)
     const d = new Date();
     d.setMonth(d.getMonth() - 1);

@@ -76,7 +76,6 @@ describe('useContainerLayout — module contract', () => {
 
 describe('useContainerLayout — ResizeObserver integration', () => {
   beforeEach(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (global as Record<string, unknown>).ResizeObserver = vi.fn().mockImplementation(
       (_cb: RoCallback) => ({ observe: () => {}, disconnect: () => {}, unobserve: () => {} }),
     );

@@ -334,7 +334,7 @@ export async function resolveFlowTokens(
 
   const placeholders = keys.map((_, i) => `key = {:k${i}}`).join(' || ');
   const params: Record<string, string> = { tenantId };
-  keys.forEach((k, i) => { params[`k${i}`] = k!; });
+  keys.forEach((k, i) => { if (k) params[`k${i}`] = k; });
   const filter = pb.filter(`tenant_id = {:tenantId} && (${placeholders})`, params);
   const records = await pb.collection('config').getList(1, 50, { filter });
   const map = Object.fromEntries(records.items.map((r) => [r['key'], r['value']]));

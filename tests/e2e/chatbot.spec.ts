@@ -1,11 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { ChatbotPage } from './pages/ChatbotPage';
 
 test.describe('Chatbot — core interactions', () => {
-  let chatbot: ChatbotPage;
-
   test.beforeEach(async ({ page, context }) => {
-    chatbot = new ChatbotPage(page);
     await context.addInitScript(() => {
       try { localStorage.setItem('amg_cookie_consent', JSON.stringify({ analytics: false, marketing: false })); } catch {}
     });
