@@ -375,7 +375,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
         setIsTyping(true);
         setTimeout(() => {
           setIsTyping(false);
-          setMessages([{ role: 'bot', text: node.message!, key: mkKey() }]);
+          setMessages([{ role: 'bot', text: node.message ?? '', key: mkKey() }]);
         }, 600);
       }, 200);
     }
@@ -610,7 +610,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
                 <div className="space-y-2.5">
                   <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">Selecciona uno o más servicios</p>
                   <div className="space-y-1.5">
-                    {(currentNode!.options as Array<FlowOption & { value?: string }>).map((opt, i) => {
+                    {((currentNode?.options ?? []) as Array<FlowOption & { value?: string }>).map((opt, i) => {
                       const isChecked = opt.value ? selectedServiceValues.includes(opt.value) : false;
                       return (
                         <motion.button
@@ -703,7 +703,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
               {showOptions && (
                 <div className="space-y-2.5">
                   <div className="chat-chips">
-                    {currentNode!.options!.map((opt, i) => (
+                    {(currentNode?.options ?? []).map((opt, i) => (
                       <motion.button
                         key={opt.next + opt.label}
                         initial={MOTION.chip.initial}

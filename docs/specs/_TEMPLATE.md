@@ -45,6 +45,6 @@
 - [ ] No hardcoded IVA rate (`0.21` / `1.21` / `21%`)
 - [ ] No PII in `console.log` / error responses
 - [ ] No hardcoded tenant data (names, prices, config)
-- [ ] `npm run type-check` → zero exit
+- [ ] `npm run type-check` → zero exit (zero TS errors)
+- [ ] `npm run lint` → zero exit (**zero errors AND zero warnings** — `--max-warnings=0`)
 - [ ] `npm test` → all pass
-- [ ] `npm run lint` → zero errors

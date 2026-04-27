@@ -58,7 +58,6 @@ test.describe('Chatbot — oil change booking golden path', () => {
     await page.waitForTimeout(3000);
 
     const hasSlots = await page.getByText(/Fechas disponibles/i).isVisible().catch(() => false);
-    const hasNameInput = await page.getByPlaceholder(/Escribe aquí/i).isVisible().catch(() => false);
     const hasPhoneFallback = await page.getByText(/llámanos/i).isVisible().catch(() => false);
 
     if (hasSlots) {

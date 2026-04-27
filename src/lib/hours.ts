@@ -52,7 +52,7 @@ export function groupHours(hours: OperatingHours[]): HoursGroup[] {
 
   let i = 0;
   while (i < DAY_ORDER.length) {
-    const dayKey = DAY_ORDER[i]!;
+    const dayKey = DAY_ORDER[i];
     const entry = byDay.get(dayKey);
     if (!entry) {
       i += 1;
@@ -61,12 +61,12 @@ export function groupHours(hours: OperatingHours[]): HoursGroup[] {
     const key = rangeKey(entry);
     let j = i;
     while (j + 1 < DAY_ORDER.length) {
-      const next = byDay.get(DAY_ORDER[j + 1]!);
+      const next = byDay.get(DAY_ORDER[j + 1]);
       if (!next || rangeKey(next) !== key) break;
       j += 1;
     }
     const startLabel = DAY_LABEL_ES[dayKey];
-    const endLabel = DAY_LABEL_ES[DAY_ORDER[j]!];
+    const endLabel = DAY_LABEL_ES[DAY_ORDER[j]];
     const label = i === j ? startLabel : `${startLabel} — ${endLabel}`;
 
     if (isClosed(entry)) {
@@ -111,7 +111,7 @@ function wallClockIn(now: Date, timeZone: string): { day: OperatingHours['day'];
     sat: 'saturday',
     sun: 'sunday',
   };
-  const day = map[wkShort] ?? JS_DAY_TO_KEY[now.getUTCDay()]!;
+  const day = map[wkShort] ?? JS_DAY_TO_KEY[now.getUTCDay()];
 
   const hourRaw = get('hour');
   const hour = hourRaw === '24' ? 0 : Number.parseInt(hourRaw, 10);
@@ -152,7 +152,7 @@ export function computeOpenStatus(
   // Find next open slot scanning today (later same-day) → next 7 days.
   const todayIdx = DAY_ORDER.indexOf(today);
   for (let offset = 0; offset < 8; offset += 1) {
-    const dayKey = DAY_ORDER[(todayIdx + offset) % DAY_ORDER.length]!;
+    const dayKey = DAY_ORDER[(todayIdx + offset) % DAY_ORDER.length];
     const entry = byDay.get(dayKey);
     if (!entry || isClosed(entry)) continue;
     if (offset === 0 && minutes >= timeToMinutes(entry.open)) continue;

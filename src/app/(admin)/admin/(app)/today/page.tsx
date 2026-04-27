@@ -9,7 +9,6 @@ import {
   TrendingDown,
   Minus,
   User,
-  Car,
   Clock,
   Euro,
   CalendarDays,

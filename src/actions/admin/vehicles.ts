@@ -203,9 +203,9 @@ export async function updateVehicle(
     return { success: false, error: 'Datos inválidos' };
   }
 
-  let existing;
+  // Existence + tenant-scope check before update.
   try {
-    existing = await ctx.pb.collection('vehicles').getFirstListItem(
+    await ctx.pb.collection('vehicles').getFirstListItem(
       ctx.pb.filter('id = {:id} && tenant_id = {:tenantId}', { id, tenantId: ctx.tenantId }),
     );
   } catch {

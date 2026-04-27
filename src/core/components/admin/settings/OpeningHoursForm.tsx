@@ -63,14 +63,19 @@ export function OpeningHoursForm({ initialHoursJson }: Props) {
   }
 
   function setDay(key: string, patch: Partial<DayHours>) {
-    setHours((prev) => ({ ...prev, [key]: { ...prev[key]!, ...patch } }));
+    setHours((prev) => {
+      const current = prev[key];
+      if (!current) return prev;
+      return { ...prev, [key]: { ...current, ...patch } };
+    });
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData();
     for (const { key } of DAYS) {
-      const day = hours[key]!;
+      const day = hours[key];
+      if (!day) continue;
       fd.set(`${key}_open`, String(day.open));
       fd.set(`${key}_from`, day.from);
       fd.set(`${key}_to`, day.to);
@@ -97,7 +102,8 @@ export function OpeningHoursForm({ initialHoursJson }: Props) {
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="glass rounded-xl overflow-hidden divide-y divide-border">
           {DAYS.map(({ key, label }) => {
-            const day = hours[key]!;
+            const day = hours[key];
+            if (!day) return null;
             return (
               <div
                 key={key}

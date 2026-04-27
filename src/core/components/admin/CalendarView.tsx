@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Plus, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { AppointmentSlideOver } from '@/core/components/admin/AppointmentSlideOver';
 import { NewAppointmentModal } from '@/core/components/admin/NewAppointmentModal';

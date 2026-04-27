@@ -1,7 +1,7 @@
 # Definition of Ready (DOR) and Definition of Done (DOD)
 
 Canonical reference for all feature work in AMG SaaS Factory.
-Last updated: 2026-04-21
+Last updated: 2026-04-28
 
 ---
 
@@ -55,7 +55,8 @@ A task is **Done** when ALL of the following are verified.
 
 - [ ] All acceptance criteria in spec checked off `[x]`
 - [ ] Spec updated: `## Status` section added with completion date and deviation notes
-- [ ] `npm run type-check` → exit 0
+- [ ] `npm run type-check` → exit 0 (**zero TS errors**)
+- [ ] `npm run lint` → exit 0 (**zero errors AND zero warnings** — runs with `--max-warnings=0`)
 - [ ] `npm test -- --run` → all pass
 - [ ] `compliance-reviewer` agent → zero violations
 - [ ] `qa-engineer` agent → verdict PASS or PARTIAL (no blocking bugs)
@@ -63,6 +64,27 @@ A task is **Done** when ALL of the following are verified.
 - [ ] PR opened on correct branch (`feature/slug`, `fix/BUG-XXX`, etc.)
 - [ ] PR squash-merged to `main`
 - [ ] Any new env vars added to `.env.example` with comments
+
+### Hard rule on lint warnings
+
+**Zero warnings** is the merge gate, not "low warning count". Per the lint-hardening
+PR (chore/strict-lint-and-dod), the CI lint step runs with `--max-warnings=0` so a
+single warning fails the build. If a rule produces too much noise to fix in a
+PR, do NOT downgrade it to `warn`; instead either:
+- Fix all the offending sites, or
+- Add a narrow `eslint-disable-next-line <rule>: <reason>` with a comment explaining why,
+  or
+- Discuss with the team and adjust the rule config (with justification documented).
+
+The strict rules currently active:
+- `@typescript-eslint/no-empty-object-type` (no `{}` as a type)
+- `@typescript-eslint/no-explicit-any` (no `any` outside test files)
+- `@typescript-eslint/no-unused-vars` (allow `_`-prefixed for intentional ignores)
+- `@typescript-eslint/no-non-null-assertion` (no `foo!` outside test files)
+- `@typescript-eslint/ban-ts-comment` (no `@ts-ignore`; `@ts-expect-error` requires a 10+ char description)
+- `@typescript-eslint/no-unsafe-function-type` (no bare `Function` type)
+- `@typescript-eslint/no-wrapper-object-types` (no `Object`, `Number`, `String`, `Boolean` as types)
+- `reportUnusedDisableDirectives` (rotting suppressions fail the build)
 
 ### Spec status update format
 
@@ -85,7 +107,10 @@ flowchart TD
     A[Implementation complete] --> B[npm run type-check]
     B -- fail --> Z1[Fix TS errors]
     Z1 --> B
-    B -- pass --> C[npm test]
+    B -- pass --> BL[npm run lint --max-warnings=0]
+    BL -- fail --> ZL[Fix lint errors and warnings]
+    ZL --> BL
+    BL -- pass --> C[npm test]
     C -- fail --> Z2[Fix failing tests]
     Z2 --> C
     C -- pass --> D[compliance-reviewer agent]
@@ -134,6 +159,7 @@ sequenceDiagram
 | Gate | Tool | Blocks |
 |---|---|---|
 | Type safety | `npm run type-check` | Commit (pre-commit hook) |
+| Lint (zero warnings) | `npm run lint` (`--max-warnings=0`) | Commit (pre-commit hook), CI |
 | Unit tests | `npm test -- --run` | Commit (pre-commit hook) |
 | Compliance | `compliance-reviewer` agent | PR merge |
 | QA | `qa-engineer` agent | PR merge |
