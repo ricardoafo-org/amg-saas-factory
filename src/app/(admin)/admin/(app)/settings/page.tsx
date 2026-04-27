@@ -11,6 +11,7 @@ async function getConfigValue(
   fallback = '',
 ): Promise<string> {
   try {
+    // eslint-disable-next-line no-restricted-syntax -- TODO Week 2 / FEAT-053: migrate to getCurrentSettings() Server Action (ADR-014)
     const record = await pb
       .collection('config')
       .getFirstListItem(
@@ -59,6 +60,7 @@ export default async function SettingsPage() {
   }> = [];
 
   try {
+    // eslint-disable-next-line no-restricted-syntax -- TODO Week 2 / FEAT-053: migrate to getCurrentSettings() Server Action (ADR-014)
     const res = await pb.collection('services').getFullList({
       filter: pb.filter('tenant_id = {:tenantId}', { tenantId }),
       sort: 'name',

@@ -44,6 +44,7 @@ export default async function QuoteDetailPage({ params }: Props) {
 
   let quote: Quote | null = null;
   try {
+    // eslint-disable-next-line no-restricted-syntax -- TODO Week 2 / FEAT-053: migrate to getQuoteById() Server Action (ADR-014)
     const record = await pb.collection('quotes').getOne(id);
     if ((record['tenant_id'] as string) !== tenantId) {
       notFound();
