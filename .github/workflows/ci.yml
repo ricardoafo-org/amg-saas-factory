@@ -164,10 +164,15 @@ jobs:
         # IDs (pbc_1720224894 etc.) and crash on a fresh CI PB. Schema is
         # applied below via scripts/apply-schema.ts (FEAT-052 source of truth).
         # pb_migrations/ deletion is scheduled for Week 5 cutover.
+        #
+        # --dev enables DEBUG log level + per-request HTTP access log. Without
+        # it, PB stays silent and a 200+empty body (the symptom we hit on
+        # 2026-04-28 with appointments POST) gives no signal of what went
+        # wrong server-side. Cost is ~1 MB of extra log; gain is observability.
         run: |
           mkdir -p .pb-empty-migrations
           ./pocketbase superuser upsert "$PB_BOOTSTRAP_EMAIL" "$PB_BOOTSTRAP_PASSWORD"
-          ./pocketbase serve --http=127.0.0.1:8090 --migrationsDir=.pb-empty-migrations > pb.log 2>&1 &
+          ./pocketbase serve --http=127.0.0.1:8090 --migrationsDir=.pb-empty-migrations --dev > pb.log 2>&1 &
           echo $! > pb.pid
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:8090/api/health >/dev/null 2>&1; then
@@ -189,17 +194,52 @@ jobs:
       - name: Run integration suite
         run: npm run test:integration
 
+      # Dump live PB state regardless of test outcome. When a test fails or
+      # skips for inscrutable reasons (e.g. PB returns 200+empty body), this
+      # snapshot — collection definitions + sample records for the tables
+      # that participate in the integration suite — is the artifact reviewers
+      # need to diagnose without a local repro.
+      - name: Dump live PB state (always)
+        if: always()
+        run: |
+          set +e
+          mkdir -p pb-debug
+          TOKEN=$(curl -fsS -X POST http://127.0.0.1:8090/api/collections/_superusers/auth-with-password \
+            -H "Content-Type: application/json" \
+            -d "{\"identity\":\"$PB_BOOTSTRAP_EMAIL\",\"password\":\"$PB_BOOTSTRAP_PASSWORD\"}" \
+            | jq -r '.token // empty')
+          if [[ -n "$TOKEN" ]]; then
+            curl -fsS -H "Authorization: Bearer $TOKEN" \
+              "http://127.0.0.1:8090/api/collections?perPage=200" \
+              > pb-debug/collections.json 2>pb-debug/collections.err
+            for col in tenants staff appointments availability_slots services customers vehicles; do
+              curl -fsS -H "Authorization: Bearer $TOKEN" \
+                "http://127.0.0.1:8090/api/collections/${col}/records?perPage=200" \
+                > "pb-debug/${col}-records.json" 2>"pb-debug/${col}-records.err"
+            done
+          else
+            echo "Could not auth to PB to dump state — see pb.log" > pb-debug/auth-failed.txt
+          fi
+          exit 0
+
       - name: Stop PocketBase
         if: always()
         run: if [[ -f pb.pid ]]; then kill "$(cat pb.pid)" 2>/dev/null || true; fi
 
-      - name: Upload PocketBase log on failure
-        if: failure()
+      # Always upload the diagnostic bundle (PB log + live state snapshot).
+      # Was previously failure-only — that hid the diagnostic on the skip
+      # path that occurs when seed setup silently 200+empties out (the bug
+      # this PR exists to debug).
+      - name: Upload PocketBase diagnostic bundle (always)
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: pocketbase-log-integration
-          path: pb.log
+          name: pocketbase-debug-integration
+          path: |
+            pb.log
+            pb-debug/
           retention-days: 7
+          if-no-files-found: warn
 
   # ============================================================
   # Security
@@ -463,13 +503,19 @@ jobs:
             tests/e2e/regression/ \
             --project=chromium \
             --shard=${{ matrix.shard }}/4
-      - name: Upload trace on failure
-        if: failure()
+      # Always upload Playwright artifacts. With trace=retain-on-failure
+      # (Playwright default), test-results/ only contains traces+videos for
+      # the failed/retried attempts. `if: always()` + `if-no-files-found:
+      # ignore` means a green run uploads nothing (no waste) and any flake
+      # or failure leaves a downloadable trace bundle for diagnosis.
+      - name: Upload Playwright trace bundle (always)
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-trace-shard-${{ matrix.shard }}
           path: test-results/
           retention-days: 7
+          if-no-files-found: ignore
 
   # E2E admin (Playwright + seeded PocketBase). DISABLED until admin login is
   # fixed in Week 2 of FEAT-053. While red, this job stalled the auto-merge
@@ -524,20 +570,22 @@ jobs:
         if: always()
         run: |
           if [[ -f pb.pid ]]; then kill "$(cat pb.pid)" 2>/dev/null || true; fi
-      - name: Upload PocketBase log on failure
-        if: failure()
+      - name: Upload PocketBase log (always)
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pocketbase-log
           path: pb.log
           retention-days: 7
-      - name: Upload trace on failure
-        if: failure()
+          if-no-files-found: ignore
+      - name: Upload Playwright trace bundle (always)
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-trace-admin
           path: test-results/
           retention-days: 7
+          if-no-files-found: ignore
 
   # ============================================================
   # Informational (NOT in ci-success.needs — does not block merge)
