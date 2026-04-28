@@ -2,9 +2,17 @@ name: CD
 
 # Continuous Deployment workflow.
 #
-# Today: auto-deploys to `tst` on every push to main.
-# Future: gains `deploy-pro` (release-tag triggered, manual approval gate) when
-# pre-pro env lands in PR 2.
+# Triggers on:
+#   - `merge_group` — runs against the merge queue's candidate commit BEFORE
+#     it merges, so branch protection's `required_deployments: [tst]` sees a
+#     real successful deployment for the candidate. This is what unblocks the
+#     queue (otherwise the rule would self-block: no merge → no deploy → no
+#     marker → no merge).
+#   - `push: main` — runs after the queue fast-forwards main. Same SHA as
+#     the candidate, so most steps are cache hits, but kept as belt-and-
+#     suspenders for the rare case of a direct push (admin override).
+#
+# Pro deploys live in deploy-pro.yml (release-tag or manual, human approval).
 #
 # Self-validating deploy (added 2026-04-28, ADR-015 + ADR-005-rev2):
 #   1. Builds runner + ops images IN PARALLEL (separate jobs, ~3 min wall-clock
@@ -29,6 +37,13 @@ on:
   push:
     branches:
       - main
+  # Merge queue integration: when a PR enters the queue, GitHub creates a
+  # candidate commit (PR rebased on main + earlier queued PRs) and fires
+  # `merge_group`. We deploy that candidate to tst so the deployment marker
+  # registers BEFORE the queue merges. Branch protection's
+  # `required_deployments: [tst]` rule then evaluates against a real,
+  # successful candidate deployment instead of self-blocking forever.
+  merge_group:
 
 # Serialize deploys: if two PRs land back-to-back, the second waits for the
 # first to finish. cancel-in-progress=false because every commit on main MUST
