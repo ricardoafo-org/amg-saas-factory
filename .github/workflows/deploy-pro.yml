@@ -2,11 +2,6 @@ name: CD pro
 
 # Production CD — manual trigger with a human approval gate.
 #
-# Wired but DEFERRED until the pro VPS is bootstrapped and the `pro` GitHub
-# Environment is created with required reviewers. Until then, this workflow
-# is callable but will fail the deploy step at the SSH stage because the
-# `PRO_*` secrets are not yet set.
-#
 # Mirrors deploy.yml (tst) gate-for-gate so a release on pro provides the
 # same correctness signal as a deploy on tst:
 #   build-runner + build-ops (parallel) → snapshot → apply schema → swap →
@@ -19,13 +14,27 @@ name: CD pro
 #     the deploy job can start AND shows up under Deployments → pro.
 #   - SSH targets use PRO_* secrets and /srv/amg-pro/ paths.
 #
-# Bootstrap checklist (one-time, before first invocation):
-#   1. Provision the pro VPS — mirror tst (Docker, Caddy ports 80/443, git, docker compose).
-#   2. SSH in, mkdir /srv/amg-pro/, scp deploy-pro.sh into /home/deploy/, chmod +x.
-#   3. Push secrets: PRO_SSH_KEY, PRO_SSH_HOST, PRO_SSH_USER, PRO_DOMAIN.
-#   4. Create the `pro` GitHub Environment with required reviewer = ricardoafo.
-#   5. Drop a sealed .env.pro on the VPS at /srv/amg-pro/.env.pro (file mode 600).
-#   6. First run: `gh workflow run deploy-pro.yml` and approve in the pro Environment.
+# FAKE-PRO MODE (FEAT-057, current state):
+#   This workflow runs end-to-end against a fake-pro stack colocated on the
+#   tst VPS, behind a shared edge router. PRO_SSH_HOST/USER/KEY point at the
+#   tst VPS; PRO_DOMAIN = pro.<host>.sslip.io. See docs/runbooks/fake-pro-bootstrap.md.
+#
+# Bootstrap checklist for fake-pro (one-time, see runbook for detail):
+#   1. SSH to tst VPS, run the fake-pro-bootstrap runbook (creates amg_edge
+#      network, brings up edge + pro stacks).
+#   2. Push secrets: PRO_SSH_KEY=TST_SSH_KEY, PRO_SSH_HOST=TST_SSH_HOST,
+#      PRO_SSH_USER=TST_SSH_USER, PRO_DOMAIN=pro.<host>.sslip.io.
+#   3. Create `pro-approval` GitHub Environment with required reviewer = ricardoafo.
+#   4. Create `pro` GitHub Environment (no reviewers; gates branch protection).
+#   5. Drop sealed .env.pro on the VPS at /srv/amg-pro/.env.pro (mode 600).
+#   6. First run: `gh workflow run deploy-pro.yml` and approve in pro-approval.
+#
+# REAL-PRO-DAY DELTA (when the real pro VPS arrives):
+#   - Flip PRO_SSH_HOST to the real pro host (other PRO_* secrets too).
+#   - Flip PRO_DOMAIN to the real prod domain.
+#   - Revert pro stack to standalone TLS: re-add caddy `ports: 80/443`,
+#     drop `amg_edge` network, re-enable `auto_https` in Caddyfile.pro.
+#   - Remove `pro.*` block from infra/Caddyfile.edge on tst VPS.
 
 on:
   release:
