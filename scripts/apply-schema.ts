@@ -28,6 +28,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import {
+  findDuplicateTuples,
+  parseUniqueIndexColumns,
+} from './lib/unique-precheck';
+
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
@@ -512,6 +517,50 @@ async function main() {
   }
 
   console.log(`\nSummary: ${drifts} drift(s), ${destructive} destructive.`);
+
+  // Pre-check: every NEW UNIQUE INDEX targeting an EXISTING collection must
+  // not conflict with current row data. PB surfaces the SQLite 2067 error
+  // inside `data.indexes.message` which our generic error reader does not
+  // unwrap, so we surface it here with row-level detail. See BUG-017.
+  let uniqueConflicts = 0;
+  for (const { schema, diff } of diffs) {
+    if (!diff.exists || diff.indexDiffs.add.length === 0) continue;
+    for (const sql of diff.indexDiffs.add) {
+      const parsed = parseUniqueIndexColumns(sql);
+      if (!parsed) continue;
+      const colName = schema['x-pb-collection'].name;
+      const fieldsParam = ['id', ...parsed.columns].join(',');
+      const recs = await pbRequest<{ items: Record<string, unknown>[] }>(
+        'GET',
+        `/api/collections/${colName}/records?perPage=500&fields=${fieldsParam}`,
+        undefined,
+        token,
+      );
+      if (recs.status !== 200) {
+        console.error(
+          `Pre-check: failed to read ${colName} records (status ${recs.status}). Skipping pre-check for this index.`,
+        );
+        continue;
+      }
+      const groups = findDuplicateTuples(recs.body.items ?? [], parsed.columns);
+      if (groups.length === 0) continue;
+      uniqueConflicts += groups.length;
+      console.error(
+        `\nUNIQUE pre-check FAILED on ${colName}: index ${sql.split(' ON ')[0]}`,
+      );
+      for (const g of groups) {
+        console.error(
+          `  ${JSON.stringify(g.values)} → ${g.ids.length} rows: [${g.ids.join(', ')}]`,
+        );
+      }
+    }
+  }
+  if (uniqueConflicts > 0) {
+    console.error(
+      `\nRefusing to apply: ${uniqueConflicts} UNIQUE constraint conflict(s) detected. Resolve duplicates first (see scripts/dedupe-config.ts for the config collection, or write an equivalent for other collections).`,
+    );
+    process.exit(1);
+  }
 
   if (destructive > 0 && !ALLOW_DESTRUCTIVE) {
     console.error('Refusing to apply destructive changes. Re-run with --allow-destructive.');
