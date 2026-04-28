@@ -38,6 +38,11 @@ const eslintConfig = [
       'pb_data.ci-disabled/**',
       'pb_hooks/**',
       'pb_migrations/**',
+      'pb_migrations.local-disabled/**',
+      // Local scratch space — `npm run pb:serve` writes pb_data + pb_migrations
+      // here when developers run a local PB. Already in .gitignore; ESLint
+      // flat config does not read .gitignore so we mirror it here.
+      'tmp/**',
 
       // PWA service-worker bundles produced by next-pwa. Minified, vendored.
       'public/sw.js',

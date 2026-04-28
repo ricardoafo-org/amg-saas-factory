@@ -26,7 +26,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 const PB_URL = process.env.POCKETBASE_URL || 'http://127.0.0.1:8090';
 const EMAIL =
@@ -133,19 +133,17 @@ function expectedPbType(prop: JsonSchemaProp): string {
 }
 
 const schemas = loadSchemas();
-let token: string | null = null;
-let pbReachable = false;
-
-beforeAll(async () => {
-  token = await authenticate();
-  pbReachable = token !== null;
-  if (!pbReachable) {
-    console.warn(
-      `[schema-contract] PB unreachable at ${PB_URL} — suite will skip. ` +
-        `Set POCKETBASE_URL + PB_BOOTSTRAP_EMAIL + PB_BOOTSTRAP_PASSWORD to enable.`,
-    );
-  }
-});
+// Top-level await: resolve auth BEFORE describe()/it() registration so
+// `it.skipIf(...)` sees the correct value. Using beforeAll() does not work —
+// skipIf is evaluated at test-registration time, not at runtime.
+const token = await authenticate();
+const pbReachable = token !== null;
+if (!pbReachable) {
+  console.warn(
+    `[schema-contract] PB unreachable at ${PB_URL} — suite will skip. ` +
+      `Set POCKETBASE_URL + PB_BOOTSTRAP_EMAIL + PB_BOOTSTRAP_PASSWORD to enable.`,
+  );
+}
 
 describe('schema-contract — every src/schemas/*.schema.json maps to a live PB collection', () => {
   it('finds at least one schema file', () => {

@@ -117,6 +117,8 @@ interface PbField {
   exceptDomains?: string[] | null;
   autogeneratePattern?: string;
   primaryKey?: boolean;
+  onCreate?: boolean;
+  onUpdate?: boolean;
 }
 
 interface PbCollection {
@@ -216,6 +218,18 @@ function buildDesiredFields(schema: JsonSchema): PbField[] {
     if (schema['x-pb-collection'].type === 'auth' && name === 'email') continue;
     fields.push(inferPbField(name, prop, required.has(name)));
   }
+  // PB 0.23+ does not auto-create created/updated columns on base/auth
+  // collections — they must be declared as autodate fields explicitly.
+  // Indexes that reference `created` / `updated` (e.g. quotes, sms_log)
+  // require these to exist, so inject them whenever the schema declares
+  // them as properties.
+  const props = schema.properties || {};
+  if ('created' in props) {
+    fields.push({ name: 'created', type: 'autodate', onCreate: true, onUpdate: false, system: false });
+  }
+  if ('updated' in props) {
+    fields.push({ name: 'updated', type: 'autodate', onCreate: true, onUpdate: true, system: false });
+  }
   return fields;
 }
 
@@ -291,7 +305,14 @@ function diffCollection(
   const liveIdx = new Set(pbCol.indexes || []);
   const wantIdx = new Set(schema['x-pb-indexes'] || []);
   const addIdx = [...wantIdx].filter((i) => !liveIdx.has(i));
-  const removeIdx = [...liveIdx].filter((i) => !wantIdx.has(i));
+  // PocketBase auto-creates system indexes on auth collections (e.g.
+  // `idx_tokenKey_<colId>`, `idx_email_<colId>`). They are not declared in
+  // our schemas — never try to remove them.
+  const isSystemIdx = (sql: string): boolean =>
+    /\bidx_(tokenKey|email)_pbc_/.test(sql);
+  const removeIdx = [...liveIdx]
+    .filter((i) => !wantIdx.has(i))
+    .filter((i) => !isSystemIdx(i));
 
   const ruleDiffs: CollectionDiff['ruleDiffs'] = {};
   const rules = schema['x-pb-rules'] || {};

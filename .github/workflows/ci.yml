@@ -33,8 +33,7 @@ on:
   merge_group:
 
 permissions:
-  contents: read
-  pull-requests: write  # security-gate posts failure comment; pr-template-check reads body
+  contents: read  # least-privilege default; jobs that need more (security-gate) opt-in below
 
 # TENANT_ID is required by the app (see src/lib/tenant.ts) — getTenantId()
 # throws at module init if unset to prevent silent cross-tenant fallback.
@@ -49,8 +48,8 @@ jobs:
     name: Type check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 20
           cache: npm
@@ -63,8 +62,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 20
           cache: npm
@@ -80,8 +79,8 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 20
           cache: npm
@@ -92,25 +91,115 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm test -- --run
+      # Coverage thresholds enforced by vitest.config.ts (ADR-005-rev2 §3.1).
+      # Ratchet floors only — never lower them without an ADR amendment.
+      - run: npm test -- --run --coverage
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-unit
+          path: coverage/
+          retention-days: 7
 
   flows-validate:
     name: Validate chatbot flows
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 20
           cache: npm
       - run: npm ci
       - run: npm run flows:validate
+
+  # ============================================================
+  # Integration — boots ephemeral PocketBase, applies schemas,
+  # runs schema-contract + tenant-isolation specs against the
+  # live API. Closes the "tests green, prod broken" gap that
+  # caused the 2026-04-26 SEV-1 (per FEAT-052).
+  # ============================================================
+  integration-tests:
+    name: Integration tests (PocketBase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      TENANT_ID: talleres-amg
+      POCKETBASE_URL: http://127.0.0.1:8090
+      PB_BOOTSTRAP_EMAIL: ci-superuser@amg-test.local
+      PB_BOOTSTRAP_PASSWORD: CiSuperuserPassword123!
+      POCKETBASE_ADMIN_EMAIL: ci-superuser@amg-test.local
+      POCKETBASE_ADMIN_PASSWORD: CiSuperuserPassword123!
+      STAFF_OWNER_EMAIL: admin@amg-test.local
+      STAFF_OWNER_PASSWORD: TestPassword123!
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Cache PocketBase binary
+        id: pb-cache
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: ./pocketbase
+          key: pocketbase-0.28.1-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Download PocketBase (cache miss)
+        if: steps.pb-cache.outputs.cache-hit != 'true'
+        run: bash scripts/setup-pocketbase.sh
+
+      - name: Boot PocketBase + create superuser
+        # Point PB at an empty migrations dir so it does NOT auto-apply the
+        # legacy pb_migrations/*.js — those hardcode env-specific collection
+        # IDs (pbc_1720224894 etc.) and crash on a fresh CI PB. Schema is
+        # applied below via scripts/apply-schema.ts (FEAT-052 source of truth).
+        # pb_migrations/ deletion is scheduled for Week 5 cutover.
+        run: |
+          mkdir -p .pb-empty-migrations
+          ./pocketbase superuser upsert "$PB_BOOTSTRAP_EMAIL" "$PB_BOOTSTRAP_PASSWORD"
+          ./pocketbase serve --http=127.0.0.1:8090 --migrationsDir=.pb-empty-migrations > pb.log 2>&1 &
+          echo $! > pb.pid
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8090/api/health >/dev/null 2>&1; then
+              echo "PocketBase ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::PocketBase failed to start"
+          tail -n 50 pb.log || true
+          exit 1
+
+      - name: Apply schemas (FEAT-052 source of truth)
+        run: npx tsx scripts/apply-schema.ts
+
+      - name: Seed tenant fixture
+        run: npx tsx scripts/seed-tenant.ts
+
+      - name: Run integration suite
+        run: npm run test:integration
+
+      - name: Stop PocketBase
+        if: always()
+        run: if [[ -f pb.pid ]]; then kill "$(cat pb.pid)" 2>/dev/null || true; fi
+
+      - name: Upload PocketBase log on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pocketbase-log-integration
+          path: pb.log
+          retention-days: 7
 
   # ============================================================
   # Security
@@ -121,8 +210,11 @@ jobs:
   security-gate:
     name: Security gate
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # posts failure comment via github-script
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           fetch-depth: 0  # need history to diff against base for PR scope
 
@@ -151,7 +243,7 @@ jobs:
 
       - name: Comment summary on PR (on failure)
         if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const body = [
@@ -199,7 +291,7 @@ jobs:
 
       - name: Validate PR description
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         with:
           script: |
             const body = context.payload.pull_request.body || '';
@@ -269,7 +361,7 @@ jobs:
 
       - name: Checkout repository
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@v6
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           fetch-depth: 0  # diff against base
 
@@ -346,14 +438,14 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 20
           cache: npm
       - run: npm ci
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
@@ -373,7 +465,7 @@ jobs:
             --shard=${{ matrix.shard }}/4
       - name: Upload trace on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-trace-shard-${{ matrix.shard }}
           path: test-results/
@@ -401,14 +493,14 @@ jobs:
       TEST_ADMIN_EMAIL: admin@amg-test.local
       TEST_ADMIN_PASSWORD: TestPassword123!
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 20
           cache: npm
       - run: npm ci
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
@@ -434,14 +526,14 @@ jobs:
           if [[ -f pb.pid ]]; then kill "$(cat pb.pid)" 2>/dev/null || true; fi
       - name: Upload PocketBase log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pocketbase-log
           path: pb.log
           retention-days: 7
       - name: Upload trace on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-trace-admin
           path: test-results/
@@ -454,8 +546,8 @@ jobs:
     name: npm audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 20
           cache: npm
@@ -484,6 +576,7 @@ jobs:
       - lint
       - unit-tests
       - flows-validate
+      - integration-tests
       - security-gate
       - pr-template-check
       - test-deletion-guard

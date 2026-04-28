@@ -47,3 +47,23 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
+
+# Stage 4: Ops image — apply-schema, seed-tenant, integration tests.
+# Built and pushed alongside the prod image as a separate tag (e.g. :tst-ops).
+# Invoked one-shot from the deploy workflow:
+#   docker run --rm --network amg_default --env-file /srv/amg/.env.tst \
+#     ghcr.io/<org>/amg-saas-factory:<tag>-ops tsx scripts/apply-schema.ts
+# Carries devDeps (tsx, vitest) so the same immutable artifact runs ops
+# scripts AND integration tests across dev / CI / VPS.
+FROM node:20-alpine AS ops
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 ops
+
+COPY --from=deps --chown=ops:nodejs /app/node_modules ./node_modules
+COPY --chown=ops:nodejs . .
+
+USER ops

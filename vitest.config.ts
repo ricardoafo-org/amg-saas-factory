@@ -15,6 +15,28 @@ export default defineConfig({
       // The tenant.test.ts suite resets and re-asserts TENANT_ID per case.
       TENANT_ID: 'talleres-amg',
     },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'json-summary', 'lcov'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.{test,spec}.{ts,tsx}',
+        'src/**/__tests__/**',
+        'src/test/**',
+        'src/**/*.d.ts',
+        'src/schemas/**',
+        'src/emails/**',
+      ],
+      // Ratchet floors per ADR-005-rev2 §3.1. Numbers reflect current
+      // baseline minus a small buffer; never lower these without an ADR.
+      // Target: 80% lines / 75% branches once the integration suite lands.
+      thresholds: {
+        lines: 20,
+        statements: 20,
+        branches: 75,
+        functions: 55,
+      },
+    },
   },
   resolve: {
     alias: {
