@@ -1,12 +1,12 @@
 # Stage 1: Install dependencies
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
 
 # Stage 2: Build the application
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 ARG NEXT_PUBLIC_COMMIT_SHA
@@ -25,7 +25,7 @@ COPY . .
 RUN npm run build:docker
 
 # Stage 3: Production runner (minimal image)
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -55,14 +55,10 @@ CMD ["node", "server.js"]
 #     ghcr.io/<org>/amg-saas-factory:<tag>-ops tsx scripts/apply-schema.ts
 # Carries devDeps (tsx, vitest) so the same immutable artifact runs ops
 # scripts AND integration tests across dev / CI / VPS.
-FROM node:20-alpine AS ops
+FROM node:22-alpine AS ops
 WORKDIR /app
 
 ENV NODE_ENV=production
-# Silence the "New major version of npm available" banner that npm 9.x prints
-# after every script. We can't upgrade — npm 11 requires node ≥ 20.17 — and
-# the banner pollutes deploy logs and one-shot ops command outputs.
-ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 ops
