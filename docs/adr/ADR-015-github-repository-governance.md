@@ -302,6 +302,23 @@ gh api repos/ricardoafo-org/amg-saas-factory/rulesets/15533204 \
   --jq '.rules[] | select(.type=="required_deployments") | .parameters'
 ```
 
+### Acceptance criteria (this ADR is "done" only when all hold)
+
+This ADR's intent is end-to-end deploy correctness across BOTH environments — not just configured-on-paper. To close, all of the following MUST hold simultaneously and be re-checkable on demand:
+
+1. **`required_deployments: [tst]` rule is ENABLED** on the main ruleset (verified via `gh api .../rulesets/...`).
+2. **A successful `deploy.yml` run on main exists** with `confirm-tst` green and an active `environment: tst` deployment marker for main HEAD.
+3. **A successful `deploy.yml` run on a `merge_group` candidate exists** — proves the merge-queue pre-merge gate (otherwise the rule would self-block on the next PR).
+4. **A successful `deploy-pro.yml` run end-to-end exists** against the fake-pro stack, with all gates green:
+   - `build-runner` + `build-ops` push images to GHCR
+   - `deploy-vps` waits for `pro` env reviewer approval (ricardoafo), then completes
+   - `health-check-pro`, `schema-contract-pro`, `smoke-pro` all green
+   - `confirm-pro` registers an active `environment: pro` deployment marker
+5. **Both environments allow merge-queue candidate branches** to deploy: the env's deployment-branch policy includes both `main` and `gh-readonly-queue/main/*` patterns. Without the second pattern the queue's pre-merge deploy is rejected with "branch not allowed to deploy" (see 2026-04-28 incident).
+6. **Repo-level fallback secrets for `TST_*` and `PRO_*` are deleted** — only env-scoped secrets remain. Verifies the env-scoped path actually resolves end-to-end and we're not silently using repo-level fallbacks.
+
+If any criterion regresses, treat the ADR as re-opened: the configuration drifted away from the documented invariant. Restore the criterion before declaring the work done again.
+
 ## Future improvements (NOT in this ADR's implementation)
 
 These are deferred but explicitly tracked here so they don't drift back into ad-hoc conversations:
