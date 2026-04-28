@@ -23,7 +23,8 @@
     "flows:validate": "node scripts/validate-flow.js",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "e2e:install": "playwright install chromium"
+    "e2e:install": "playwright install chromium",
+    "smoke:deployed": "playwright test --config=playwright.smoke.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
