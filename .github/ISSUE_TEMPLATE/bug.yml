@@ -1,18 +1,23 @@
 name: Bug report
 description: Something is broken, wrong, or leaking
 title: "[BUG] "
-labels: ["type:fix", "status:needs-review"]
+labels: ["type:fix"]
 body:
   - type: markdown
     attributes:
       value: |
-        Filing a bug? Include enough to reproduce. Vague reports get closed.
+        Filing a bug? Include enough to reproduce — vague reports get closed.
+
+        After triage, the **bug-triager** agent (or a maintainer) will:
+          1. Add the matching `sev:1` / `sev:2` / `sev:3` / `sev:4` label per the [severity rubric](../docs/contracts/severity-rubric.md).
+          2. Add `status:needs-review` (or `status:blocked` if waiting on info).
+          3. For SEV-1/SEV-2 bugs, create a deep-dive in `docs/bugs/wip-BUG-XXX-*.md` and link it below.
   - type: input
     id: bug-id
     attributes:
       label: Bug ID
-      description: If you already filed it in `docs/bugs/`, put the BUG-XXX id here.
-      placeholder: BUG-012
+      description: If a `docs/bugs/wip-BUG-XXX-*.md` file already exists, put the BUG-XXX id here. Otherwise leave blank — the triager will assign one.
+      placeholder: BUG-016
   - type: textarea
     id: what-happens
     attributes:
@@ -51,14 +56,31 @@ body:
   - type: dropdown
     id: severity
     attributes:
-      label: Severity
+      label: Severity (proposed — triager confirms via rubric)
+      description: |
+        Map to `docs/contracts/severity-rubric.md`. Triager will add the matching `sev:N` label.
       options:
-        - p0 — blocker (site down, data loss, compliance breach)
-        - p1 — high (main flow broken for many users)
-        - p2 — medium (edge case or workaround exists)
-        - p3 — low (cosmetic, nice-to-have)
+        - SEV-1 — critical (24h SLA — security breach, LOPDGDD violation, data loss, auth bypass)
+        - SEV-2 — high (72h SLA — feature broken, wrong legal output, serious UX regression)
+        - SEV-3 — medium (7d SLA — degraded UX, broken secondary link, wrong non-critical data)
+        - SEV-4 — low (next sprint — cosmetic, copy error, minor visual)
     validations:
       required: true
+  - type: input
+    id: rubric-row
+    attributes:
+      label: Severity rubric row (cite the axis row that justifies the severity)
+      description: |
+        Cite the exact row from `docs/contracts/severity-rubric.md` (e.g. `S2` for tenant-isolation IDOR, `F1` for missing IVA breakdown). If no row matches, write `none — default SEV-3`.
+      placeholder: "S2 — tenant_id guard missing on PocketBase query"
+    validations:
+      required: true
+  - type: input
+    id: deep-dive
+    attributes:
+      label: Linked deep-dive (optional)
+      description: Path to the `docs/bugs/wip-BUG-XXX-*.md` post-mortem if one exists.
+      placeholder: docs/bugs/wip-BUG-016-filter-injection.md
   - type: textarea
     id: logs
     attributes:
