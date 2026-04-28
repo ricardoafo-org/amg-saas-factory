@@ -1,0 +1,44 @@
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.pro:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - PRO_DOMAIN=${PRO_DOMAIN}
+    depends_on:
+      - app
+
+  app:
+    image: ghcr.io/ricardoafo-org/amg-saas-factory:${IMAGE_TAG:-pro}
+    restart: unless-stopped
+    env_file: .env.pro
+    ports:
+      # Loopback only — VPS deploy script hits localhost:3000/api/health for
+      # post-deploy verification. Caddy fronts public 80/443 via docker network.
+      - "127.0.0.1:3000:3000"
+    expose:
+      - "3000"
+    depends_on:
+      - pocketbase
+
+  pocketbase:
+    build:
+      context: .
+      dockerfile: Dockerfile.pocketbase
+    image: amg-pocketbase:0.28.1
+    restart: unless-stopped
+    expose:
+      - "8090"
+    volumes:
+      - pb_data:/pb/pb_data
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pb_data:

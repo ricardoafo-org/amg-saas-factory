@@ -1,0 +1,376 @@
+name: CD pro
+
+# Production CD — manual trigger with a human approval gate.
+#
+# Wired but DEFERRED until the pro VPS is bootstrapped and the `pro` GitHub
+# Environment is created with required reviewers. Until then, this workflow
+# is callable but will fail the deploy step at the SSH stage because the
+# `PRO_*` secrets are not yet set.
+#
+# Mirrors deploy.yml (tst) gate-for-gate so a release on pro provides the
+# same correctness signal as a deploy on tst:
+#   build-runner + build-ops (parallel) → snapshot → apply schema → swap →
+#   health-check → schema-contract → smoke → confirm-pro
+#
+# The ONLY differences vs tst:
+#   - Trigger is manual or release tag, not push to main.
+#   - confirm-pro carries `environment: pro`, which (once the Environment is
+#     configured in repo settings) requires admin reviewer approval before
+#     the deploy job can start AND shows up under Deployments → pro.
+#   - SSH targets use PRO_* secrets and /srv/amg-pro/ paths.
+#
+# Bootstrap checklist (one-time, before first invocation):
+#   1. Provision the pro VPS — mirror tst (Docker, Caddy ports 80/443, git, docker compose).
+#   2. SSH in, mkdir /srv/amg-pro/, scp deploy-pro.sh into /home/deploy/, chmod +x.
+#   3. Push secrets: PRO_SSH_KEY, PRO_SSH_HOST, PRO_SSH_USER, PRO_DOMAIN.
+#   4. Create the `pro` GitHub Environment with required reviewer = ricardoafo.
+#   5. Drop a sealed .env.pro on the VPS at /srv/amg-pro/.env.pro (file mode 600).
+#   6. First run: `gh workflow run deploy-pro.yml` and approve in the pro Environment.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to deploy (defaults to release tag or sha-<commit>)'
+        required: false
+        type: string
+
+# Serialize pro deploys — only one in flight at a time.
+concurrency:
+  group: deploy-pro
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_REPO: ghcr.io/ricardoafo-org/amg-saas-factory
+  PRO_BASE_URL: https://${{ secrets.PRO_DOMAIN }}
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # Build phase — runner + ops images in parallel, tagged for pro.
+  # ─────────────────────────────────────────────────────────────────────
+
+  build-runner:
+    name: Build runner image (pro)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Log in to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+
+      - name: Build and push runner image
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        with:
+          context: .
+          target: runner
+          push: true
+          tags: |
+            ${{ env.IMAGE_REPO }}:pro
+            ${{ env.IMAGE_REPO }}:sha-${{ github.sha }}-pro
+          build-args: |
+            NEXT_PUBLIC_COMMIT_SHA=${{ github.sha }}
+            TENANT_ID=talleres-amg
+          cache-from: type=gha,scope=runner
+          cache-to: type=gha,mode=max,scope=runner
+
+  build-ops:
+    name: Build ops image (pro)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Log in to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+
+      - name: Build and push ops image
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        with:
+          context: .
+          target: ops
+          push: true
+          tags: |
+            ${{ env.IMAGE_REPO }}:pro-ops
+            ${{ env.IMAGE_REPO }}:sha-${{ github.sha }}-pro-ops
+          cache-from: type=gha,scope=ops
+          cache-to: type=gha,mode=max,scope=ops
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Approval gate — `pro` Environment requires an admin reviewer before
+  # this job can start. Configure reviewers in repo Settings → Environments → pro.
+  # ─────────────────────────────────────────────────────────────────────
+
+  approve-pro:
+    name: Approve pro deployment
+    needs: [build-runner, build-ops]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1440  # up to 24h waiting for human approval
+    environment:
+      name: pro-approval
+      url: https://${{ secrets.PRO_DOMAIN }}
+    steps:
+      - name: Approval recorded
+        run: echo "Pro deployment approved by reviewer."
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Deploy phase — sequential SSH steps, gated by approve-pro.
+  # ─────────────────────────────────────────────────────────────────────
+
+  deploy-vps:
+    name: Deploy to pro VPS
+    needs: approve-pro
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Sync infra files to pro VPS
+        env:
+          SSH_KEY: ${{ secrets.PRO_SSH_KEY }}
+          SSH_HOST: ${{ secrets.PRO_SSH_HOST }}
+          SSH_USER: ${{ secrets.PRO_SSH_USER }}
+        run: |
+          set -euo pipefail
+          KEY_FILE=$(mktemp)
+          trap 'rm -f $KEY_FILE' EXIT
+          echo "$SSH_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+          scp -i "$KEY_FILE" -o StrictHostKeyChecking=accept-new \
+            infra/docker-compose.pro.yml \
+            infra/Caddyfile.pro \
+            infra/Dockerfile.pocketbase \
+            "$SSH_USER@$SSH_HOST:/srv/amg-pro/"
+
+      # Snapshot pb_data BEFORE any schema mutation. 14-snapshot retention.
+      - name: Snapshot pro PocketBase data dir
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.PRO_SSH_HOST }}
+          username: ${{ secrets.PRO_SSH_USER }}
+          key: ${{ secrets.PRO_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            TS=$(date -u +%Y%m%dT%H%M%SZ)
+            mkdir -p /home/deploy/pb-snapshots-pro
+            docker run --rm \
+              -v amg-pro_pb_data:/source:ro \
+              -v /home/deploy/pb-snapshots-pro:/dest \
+              alpine:3 \
+              tar czf /dest/pb-${TS}.tar.gz -C /source .
+            ls -1t /home/deploy/pb-snapshots-pro/pb-*.tar.gz | tail -n +15 | xargs -r rm
+            ls -lh /home/deploy/pb-snapshots-pro/pb-${TS}.tar.gz
+
+      - name: Pull ops image on pro VPS
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.PRO_SSH_HOST }}
+          username: ${{ secrets.PRO_SSH_USER }}
+          key: ${{ secrets.PRO_SSH_KEY }}
+          script: |
+            docker pull ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}-pro-ops
+
+      - name: Apply schema to pro PB
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.PRO_SSH_HOST }}
+          username: ${{ secrets.PRO_SSH_USER }}
+          key: ${{ secrets.PRO_SSH_KEY }}
+          script: |
+            docker run --rm \
+              --network amg-pro_default \
+              --env-file /srv/amg-pro/.env.pro \
+              ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}-pro-ops \
+              npx tsx scripts/apply-schema.ts
+
+      - name: Deploy to pro VPS via SSH
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.PRO_SSH_HOST }}
+          username: ${{ secrets.PRO_SSH_USER }}
+          key: ${{ secrets.PRO_SSH_KEY }}
+          script: /home/deploy/deploy-pro.sh sha-${{ github.sha }}
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Post-deploy gates — same shape as tst.
+  # ─────────────────────────────────────────────────────────────────────
+
+  health-check-pro:
+    name: Health check pro
+    needs: deploy-vps
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Probe /api/health until commit matches deployed SHA
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          PRO_BASE_URL: https://${{ secrets.PRO_DOMAIN }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            echo "Attempt ${attempt}/24 — GET ${PRO_BASE_URL}/api/health"
+            response=$(curl --silent --show-error --max-time 10 "${PRO_BASE_URL}/api/health" || true)
+            if [ -z "${response}" ]; then
+              echo "  no response yet"
+              sleep 5
+              continue
+            fi
+            ok=$(echo "${response}" | jq -r '.ok // false')
+            commit=$(echo "${response}" | jq -r '.commit // "missing"')
+            if [ "${ok}" = "true" ] && [ "${commit}" = "${EXPECTED_SHA}" ]; then
+              echo "Healthy. ok=true commit=${commit}"
+              exit 0
+            fi
+            echo "  ok=${ok} commit=${commit} (expected ${EXPECTED_SHA}) — retrying"
+            sleep 5
+          done
+          echo "Health check failed after 24 attempts. Container did not converge on ${EXPECTED_SHA}."
+          exit 1
+
+      - name: Probe homepage SSR
+        env:
+          PRO_BASE_URL: https://${{ secrets.PRO_DOMAIN }}
+        run: |
+          set -euo pipefail
+          body=$(curl --silent --show-error --max-time 15 "${PRO_BASE_URL}/")
+          bytes=${#body}
+          echo "Homepage size: ${bytes} bytes"
+          if [ "${bytes}" -lt 10000 ]; then
+            echo "FAIL: homepage HTML is suspiciously small (<10KB)"
+            exit 1
+          fi
+          if ! echo "${body}" | grep -q "Talleres AMG"; then
+            echo "FAIL: homepage HTML missing brand marker 'Talleres AMG'"
+            exit 1
+          fi
+          echo "Homepage SSR OK (${bytes} bytes, brand marker present)."
+
+  schema-contract-pro:
+    name: Schema contract test (pro)
+    needs: [deploy-vps, health-check-pro]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Run schema-contract integration test from ops image
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.PRO_SSH_HOST }}
+          username: ${{ secrets.PRO_SSH_USER }}
+          key: ${{ secrets.PRO_SSH_KEY }}
+          script: |
+            docker run --rm \
+              --network amg-pro_default \
+              --env-file /srv/amg-pro/.env.pro \
+              ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}-pro-ops \
+              npx vitest run --config vitest.integration.config.ts tests/db/schema-contract.integration.test.ts
+
+  smoke-pro:
+    name: Smoke test against pro URL
+    needs: [deploy-vps, health-check-pro]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      BASE_URL: https://${{ secrets.PRO_DOMAIN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browser (cache miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run smoke spec
+        run: npx playwright test --config=playwright.smoke.config.ts
+
+      - name: Upload Playwright trace on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-smoke-pro-trace
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────
+  # confirm-pro — the only job carrying `environment: pro`. Branch
+  # protection's `required_deployments: [pro]` (configured separately for
+  # release branches) gates next release on this aggregator going green.
+  # ─────────────────────────────────────────────────────────────────────
+
+  confirm-pro:
+    name: Confirm pro deployment
+    needs: [deploy-vps, health-check-pro, schema-contract-pro, smoke-pro]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    permissions:
+      contents: read
+    environment:
+      name: pro
+      url: https://${{ secrets.PRO_DOMAIN }}
+    steps:
+      - name: Confirm all gates green
+        run: |
+          echo "✅ Approval recorded"
+          echo "✅ Deploy succeeded"
+          echo "✅ Health check converged on commit ${{ github.sha }}"
+          echo "✅ Schema contract test passed against pro PB"
+          echo "✅ Smoke test passed against pro URL"
+          echo ""
+          echo "pro deployment marked successful."
