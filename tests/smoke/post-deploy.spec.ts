@@ -86,12 +86,13 @@ test.describe('post-deploy smoke — deployed URL booking happy path', () => {
     await dialog.getByLabel(/Kilómetros/i).fill('50000');
     await dialog.getByRole('button', { name: /^Continuar$/i }).click();
 
-    // Advance signal: services step renders the catalog. We assert at least
-    // one service is shown; not which one (catalog content is a contract
-    // test, not a smoke).
-    await expect(dialog.locator('button[role="checkbox"]').first()).toBeVisible({
-      timeout: 5_000,
-    });
+    // Advance signal: services step renders. We assert the step's
+    // characteristic prompt — semantic text is more selector-stable than
+    // ChipRow's aria-pressed buttons. Catalog content (which services
+    // exist) is a contract test, not a smoke.
+    await expect(
+      dialog.getByText(/Qué necesitas que revisemos/i),
+    ).toBeVisible({ timeout: 5_000 });
   });
 });
 
