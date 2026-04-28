@@ -1,12 +1,12 @@
 # Stage 1: Install dependencies
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm ci
 
 # Stage 2: Build the application
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
 ARG NEXT_PUBLIC_COMMIT_SHA
@@ -25,7 +25,7 @@ COPY . .
 RUN npm run build:docker
 
 # Stage 3: Production runner (minimal image)
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -55,7 +55,7 @@ CMD ["node", "server.js"]
 #     ghcr.io/<org>/amg-saas-factory:<tag>-ops tsx scripts/apply-schema.ts
 # Carries devDeps (tsx, vitest) so the same immutable artifact runs ops
 # scripts AND integration tests across dev / CI / VPS.
-FROM node:22-alpine AS ops
+FROM node:24-alpine AS ops
 WORKDIR /app
 
 ENV NODE_ENV=production
