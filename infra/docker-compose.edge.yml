@@ -1,0 +1,37 @@
+# Edge router stack — single Caddy that owns public ports 80/443 and TLS.
+# Splits incoming traffic by Host header to inner stacks (tst, pro) joined to
+# the shared `amg_edge` docker network.
+#
+# This stack is independent of tst/pro lifecycles: tearing down either inner
+# stack does not affect the edge or the other stack.
+#
+# Bootstrap (one-time, on the VPS):
+#   1. docker network create amg_edge
+#   2. mkdir -p /srv/amg-edge && cd /srv/amg-edge
+#   3. drop docker-compose.edge.yml + Caddyfile.edge + .env.edge here
+#   4. docker compose -f docker-compose.edge.yml --env-file .env.edge up -d
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.edge:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - TST_DOMAIN=${TST_DOMAIN}
+      - PRO_DOMAIN=${PRO_DOMAIN}
+    networks:
+      - amg_edge
+
+networks:
+  amg_edge:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

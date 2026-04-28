@@ -1,0 +1,39 @@
+# Edge router Caddyfile.
+#
+# Fronts both tst and (fake-)pro stacks on a single VPS. Owns ports 80/443 and
+# TLS termination. Routes by Host header to the inner stack's HTTP-only Caddy
+# via the shared `amg_edge` docker network.
+#
+# Inner stacks publish themselves on the shared network with stable aliases:
+#   tst-caddy   → tst stack's caddy (HTTP-only, :80)
+#   pro-caddy   → pro stack's caddy (HTTP-only, :80)
+#
+# When the real pro VPS is provisioned, the `{$PRO_DOMAIN}` block here is
+# removed; pro stack's compose re-adds its own ports 80/443. Tst remains on
+# the edge as before.
+
+{$TST_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy tst-caddy:80 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+    }
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+}
+
+{$PRO_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy pro-caddy:80 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+    }
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+}

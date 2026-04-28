@@ -2,30 +2,49 @@ name: CD pro
 
 # Production CD — manual trigger with a human approval gate.
 #
-# Wired but DEFERRED until the pro VPS is bootstrapped and the `pro` GitHub
-# Environment is created with required reviewers. Until then, this workflow
-# is callable but will fail the deploy step at the SSH stage because the
-# `PRO_*` secrets are not yet set.
-#
 # Mirrors deploy.yml (tst) gate-for-gate so a release on pro provides the
 # same correctness signal as a deploy on tst:
-#   build-runner + build-ops (parallel) → snapshot → apply schema → swap →
-#   health-check → schema-contract → smoke → confirm-pro
+#   build-runner + build-ops (parallel) → deploy-vps (gated by `pro` env
+#   reviewer approval) → health-check → schema-contract → smoke → confirm-pro
 #
 # The ONLY differences vs tst:
 #   - Trigger is manual or release tag, not push to main.
-#   - confirm-pro carries `environment: pro`, which (once the Environment is
+#   - deploy-vps carries `environment: pro`, which (once the Environment is
 #     configured in repo settings) requires admin reviewer approval before
 #     the deploy job can start AND shows up under Deployments → pro.
 #   - SSH targets use PRO_* secrets and /srv/amg-pro/ paths.
 #
-# Bootstrap checklist (one-time, before first invocation):
-#   1. Provision the pro VPS — mirror tst (Docker, Caddy ports 80/443, git, docker compose).
-#   2. SSH in, mkdir /srv/amg-pro/, scp deploy-pro.sh into /home/deploy/, chmod +x.
-#   3. Push secrets: PRO_SSH_KEY, PRO_SSH_HOST, PRO_SSH_USER, PRO_DOMAIN.
-#   4. Create the `pro` GitHub Environment with required reviewer = ricardoafo.
-#   5. Drop a sealed .env.pro on the VPS at /srv/amg-pro/.env.pro (file mode 600).
-#   6. First run: `gh workflow run deploy-pro.yml` and approve in the pro Environment.
+# When a release-branch flow with `required_deployments: [pro]` is added
+# later, split this into two environments (`pro-approval` for the gate,
+# `pro` for the post-success marker on a confirm job). Single-env is the
+# right call until then.
+#
+# FAKE-PRO MODE (FEAT-057, current state):
+#   This workflow runs end-to-end against a fake-pro stack colocated on the
+#   tst VPS, behind a shared edge router. PRO_SSH_HOST/USER/KEY point at the
+#   tst VPS; PRO_DOMAIN = pro.<host>.sslip.io. See docs/runbooks/fake-pro-bootstrap.md.
+#
+# Bootstrap checklist for fake-pro (one-time, see runbook for detail):
+#   1. SSH to tst VPS, run the fake-pro-bootstrap runbook (creates amg_edge
+#      network, brings up edge + pro stacks).
+#   2. Create `pro` GitHub Environment (Settings → Environments → New):
+#        - Required reviewer: ricardoafo
+#        - Deployment branches and tags: Selected → main
+#   3. Add Environment secrets to the `pro` env (Settings → Environments →
+#      pro → Add environment secret):
+#        - PRO_SSH_KEY  = same value as TST_SSH_KEY
+#        - PRO_SSH_HOST = same value as TST_SSH_HOST
+#        - PRO_SSH_USER = same value as TST_SSH_USER
+#        - PRO_DOMAIN   = pro.<host>.sslip.io
+#   4. Drop sealed .env.pro on the VPS at /srv/amg-pro/.env.pro (mode 600).
+#   5. First run: `gh workflow run deploy-pro.yml` and approve in `pro`.
+#
+# REAL-PRO-DAY DELTA (when the real pro VPS arrives):
+#   - Flip PRO_SSH_HOST to the real pro host (other PRO_* secrets too).
+#   - Flip PRO_DOMAIN to the real prod domain.
+#   - Revert pro stack to standalone TLS: re-add caddy `ports: 80/443`,
+#     drop `amg_edge` network, re-enable `auto_https` in Caddyfile.pro.
+#   - Remove `pro.*` block from infra/Caddyfile.edge on tst VPS.
 
 on:
   release:
@@ -47,7 +66,10 @@ permissions:
 
 env:
   IMAGE_REPO: ghcr.io/ricardoafo-org/amg-saas-factory
-  PRO_BASE_URL: https://${{ secrets.PRO_DOMAIN }}
+# PRO_* secrets live on the `pro` Environment (Settings → Environments → pro
+# → Environment secrets). Only jobs with `environment: pro` can read them,
+# and the env's branch restriction means feature-branch / fork PR workflows
+# can't read them at all. Tighter blast radius than repo-level secrets.
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────
@@ -124,33 +146,21 @@ jobs:
           cache-to: type=gha,mode=max,scope=ops
 
   # ─────────────────────────────────────────────────────────────────────
-  # Approval gate — `pro` Environment requires an admin reviewer before
-  # this job can start. Configure reviewers in repo Settings → Environments → pro.
-  # ─────────────────────────────────────────────────────────────────────
-
-  approve-pro:
-    name: Approve pro deployment
-    needs: [build-runner, build-ops]
-    runs-on: ubuntu-latest
-    timeout-minutes: 1440  # up to 24h waiting for human approval
-    environment:
-      name: pro-approval
-      url: https://${{ secrets.PRO_DOMAIN }}
-    steps:
-      - name: Approval recorded
-        run: echo "Pro deployment approved by reviewer."
-
-  # ─────────────────────────────────────────────────────────────────────
-  # Deploy phase — sequential SSH steps, gated by approve-pro.
+  # Deploy phase — sequential SSH steps. The `pro` Environment on this
+  # job requires an admin reviewer before any step runs (configure in
+  # repo Settings → Environments → pro). One env, one gate, one marker.
   # ─────────────────────────────────────────────────────────────────────
 
   deploy-vps:
     name: Deploy to pro VPS
-    needs: approve-pro
+    needs: [build-runner, build-ops]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 1440  # up to 24h waiting for human approval before deploy
     permissions:
       contents: read
+    environment:
+      name: pro
+      url: https://${{ secrets.PRO_DOMAIN }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -232,6 +242,9 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+    environment:
+      name: pro
+      url: https://${{ secrets.PRO_DOMAIN }}
     steps:
       - name: Probe /api/health until commit matches deployed SHA
         env:
@@ -284,6 +297,9 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+    environment:
+      name: pro
+      url: https://${{ secrets.PRO_DOMAIN }}
     steps:
       - name: Run schema-contract integration test from ops image
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
@@ -305,6 +321,9 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    environment:
+      name: pro
+      url: https://${{ secrets.PRO_DOMAIN }}
     env:
       BASE_URL: https://${{ secrets.PRO_DOMAIN }}
     steps:
@@ -314,7 +333,7 @@ jobs:
       - name: Use Node.js 20
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -349,9 +368,10 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────────────────
-  # confirm-pro — the only job carrying `environment: pro`. Branch
-  # protection's `required_deployments: [pro]` (configured separately for
-  # release branches) gates next release on this aggregator going green.
+  # confirm-pro — plain aggregator. Single-env model: `pro` env recording
+  # already lives on deploy-vps. When release-branch flow with
+  # `required_deployments` is added later, move `environment: pro` here
+  # and add a separate `pro-approval` env on deploy-vps.
   # ─────────────────────────────────────────────────────────────────────
 
   confirm-pro:
@@ -361,9 +381,6 @@ jobs:
     timeout-minutes: 1
     permissions:
       contents: read
-    environment:
-      name: pro
-      url: https://${{ secrets.PRO_DOMAIN }}
     steps:
       - name: Confirm all gates green
         run: |

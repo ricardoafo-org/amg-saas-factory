@@ -2,9 +2,17 @@ name: CD
 
 # Continuous Deployment workflow.
 #
-# Today: auto-deploys to `tst` on every push to main.
-# Future: gains `deploy-pro` (release-tag triggered, manual approval gate) when
-# pre-pro env lands in PR 2.
+# Triggers on:
+#   - `merge_group` — runs against the merge queue's candidate commit BEFORE
+#     it merges, so branch protection's `required_deployments: [tst]` sees a
+#     real successful deployment for the candidate. This is what unblocks the
+#     queue (otherwise the rule would self-block: no merge → no deploy → no
+#     marker → no merge).
+#   - `push: main` — runs after the queue fast-forwards main. Same SHA as
+#     the candidate, so most steps are cache hits, but kept as belt-and-
+#     suspenders for the rare case of a direct push (admin override).
+#
+# Pro deploys live in deploy-pro.yml (release-tag or manual, human approval).
 #
 # Self-validating deploy (added 2026-04-28, ADR-015 + ADR-005-rev2):
 #   1. Builds runner + ops images IN PARALLEL (separate jobs, ~3 min wall-clock
@@ -19,11 +27,23 @@ name: CD
 #      marked successful only when ALL gates pass. Branch protection's
 #      `required_deployments: [tst]` rule then blocks the next PR's merge if any
 #      gate is red. No false-green deployment status.
+#
+# TST_* secrets live on the `tst` Environment (Settings → Environments → tst).
+# Jobs that read TST_SSH_* (deploy-vps, schema-contract-tst) carry
+# `environment: tst` so they can resolve env-scoped secrets. The env's `main`
+# branch restriction means feature-branch / fork-PR workflows can't read them.
 
 on:
   push:
     branches:
       - main
+  # Merge queue integration: when a PR enters the queue, GitHub creates a
+  # candidate commit (PR rebased on main + earlier queued PRs) and fires
+  # `merge_group`. We deploy that candidate to tst so the deployment marker
+  # registers BEFORE the queue merges. Branch protection's
+  # `required_deployments: [tst]` rule then evaluates against a real,
+  # successful candidate deployment instead of self-blocking forever.
+  merge_group:
 
 # Serialize deploys: if two PRs land back-to-back, the second waits for the
 # first to finish. cancel-in-progress=false because every commit on main MUST
@@ -126,6 +146,9 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    environment:
+      name: tst
+      url: https://tst.178-104-237-14.sslip.io
     steps:
       # Sync infra files from repo to /srv/amg/ on the VPS so any change to
       # compose / Caddyfile / Dockerfile.pocketbase auto-deploys. .env.tst is
@@ -270,6 +293,9 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+    environment:
+      name: tst
+      url: https://tst.178-104-237-14.sslip.io
     steps:
       # Runs vitest from the ops image (same SHA as the runner) inside the
       # compose network, so it talks to `pocketbase:8090` exactly like the
@@ -304,7 +330,7 @@ jobs:
       - name: Use Node.js 20
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies

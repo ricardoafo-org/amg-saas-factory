@@ -93,6 +93,9 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    environment:
+      name: tst
+      url: https://tst.178-104-237-14.sslip.io
     steps:
       - name: Pull dedupe image on VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5

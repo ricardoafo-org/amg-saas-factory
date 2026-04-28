@@ -2,15 +2,20 @@ services:
   caddy:
     image: caddy:2.8-alpine
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    # No host ports. The edge router (docker-compose.edge.yml) owns 80/443
+    # and reaches this caddy via the shared `amg_edge` network using the
+    # `tst-caddy` alias. See FEAT-057 / docs/runbooks/fake-pro-bootstrap.md.
+    expose:
+      - "80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    environment:
-      - TST_DOMAIN=${TST_DOMAIN}
+    networks:
+      default:
+      amg_edge:
+        aliases:
+          - tst-caddy
     depends_on:
       - app
 
@@ -38,6 +43,11 @@ services:
       - "8090"
     volumes:
       - pb_data:/pb/pb_data
+
+networks:
+  default:
+  amg_edge:
+    external: true
 
 volumes:
   caddy_data:

@@ -1,4 +1,19 @@
-{$TST_DOMAIN} {
+# Inner tst Caddy. HTTP-only (port 80). TLS is terminated upstream by the
+# edge router (Caddyfile.edge), which reverse-proxies here over the shared
+# `amg_edge` docker network using the `tst-caddy` alias.
+#
+# When tst becomes self-fronting again (e.g. dedicated VPS), revert this to
+# `{$TST_DOMAIN} {` and re-add `ports: 80/443` in docker-compose.tst.yml.
+
+{
+    auto_https off
+    servers {
+        # Trust X-Forwarded-* from private-range peers (the edge container).
+        trusted_proxies static private_ranges
+    }
+}
+
+:80 {
     encode zstd gzip
 
     # PocketBase admin UI is NOT publicly reachable.
