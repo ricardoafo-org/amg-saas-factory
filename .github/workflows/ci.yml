@@ -159,9 +159,15 @@ jobs:
         run: bash scripts/setup-pocketbase.sh
 
       - name: Boot PocketBase + create superuser
+        # Point PB at an empty migrations dir so it does NOT auto-apply the
+        # legacy pb_migrations/*.js — those hardcode env-specific collection
+        # IDs (pbc_1720224894 etc.) and crash on a fresh CI PB. Schema is
+        # applied below via scripts/apply-schema.ts (FEAT-052 source of truth).
+        # pb_migrations/ deletion is scheduled for Week 5 cutover.
         run: |
+          mkdir -p .pb-empty-migrations
           ./pocketbase superuser upsert "$PB_BOOTSTRAP_EMAIL" "$PB_BOOTSTRAP_PASSWORD"
-          ./pocketbase serve --http=127.0.0.1:8090 > pb.log 2>&1 &
+          ./pocketbase serve --http=127.0.0.1:8090 --migrationsDir=.pb-empty-migrations > pb.log 2>&1 &
           echo $! > pb.pid
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:8090/api/health >/dev/null 2>&1; then
