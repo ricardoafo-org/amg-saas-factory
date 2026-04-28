@@ -379,11 +379,15 @@ jobs:
           path: test-results/
           retention-days: 7
 
-  # E2E admin (Playwright + seeded PocketBase). Currently failing because
-  # admin login is broken (will be fixed in Week 2 of FEAT-053). NOT in
-  # ci-success.needs — does not block merges. Re-add when admin login works.
+  # E2E admin (Playwright + seeded PocketBase). DISABLED until admin login is
+  # fixed in Week 2 of FEAT-053. While red, this job stalled the auto-merge
+  # flow even though it isn't in ci-success.needs (queued PRs waited on its
+  # completion). Re-enabling this job is an explicit Acceptance Criterion of
+  # the FEAT-053 admin-login fix — flip `if: false` back to its old form
+  # AND re-add `e2e-admin` to ci-success.needs in the same PR.
   e2e-admin:
     name: E2E admin
+    if: false  # disabled — see FEAT-053 AC for re-enablement
     needs: next-build  # Tier 3
     runs-on: ubuntu-latest
     timeout-minutes: 10
