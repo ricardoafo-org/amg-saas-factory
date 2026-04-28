@@ -1,20 +1,49 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "ConsentLog",
+  "description": "Immutable LOPDGDD consent record. MUST be written BEFORE any other personal-data collection write (rubric F2). Hash anchors policy version to detect tampering.",
+  "x-pb-collection": {
+    "type": "base",
+    "name": "consent_log"
+  },
   "type": "object",
-  "required": ["tenant_id", "subject_email", "policy_version", "policy_hash", "consented", "consented_at", "form_context"],
+  "required": [
+    "tenant_id",
+    "subject_email",
+    "policy_version",
+    "policy_hash",
+    "consented",
+    "consented_at",
+    "form_context"
+  ],
   "properties": {
-    "id":             { "type": "string" },
-    "tenant_id":      { "type": "string" },
-    "subject_email":  { "type": "string", "format": "email" },
-    "policy_version": { "type": "string" },
-    "policy_hash":    { "type": "string", "minLength": 64, "maxLength": 64 },
-    "consented":      { "type": "boolean" },
-    "consented_at":   { "type": "string", "format": "date-time" },
-    "ip_address":     { "type": "string" },
-    "user_agent":     { "type": "string" },
-    "form_context":   { "type": "string" },
-    "created":        { "type": "string", "format": "date-time" },
-    "updated":        { "type": "string", "format": "date-time" }
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "subject_email": { "type": "string", "format": "email" },
+    "policy_version": { "type": "string", "minLength": 1, "maxLength": 30 },
+    "policy_hash": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "consented": { "type": "boolean" },
+    "consented_at": { "type": "string", "format": "date-time" },
+    "ip_address": { "type": "string", "maxLength": 45 },
+    "user_agent": { "type": "string", "maxLength": 500 },
+    "form_context": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE INDEX idx_consent_tenant_email ON consent_log (tenant_id, subject_email)",
+    "CREATE INDEX idx_consent_tenant_at ON consent_log (tenant_id, consented_at)"
+  ],
+  "x-pb-rules": {
+    "listRule": "tenant_id = @request.auth.tenant_id",
+    "viewRule": "tenant_id = @request.auth.tenant_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
   }
 }

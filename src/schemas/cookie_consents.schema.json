@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CookieConsent",
+  "description": "Cookie banner consent record (LSSI-CE / ePrivacy). Granular per-category booleans (analytics, marketing). Distinct from consent_log which records LOPDGDD personal-data consent.",
+  "x-pb-collection": {
+    "type": "base",
+    "name": "cookie_consents"
+  },
+  "type": "object",
+  "required": ["tenant_id"],
+  "properties": {
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "session_id": { "type": "string", "maxLength": 100 },
+    "analytics": { "type": "boolean" },
+    "marketing": { "type": "boolean" },
+    "consented_at": { "type": "string", "format": "date-time" },
+    "user_agent": { "type": "string", "maxLength": 500 },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE INDEX idx_cookie_tenant_session ON cookie_consents (tenant_id, session_id)",
+    "CREATE INDEX idx_cookie_tenant_at ON cookie_consents (tenant_id, consented_at)"
+  ],
+  "x-pb-rules": {
+    "listRule": "tenant_id = @request.auth.tenant_id",
+    "viewRule": "tenant_id = @request.auth.tenant_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
+  }
+}

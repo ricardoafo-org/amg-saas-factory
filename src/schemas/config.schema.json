@@ -1,14 +1,30 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Config",
+  "description": "Per-tenant key/value config. Source of truth for IVA rate, business name, and any other runtime-tunable value. Avoids hardcoded constants in components (rubric F6).",
+  "x-pb-collection": {
+    "type": "base",
+    "name": "config"
+  },
   "type": "object",
   "required": ["tenant_id", "key", "value"],
   "properties": {
-    "id":        { "type": "string" },
-    "tenant_id": { "type": "string" },
-    "key":       { "type": "string", "minLength": 1, "maxLength": 100 },
-    "value":     { "type": "string" },
-    "created":   { "type": "string", "format": "date-time" },
-    "updated":   { "type": "string", "format": "date-time" }
+    "id": { "type": "string" },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 50 },
+    "key": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "value": { "type": "string" },
+    "created": { "type": "string", "format": "date-time" },
+    "updated": { "type": "string", "format": "date-time" }
+  },
+  "x-pb-indexes": [
+    "CREATE INDEX idx_config_tenant ON config (tenant_id)",
+    "CREATE UNIQUE INDEX idx_config_tenant_key ON config (tenant_id, key)"
+  ],
+  "x-pb-rules": {
+    "listRule": "tenant_id = @request.auth.tenant_id",
+    "viewRule": "tenant_id = @request.auth.tenant_id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null
   }
 }
