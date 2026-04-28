@@ -68,6 +68,17 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Cache the Next.js incremental compile artifacts. Key on lockfile +
+      # source files: any code change creates a new cache; restore-key falls
+      # back to lockfile-only so npm-only bumps still hit a warm cache.
+      - name: Cache .next
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.{ts,tsx,js,jsx,css}') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            next-${{ runner.os }}-
       # `npm run build:docker` is `next build` only — skips schemas:sync (needs
       # PocketBase, not available in CI). Same command runs inside the deploy
       # Docker stage, so a green run here means tst will deploy.
@@ -542,18 +553,20 @@ jobs:
   # ============================================================
   # E2E
   # ============================================================
-  # E2E smoke (Playwright). Sharded 2× for parallelism (~8x on GH-hosted
-  # 4-CPU runners with workers=100% per shard). Runs tests/e2e/smoke.spec.ts
+  # E2E smoke (Playwright). Sharded 2× for parallelism. Runs tests/e2e/smoke.spec.ts
   # + tests/e2e/regression/.
   #
-  # Was 4 shards; dropped to 2 to halve the CI minute cost. Wall-clock
-  # impact is small because per-shard runtime is dominated by browser
-  # startup and `next-build` artifact handling, not test count.
+  # Runs inside the official Playwright container so browsers + system deps
+  # come pre-baked — skips ~30s of `playwright install` per shard. Container
+  # tag is pinned to the npm @playwright/test version; the skew-check step
+  # below fails CI if someone bumps the npm package without bumping the tag.
   e2e-smoke:
     name: E2E smoke (shard ${{ matrix.shard }}/2)
     needs: next-build  # Tier 3 — don't burn shards if build is broken
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright:v1.59.1-jammy
     strategy:
       fail-fast: false
       matrix:
@@ -565,18 +578,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Cache Playwright browsers
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
-        id: pw-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: pw-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-      - name: Install Playwright browsers
-        if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-      - name: Install Playwright system deps (cache hit)
-        if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+      # Skew guard: container tag must match the @playwright/test version in
+      # node_modules. Dependabot bumps package-lock.json weekly; if the tag
+      # falls behind, this fires on the next CI run and forces an explicit
+      # tag bump in the same PR. Single source of truth = node_modules.
+      - name: Verify Playwright container/npm version match
+        shell: bash
+        run: |
+          PKG_VERSION=$(node -p "require('@playwright/test/package.json').version")
+          EXPECTED_TAG="v${PKG_VERSION}-jammy"
+          ACTUAL_TAG="v1.59.1-jammy"
+          if [ "$EXPECTED_TAG" != "$ACTUAL_TAG" ]; then
+            echo "::error::Playwright npm version ($PKG_VERSION) does not match container tag ($ACTUAL_TAG)."
+            echo "Bump 'mcr.microsoft.com/playwright:$EXPECTED_TAG' in .github/workflows/ci.yml + deploy.yml + deploy-pro.yml."
+            exit 1
+          fi
       - name: Run smoke + regression suites
         run: |
           npx playwright test \
@@ -843,6 +859,37 @@ jobs:
         continue-on-error: true
 
   # ============================================================
+  # CodeQL — folded in from the deprecated default-setup workflow.
+  # ============================================================
+  # Runs on every PR + merge_group candidate; SARIF results upload to the
+  # Security tab. Replaces GitHub's hidden default-setup workflow that used
+  # to live at dynamic/github-code-scanning/codeql — disabled in repo
+  # settings as part of this PR.
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write  # upload SARIF
+      actions: read           # required by codeql-action for workflow-context
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, javascript-typescript]
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        with:
+          languages: ${{ matrix.language }}
+          # Default suite mirrors what the previous default setup was running.
+          queries: security-extended
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        with:
+          category: /language:${{ matrix.language }}
+
+  # ============================================================
   # Wrap-up — single required status check for branch protection
   # ============================================================
   # Status check aggregation pattern (GitHub-recommended for matrix builds
@@ -867,6 +914,7 @@ jobs:
       - test-deletion-guard
       - new-code-needs-test
       - e2e-smoke
+      - codeql
     if: always()
     runs-on: ubuntu-24.04
     steps:
