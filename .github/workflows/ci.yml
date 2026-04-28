@@ -690,7 +690,7 @@ jobs:
   auto-label:
     name: Auto-label PRs
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: write
@@ -705,7 +705,7 @@ jobs:
   pr-size:
     name: PR size
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: write
@@ -801,6 +801,42 @@ jobs:
                 comment_id: existing.id,
               });
             }
+
+  # Dependency review — blocks PRs that introduce dependencies with known
+  # high-severity vulnerabilities or incompatible licenses. Free for public
+  # repos. Skips on merge_group (already validated when PR was opened).
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  # Semgrep SAST — pattern-based static analysis with curated OSS rule packs.
+  # Complements CodeQL (semantic dataflow) with style + language-specific
+  # bug detection. Non-blocking initially (continue-on-error) so the first
+  # rollout doesn't drown the queue in legacy findings; tighten once the
+  # baseline is clean.
+  semgrep:
+    name: Semgrep SAST
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - name: Run semgrep ci
+        run: semgrep ci --config=p/default --config=p/javascript --config=p/typescript --config=p/owasp-top-ten --config=p/security-audit
+        continue-on-error: true
 
   # ============================================================
   # Wrap-up — single required status check for branch protection
