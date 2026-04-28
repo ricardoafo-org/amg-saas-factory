@@ -31,6 +31,12 @@ on:
   # Without this trigger, queued PRs hang forever waiting for a check that
   # never runs. See repo Settings → Branches → main → "Require merge queue".
   merge_group:
+  # OSSF Scorecard runs weekly + when branch protection changes. The
+  # `scorecard` job at the bottom is event-guarded; other CI jobs run too
+  # on these events as a free weekly main-is-still-green health check.
+  schedule:
+    - cron: '0 6 * * 1'  # Mondays 06:00 UTC
+  branch_protection_rule:
 
 permissions:
   contents: read  # least-privilege default; jobs that need more (security-gate) opt-in below
@@ -857,6 +863,47 @@ jobs:
       - name: Run semgrep ci
         run: semgrep ci --config=p/default --config=p/javascript --config=p/typescript --config=p/owasp-top-ten --config=p/security-audit
         continue-on-error: true
+
+  # ============================================================
+  # OSSF Scorecard — folded in from the deprecated scorecard.yml workflow.
+  # ============================================================
+  # Runs only on `schedule` (Mondays 06:00 UTC) and `branch_protection_rule`
+  # events — NOT on PR or merge_group, since OSSF measures repo-level
+  # supply-chain posture, not per-PR diffs. Findings publish as SARIF to
+  # the Security tab and as a public scorecard.dev badge.
+  scorecard:
+    name: OSSF Scorecard
+    if: github.event_name == 'schedule' || github.event_name == 'branch_protection_rule'
+    runs-on: ubuntu-24.04
+    permissions:
+      security-events: write  # upload SARIF to Code Scanning
+      id-token: write          # publish results to OpenSSF transparency log
+      contents: read           # analyze the repo
+      actions: read            # analyze workflow files
+    steps:
+      - name: Checkout
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload results artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      - name: Upload to GitHub code-scanning dashboard
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        with:
+          sarif_file: results.sarif
 
   # ============================================================
   # CodeQL — folded in from the deprecated default-setup workflow.
