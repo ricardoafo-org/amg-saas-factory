@@ -16,6 +16,7 @@ export default async function ReportsPage() {
 
   let bookings: Booking[] = [];
   try {
+    // eslint-disable-next-line no-restricted-syntax -- TODO Week 2 / FEAT-053: migrate to getReportRangeData() Server Action (ADR-014)
     const res = await pb.collection('appointments').getFullList({
       filter: pb.filter(
         'tenant_id = {:tenantId} && scheduled_at >= {:fromStr} && scheduled_at < {:toStr}',

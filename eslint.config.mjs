@@ -110,6 +110,52 @@ const eslintConfig = [
     },
   },
 
+  // ADR-014: pages and route handlers must NEVER touch PocketBase directly.
+  // The only API layer is Server Actions in src/actions/** (which call
+  // src/lib/pb.ts under the hood). This rule enforces that boundary at lint
+  // time so the four known bypass pages (Week 2 of the rebuild) cannot
+  // regrow elsewhere.
+  //
+  // What is forbidden:
+  //   - importing from '@/lib/pb' anywhere under src/app/**
+  //   - calling `.collection(...)` on any object under src/app/** (the
+  //     PocketBase-specific access pattern, reachable via getPb() or via
+  //     getStaffCtx().pb)
+  //
+  // The four known bypass call sites (settings, reports, quotes/[id],
+  // quotes/new) carry an explicit eslint-disable + a Week-2 migration TODO.
+  // Removing that disable comment is the migration acceptance signal.
+  {
+    files: ['src/app/**/*.{ts,tsx}'],
+    ignores: [
+      'src/app/**/__tests__/**',
+      'src/app/**/*.{test,spec}.{ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/lib/pb', '@/lib/pb/*'],
+              message:
+                'ADR-014: pages and route handlers must not import PocketBase directly. Call a Server Action from src/actions/** instead.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "CallExpression[callee.type='MemberExpression'][callee.property.name='collection']",
+          message:
+            'ADR-014: pages must not call PocketBase .collection(...) directly. Use a Server Action from src/actions/**.',
+        },
+      ],
+    },
+  },
+
   // Test files — keep strict on real bugs (unused vars, empty types) but
   // relax patterns that are legitimate test ergonomics:
   //   - `foo!.bar` non-null assertions are common when asserting on mocked

@@ -8,6 +8,7 @@ export default async function NewQuotePage() {
 
   let ivaRate = 0;
   try {
+    // eslint-disable-next-line no-restricted-syntax -- TODO Week 2 / FEAT-053: migrate to getQuoteContext() Server Action (ADR-014)
     const config = await pb
       .collection('config')
       .getFirstListItem(
