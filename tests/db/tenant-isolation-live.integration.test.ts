@@ -44,11 +44,16 @@ async function pbReq<T = unknown>(
   urlPath: string,
   body?: unknown,
   token?: string,
-): Promise<{ status: number; body: T; raw: string }> {
+): Promise<{ status: number; body: T; raw: string; headers: Record<string, string> }> {
   const res = await fetch(`${PB_URL}${urlPath}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
+      // Force-close the connection so undici cannot silently reuse a half-broken
+      // pooled socket between requests. Hit a CI-only ghost where appointment
+      // POST returned 200+empty after staff POST; isolating the connection per
+      // request rules out keep-alive state as the cause.
+      Connection: 'close',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
@@ -61,7 +66,11 @@ async function pbReq<T = unknown>(
   } catch {
     parsed = undefined;
   }
-  return { status: res.status, body: parsed as T, raw };
+  const headers: Record<string, string> = {};
+  res.headers.forEach((v, k) => {
+    headers[k] = v;
+  });
+  return { status: res.status, body: parsed as T, raw, headers };
 }
 
 function isCreated<T extends { id?: string }>(res: { status: number; body: T; raw: string }): boolean {
@@ -190,8 +199,8 @@ async function setup(): Promise<boolean> {
   if (!isCreated(aptA) || !isCreated(aptB)) {
     console.warn(
       `[tenant-isolation-live] appointment seed failed — suite will skip\n` +
-        `  a=${aptA.status} body=${aptA.raw.slice(0, 600)}\n` +
-        `  b=${aptB.status} body=${aptB.raw.slice(0, 600)}`,
+        `  a=${aptA.status} headers=${JSON.stringify(aptA.headers)} body=${aptA.raw.slice(0, 600)}\n` +
+        `  b=${aptB.status} headers=${JSON.stringify(aptB.headers)} body=${aptB.raw.slice(0, 600)}`,
     );
     return false;
   }

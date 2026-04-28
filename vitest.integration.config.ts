@@ -20,6 +20,17 @@ export default defineConfig({
     exclude: ['node_modules/**'],
     testTimeout: 15_000,
     hookTimeout: 15_000,
+    // Run integration files in serial child processes. Threads share Node's
+    // global undici fetch agent + connection pool; on CI Linux that produced
+    // a 200+empty appointment POST after schema-contract's reads had warmed
+    // the pool. singleFork serializes files so the live PB sees one client
+    // at a time and we don't have to debug pool contention.
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
   },
   resolve: {
     alias: {
