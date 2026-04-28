@@ -1,0 +1,68 @@
+name: Dedupe config (BUG-017)
+
+# One-shot, manual-trigger-only workflow that runs scripts/dedupe-config.ts
+# against tst PB. DESTRUCTIVE: deletes duplicate (tenant_id, key) rows.
+#
+# Required input `confirm` must be the literal string `dedupe-tst` to run.
+# This is the only safety mechanism — the workflow is gated to ricardoafo by
+# repo permissions, but the confirm string makes accidental clicks impossible.
+#
+# Trigger:
+#   GitHub UI → Actions → Dedupe config (BUG-017) → Run workflow
+#   Inputs:
+#     confirm = "dedupe-tst"
+#     mode    = "dry-run" (default — reports what would be deleted) | "apply"
+#
+# Once tst is clean and the next CD run goes green end-to-end, this workflow
+# and scripts/dedupe-config.ts can be deleted in a follow-up PR.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "dedupe-tst" to confirm.'
+        required: true
+        type: string
+      mode:
+        description: 'Run mode'
+        required: true
+        default: 'dry-run'
+        type: choice
+        options:
+          - dry-run
+          - apply
+
+permissions:
+  contents: read
+
+jobs:
+  dedupe:
+    name: Run dedupe-config.ts on tst
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify confirmation token
+        run: |
+          if [ "${{ inputs.confirm }}" != "dedupe-tst" ]; then
+            echo "::error::confirm input must be the literal string 'dedupe-tst'"
+            exit 1
+          fi
+          echo "Confirmation accepted. Mode: ${{ inputs.mode }}"
+
+      - name: Run dedupe-config.ts via ops image inside compose network
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.TST_SSH_HOST }}
+          username: ${{ secrets.TST_SSH_USER }}
+          key: ${{ secrets.TST_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            FLAG=""
+            if [ "${{ inputs.mode }}" = "apply" ]; then
+              FLAG="--apply"
+            fi
+            docker run --rm \
+              --network amg_default \
+              --env-file /srv/amg/.env.tst \
+              ghcr.io/ricardoafo-org/amg-saas-factory:tst-ops \
+              npx tsx scripts/dedupe-config.ts $FLAG

@@ -44,6 +44,11 @@ const eslintConfig = [
       // flat config does not read .gitignore so we mirror it here.
       'tmp/**',
 
+      // Personal AI tooling per ADR-013 — agents, hooks, rules, skills live
+      // off-repo. Any local scratch under `.claude/` (hooks, settings, etc.)
+      // is not project source and must not be linted.
+      '.claude/**',
+
       // PWA service-worker bundles produced by next-pwa. Minified, vendored.
       'public/sw.js',
       'public/swe-worker-*.js',

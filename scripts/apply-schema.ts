@@ -28,6 +28,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import {
+  findDuplicateTuples,
+  parseUniqueIndexColumns,
+} from './lib/unique-precheck';
+
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
@@ -512,6 +517,54 @@ async function main() {
   }
 
   console.log(`\nSummary: ${drifts} drift(s), ${destructive} destructive.`);
+
+  // Pre-check: for every NEW UNIQUE index targeting an existing collection,
+  // verify the live data does not already contain duplicate tuples on the
+  // unique columns. PB returns SQLite error 2067 in that case — surface an
+  // actionable error here before the request is fired (BUG-017).
+  let uniqueConflicts = 0;
+  for (const { schema, diff } of diffs) {
+    if (!diff.exists || diff.indexDiffs.add.length === 0) continue;
+    for (const sql of diff.indexDiffs.add) {
+      const parsed = parseUniqueIndexColumns(sql);
+      if (!parsed) continue;
+      const colName = schema['x-pb-collection'].name;
+      const fields = parsed.columns.join(',');
+      const recs = await pbRequest<{ items: Record<string, unknown>[] }>(
+        'GET',
+        `/api/collections/${colName}/records?perPage=500&fields=id,${fields}`,
+        undefined,
+        token,
+      );
+      if (recs.status !== 200) {
+        console.error(
+          `Pre-check failed: cannot read records on ${colName} (${recs.status}).`,
+        );
+        process.exit(2);
+      }
+      const dups = findDuplicateTuples(recs.body.items || [], parsed.columns);
+      if (dups.length > 0) {
+        uniqueConflicts++;
+        console.error(
+          `\nUNIQUE-INDEX CONFLICT on ${colName} (${parsed.columns.join(', ')}):`,
+        );
+        for (const d of dups) {
+          console.error(
+            `  tuple (${d.tuple.join(', ')}) appears ${d.recordIds.length}× — ids: ${d.recordIds.join(', ')}`,
+          );
+        }
+      }
+    }
+  }
+  if (uniqueConflicts > 0) {
+    console.error(
+      `\n${uniqueConflicts} UNIQUE-index conflict(s). The existing data must be deduped before this index can be created.`,
+    );
+    console.error(
+      'For BUG-017 (config(tenant_id, key)): run scripts/dedupe-config.ts via the dedupe-config workflow.',
+    );
+    process.exit(1);
+  }
 
   if (destructive > 0 && !ALLOW_DESTRUCTIVE) {
     console.error('Refusing to apply destructive changes. Re-run with --allow-destructive.');
