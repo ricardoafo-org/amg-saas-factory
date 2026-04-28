@@ -27,10 +27,15 @@ name: CD pro
 # Bootstrap checklist for fake-pro (one-time, see runbook for detail):
 #   1. SSH to tst VPS, run the fake-pro-bootstrap runbook (creates amg_edge
 #      network, brings up edge + pro stacks).
-#   2. Push secrets: PRO_SSH_KEY=TST_SSH_KEY, PRO_SSH_HOST=TST_SSH_HOST,
-#      PRO_SSH_USER=TST_SSH_USER, PRO_DOMAIN=pro.<host>.sslip.io.
-#   3. Create `pro` GitHub Environment with required reviewer = ricardoafo
-#      and deployment branch restriction to `main`.
+#   2. Create `pro` GitHub Environment (Settings → Environments → New):
+#        - Required reviewer: ricardoafo
+#        - Deployment branches and tags: Selected → main
+#   3. Add Environment secrets to the `pro` env (Settings → Environments →
+#      pro → Add environment secret):
+#        - PRO_SSH_KEY  = same value as TST_SSH_KEY
+#        - PRO_SSH_HOST = same value as TST_SSH_HOST
+#        - PRO_SSH_USER = same value as TST_SSH_USER
+#        - PRO_DOMAIN   = pro.<host>.sslip.io
 #   4. Drop sealed .env.pro on the VPS at /srv/amg-pro/.env.pro (mode 600).
 #   5. First run: `gh workflow run deploy-pro.yml` and approve in `pro`.
 #
@@ -61,7 +66,10 @@ permissions:
 
 env:
   IMAGE_REPO: ghcr.io/ricardoafo-org/amg-saas-factory
-  PRO_BASE_URL: https://${{ secrets.PRO_DOMAIN }}
+# PRO_* secrets live on the `pro` Environment (Settings → Environments → pro
+# → Environment secrets). Only jobs with `environment: pro` can read them,
+# and the env's branch restriction means feature-branch / fork PR workflows
+# can't read them at all. Tighter blast radius than repo-level secrets.
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────
@@ -234,6 +242,9 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+    environment:
+      name: pro
+      url: https://${{ secrets.PRO_DOMAIN }}
     steps:
       - name: Probe /api/health until commit matches deployed SHA
         env:
@@ -286,6 +297,9 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+    environment:
+      name: pro
+      url: https://${{ secrets.PRO_DOMAIN }}
     steps:
       - name: Run schema-contract integration test from ops image
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
@@ -307,6 +321,9 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    environment:
+      name: pro
+      url: https://${{ secrets.PRO_DOMAIN }}
     env:
       BASE_URL: https://${{ secrets.PRO_DOMAIN }}
     steps:

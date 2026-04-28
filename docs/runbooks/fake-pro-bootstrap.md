@@ -193,20 +193,22 @@ docker compose -f /srv/amg-pro/docker-compose.pro.yml --env-file /srv/amg-pro/.e
 
 ## Step 7 — Wire GitHub secrets for `deploy-pro.yml`
 
-In the repo, set the following Actions secrets (admin-scoped):
+Create the `pro` GitHub Environment under **Settings → Environments → New environment**:
+
+- Name: `pro`
+- Required reviewers: `ricardoafo`
+- Deployment branches and tags: "Selected branches and tags" → add `main`
+
+Then add Environment secrets (Settings → Environments → pro → **Add environment secret**, NOT repository secrets):
 
 - `PRO_SSH_HOST` = same value as `TST_SSH_HOST` (fake-pro is colocated)
 - `PRO_SSH_USER` = same value as `TST_SSH_USER`
 - `PRO_SSH_KEY`  = same value as `TST_SSH_KEY`
 - `PRO_DOMAIN`   = `pro.178-104-237-14.sslip.io`
 
-Create the `pro` GitHub Environment under **Settings → Environments**:
+Why env-scoped, not repo-scoped: only jobs with `environment: pro` can read these secrets, and the env's `main`-branch restriction means feature-branch / fork PR workflows can't read them at all. Tighter blast radius. The deploy-pro.yml workflow has `environment: pro` on every job that needs PRO_* (deploy-vps, health-check-pro, schema-contract-pro, smoke-pro). Reviewer prompts once per workflow run.
 
-- Name: `pro`
-- Required reviewers: `ricardoafo`
-- Deployment branches and tags: "Selected branches and tags" → add `main`
-
-This is the single env: reviewer gates the `deploy-vps` job; the same env records the deployment on success. When a release-branch flow with `required_deployments: [pro]` is added later, split into `pro-approval` (gate) + `pro` (marker on a separate confirm job).
+Single-env model: the `pro` env both gates the deploy (reviewer) and records the deployment on success. When a release-branch flow with `required_deployments: [pro]` is added later, split into `pro-approval` (gate) + `pro` (marker on a separate confirm job).
 
 First end-to-end test:
 
