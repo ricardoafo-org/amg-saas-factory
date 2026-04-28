@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit — fast local feedback before commit.
+# Activate once per clone with: npm run hooks:install
+# Bypass (emergencies only — leaves audit trail): git commit --no-verify
+
+set -e
+
+echo "Running pre-commit checks..."
+
+echo "  [1/3] Type check..."
+npm run type-check
+
+echo "  [2/3] Lint (zero warnings allowed)..."
+npm run lint
+
+echo "  [3/3] Unit tests..."
+npm test -- --run
+
+echo "Pre-commit checks passed."

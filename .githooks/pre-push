@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# .githooks/pre-push — last-line defense before code leaves the laptop.
+# Activate once per clone with: npm run hooks:install
+# Bypass (emergencies only): git push --no-verify
+
+set -e
+
+# Skip on force-push of a delete (we are removing the branch upstream).
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [[ "$local_sha" == "0000000000000000000000000000000000000000" ]]; then
+    exit 0
+  fi
+done
+
+echo "Running pre-push checks..."
+
+echo "  [1/2] Security gate (deterministic checks)..."
+bash scripts/ci-security-gate.sh
+
+echo "  [2/2] Integration tests (PocketBase) — only if PB reachable..."
+PB_URL="${POCKETBASE_URL:-http://127.0.0.1:8090}"
+if curl --silent --fail --max-time 2 "${PB_URL}/api/health" > /dev/null 2>&1; then
+  npm run test:integration -- --run
+else
+  echo "    PocketBase not reachable at ${PB_URL} — skipped (CI will run them)."
+fi
+
+echo "Pre-push checks passed."

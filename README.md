@@ -13,6 +13,7 @@ Multi-tenant workshop management platform built on Next.js 15, PocketBase, and T
 
 ```bash
 npm install
+npm run hooks:install # Activate .githooks (pre-commit + pre-push)
 npm run pb:serve      # PocketBase at :8090
 npm run dev           # Next.js at :3000
 ```
