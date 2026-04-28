@@ -200,16 +200,19 @@ In the repo, set the following Actions secrets (admin-scoped):
 - `PRO_SSH_KEY`  = same value as `TST_SSH_KEY`
 - `PRO_DOMAIN`   = `pro.178-104-237-14.sslip.io`
 
-Create the `pro` and `pro-approval` GitHub Environments under **Settings → Environments**:
+Create the `pro` GitHub Environment under **Settings → Environments**:
 
-- `pro-approval`: required reviewer = ricardoafo (gates the deploy job).
-- `pro`: no reviewers needed; this is the final aggregator that gates branch-protection's `required_deployments`.
+- Name: `pro`
+- Required reviewers: `ricardoafo`
+- Deployment branches and tags: "Selected branches and tags" → add `main`
+
+This is the single env: reviewer gates the `deploy-vps` job; the same env records the deployment on success. When a release-branch flow with `required_deployments: [pro]` is added later, split into `pro-approval` (gate) + `pro` (marker on a separate confirm job).
 
 First end-to-end test:
 
 ```bash
 gh workflow run deploy-pro.yml
-# approve in the pro-approval Environment when prompted
+# approve in the pro Environment when prompted
 gh run watch
 ```
 

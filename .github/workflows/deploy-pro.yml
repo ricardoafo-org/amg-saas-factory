@@ -4,15 +4,20 @@ name: CD pro
 #
 # Mirrors deploy.yml (tst) gate-for-gate so a release on pro provides the
 # same correctness signal as a deploy on tst:
-#   build-runner + build-ops (parallel) → snapshot → apply schema → swap →
-#   health-check → schema-contract → smoke → confirm-pro
+#   build-runner + build-ops (parallel) → deploy-vps (gated by `pro` env
+#   reviewer approval) → health-check → schema-contract → smoke → confirm-pro
 #
 # The ONLY differences vs tst:
 #   - Trigger is manual or release tag, not push to main.
-#   - confirm-pro carries `environment: pro`, which (once the Environment is
+#   - deploy-vps carries `environment: pro`, which (once the Environment is
 #     configured in repo settings) requires admin reviewer approval before
 #     the deploy job can start AND shows up under Deployments → pro.
 #   - SSH targets use PRO_* secrets and /srv/amg-pro/ paths.
+#
+# When a release-branch flow with `required_deployments: [pro]` is added
+# later, split this into two environments (`pro-approval` for the gate,
+# `pro` for the post-success marker on a confirm job). Single-env is the
+# right call until then.
 #
 # FAKE-PRO MODE (FEAT-057, current state):
 #   This workflow runs end-to-end against a fake-pro stack colocated on the
@@ -24,10 +29,10 @@ name: CD pro
 #      network, brings up edge + pro stacks).
 #   2. Push secrets: PRO_SSH_KEY=TST_SSH_KEY, PRO_SSH_HOST=TST_SSH_HOST,
 #      PRO_SSH_USER=TST_SSH_USER, PRO_DOMAIN=pro.<host>.sslip.io.
-#   3. Create `pro-approval` GitHub Environment with required reviewer = ricardoafo.
-#   4. Create `pro` GitHub Environment (no reviewers; gates branch protection).
-#   5. Drop sealed .env.pro on the VPS at /srv/amg-pro/.env.pro (mode 600).
-#   6. First run: `gh workflow run deploy-pro.yml` and approve in pro-approval.
+#   3. Create `pro` GitHub Environment with required reviewer = ricardoafo
+#      and deployment branch restriction to `main`.
+#   4. Drop sealed .env.pro on the VPS at /srv/amg-pro/.env.pro (mode 600).
+#   5. First run: `gh workflow run deploy-pro.yml` and approve in `pro`.
 #
 # REAL-PRO-DAY DELTA (when the real pro VPS arrives):
 #   - Flip PRO_SSH_HOST to the real pro host (other PRO_* secrets too).
@@ -133,33 +138,21 @@ jobs:
           cache-to: type=gha,mode=max,scope=ops
 
   # ─────────────────────────────────────────────────────────────────────
-  # Approval gate — `pro` Environment requires an admin reviewer before
-  # this job can start. Configure reviewers in repo Settings → Environments → pro.
-  # ─────────────────────────────────────────────────────────────────────
-
-  approve-pro:
-    name: Approve pro deployment
-    needs: [build-runner, build-ops]
-    runs-on: ubuntu-latest
-    timeout-minutes: 1440  # up to 24h waiting for human approval
-    environment:
-      name: pro-approval
-      url: https://${{ secrets.PRO_DOMAIN }}
-    steps:
-      - name: Approval recorded
-        run: echo "Pro deployment approved by reviewer."
-
-  # ─────────────────────────────────────────────────────────────────────
-  # Deploy phase — sequential SSH steps, gated by approve-pro.
+  # Deploy phase — sequential SSH steps. The `pro` Environment on this
+  # job requires an admin reviewer before any step runs (configure in
+  # repo Settings → Environments → pro). One env, one gate, one marker.
   # ─────────────────────────────────────────────────────────────────────
 
   deploy-vps:
     name: Deploy to pro VPS
-    needs: approve-pro
+    needs: [build-runner, build-ops]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 1440  # up to 24h waiting for human approval before deploy
     permissions:
       contents: read
+    environment:
+      name: pro
+      url: https://${{ secrets.PRO_DOMAIN }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -358,9 +351,10 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────────────────
-  # confirm-pro — the only job carrying `environment: pro`. Branch
-  # protection's `required_deployments: [pro]` (configured separately for
-  # release branches) gates next release on this aggregator going green.
+  # confirm-pro — plain aggregator. Single-env model: `pro` env recording
+  # already lives on deploy-vps. When release-branch flow with
+  # `required_deployments` is added later, move `environment: pro` here
+  # and add a separate `pro-approval` env on deploy-vps.
   # ─────────────────────────────────────────────────────────────────────
 
   confirm-pro:
@@ -370,9 +364,6 @@ jobs:
     timeout-minutes: 1
     permissions:
       contents: read
-    environment:
-      name: pro
-      url: https://${{ secrets.PRO_DOMAIN }}
     steps:
       - name: Confirm all gates green
         run: |
