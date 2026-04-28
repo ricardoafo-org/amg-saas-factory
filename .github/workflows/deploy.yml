@@ -2,10 +2,23 @@ name: CD
 
 # Continuous Deployment workflow.
 #
-# Today: auto-deploys to `tst` environment on every push to main.
-# Future: will gain `deploy-pro` job (gated by GitHub Environment `pro`
-# with required-reviewers + release-tag trigger). See
-# docs/decisions/2026-04-27-production-cd-plan.md for the target shape.
+# Today: auto-deploys to `tst` on every push to main.
+# Future: gains `deploy-pro` (release-tag triggered, manual approval gate) when
+# pre-pro env lands in PR 2.
+#
+# Self-validating deploy (added 2026-04-28, ADR-015 + ADR-005-rev2):
+#   1. Builds runner + ops images IN PARALLEL (separate jobs, ~3 min wall-clock
+#      vs ~6 min sequential).
+#   2. Snapshots pb_data BEFORE schema apply (rollback safety, 14-snapshot retention).
+#   3. Applies schema idempotently from the ops image inside the compose network,
+#      BEFORE container swap. Same SHA drives schema and runtime — version-locked.
+#   4. Post-deploy gates: health check (5s × 24 polling), schema contract test
+#      (vitest from ops image inside compose network), smoke spec (Playwright on
+#      runner against public URL with browser cache).
+#   5. `confirm-tst` aggregator carries `environment: tst` — deployment status is
+#      marked successful only when ALL gates pass. Branch protection's
+#      `required_deployments: [tst]` rule then blocks the next PR's merge if any
+#      gate is red. No false-green deployment status.
 
 on:
   push:
@@ -13,35 +26,36 @@ on:
       - main
 
 # Serialize deploys: if two PRs land back-to-back, the second waits for the
-# first to finish before building+pushing+SSH'ing. cancel-in-progress=false
-# because every commit on main MUST land on tst (no skipping intermediate
-# revisions). The PR gate already ran type-check + next-build + tests, so
-# we no longer duplicate the smoke step here.
+# first to finish. cancel-in-progress=false because every commit on main MUST
+# land on tst (no skipping intermediate revisions).
 concurrency:
   group: deploy-tst
   cancel-in-progress: false
 
 permissions:
   contents: read
-  packages: write
+
+env:
+  IMAGE_REPO: ghcr.io/ricardoafo-org/amg-saas-factory
+  TST_BASE_URL: https://tst.178-104-237-14.sslip.io
 
 jobs:
-  deploy-tst:
-    name: Deploy to tst
-    runs-on: ubuntu-latest
-    # Tracks this deploy under the `tst` GitHub Environment.
-    # Gives the merge queue a "tst deployment must succeed" gate via
-    # branch protection's "Require deployments to succeed before merging"
-    # — when enabled, no new PR can merge until the previous merge's
-    # tst deploy completes successfully. Catches breakage before it
-    # cascades through main.
-    environment:
-      name: tst
-      url: https://tst.178-104-237-14.sslip.io
+  # ─────────────────────────────────────────────────────────────────────
+  # Build phase — runner + ops images build in parallel.
+  # Both stages share the deps layer cache so the second build is mostly
+  # cache hits. End-to-end wall clock ~3 min vs ~6 min sequential.
+  # ─────────────────────────────────────────────────────────────────────
 
+  build-runner:
+    name: Build runner image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Log in to GHCR
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
@@ -53,19 +67,133 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
 
-      - name: Build and push image
+      - name: Build and push runner image
         uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
         with:
           context: .
+          target: runner
           push: true
           tags: |
-            ghcr.io/ricardoafo-org/amg-saas-factory:tst
-            ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}
+            ${{ env.IMAGE_REPO }}:tst
+            ${{ env.IMAGE_REPO }}:sha-${{ github.sha }}
           build-args: |
             NEXT_PUBLIC_COMMIT_SHA=${{ github.sha }}
             TENANT_ID=talleres-amg
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=runner
+          cache-to: type=gha,mode=max,scope=runner
+
+  build-ops:
+    name: Build ops image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Log in to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+
+      - name: Build and push ops image
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        with:
+          context: .
+          target: ops
+          push: true
+          tags: |
+            ${{ env.IMAGE_REPO }}:tst-ops
+            ${{ env.IMAGE_REPO }}:sha-${{ github.sha }}-ops
+          cache-from: type=gha,scope=ops
+          cache-to: type=gha,mode=max,scope=ops
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Deploy phase — sequential SSH steps. Depends on both builds completing.
+  # ─────────────────────────────────────────────────────────────────────
+
+  deploy-vps:
+    name: Deploy to VPS
+    needs: [build-runner, build-ops]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # Sync infra files from repo to /srv/amg/ on the VPS so any change to
+      # compose / Caddyfile / Dockerfile.pocketbase auto-deploys. .env.tst is
+      # NOT synced — secrets live on the VPS only.
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Sync infra files to VPS
+        env:
+          SSH_KEY: ${{ secrets.TST_SSH_KEY }}
+          SSH_HOST: ${{ secrets.TST_SSH_HOST }}
+          SSH_USER: ${{ secrets.TST_SSH_USER }}
+        run: |
+          set -euo pipefail
+          KEY_FILE=$(mktemp)
+          trap 'rm -f $KEY_FILE' EXIT
+          echo "$SSH_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+          scp -i "$KEY_FILE" -o StrictHostKeyChecking=accept-new \
+            infra/docker-compose.tst.yml \
+            infra/Caddyfile \
+            infra/Dockerfile.pocketbase \
+            "$SSH_USER@$SSH_HOST:/srv/amg/"
+
+      # Snapshot pb_data BEFORE any schema mutation (rollback insurance).
+      # 14-snapshot retention.
+      - name: Snapshot PocketBase data dir
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.TST_SSH_HOST }}
+          username: ${{ secrets.TST_SSH_USER }}
+          key: ${{ secrets.TST_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            TS=$(date -u +%Y%m%dT%H%M%SZ)
+            mkdir -p /home/deploy/pb-snapshots
+            docker run --rm \
+              -v amg_pb_data:/source:ro \
+              -v /home/deploy/pb-snapshots:/dest \
+              alpine:3 \
+              tar czf /dest/pb-${TS}.tar.gz -C /source .
+            ls -1t /home/deploy/pb-snapshots/pb-*.tar.gz | tail -n +15 | xargs -r rm
+            ls -lh /home/deploy/pb-snapshots/pb-${TS}.tar.gz
+
+      # Pull ops image once so apply + schema-contract reuse the local copy.
+      - name: Pull ops image on VPS
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.TST_SSH_HOST }}
+          username: ${{ secrets.TST_SSH_USER }}
+          key: ${{ secrets.TST_SSH_KEY }}
+          script: |
+            docker pull ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}-ops
+
+      # Idempotent schema apply BEFORE container swap. apply-schema.ts exits 0
+      # when in sync; non-zero on drift unless --allow-destructive (never from CI).
+      - name: Apply schema to tst PB
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.TST_SSH_HOST }}
+          username: ${{ secrets.TST_SSH_USER }}
+          key: ${{ secrets.TST_SSH_KEY }}
+          script: |
+            docker run --rm \
+              --network amg_default \
+              --env-file /srv/amg/.env.tst \
+              ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}-ops \
+              npx tsx scripts/apply-schema.ts
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
@@ -73,47 +201,39 @@ jobs:
           host: ${{ secrets.TST_SSH_HOST }}
           username: ${{ secrets.TST_SSH_USER }}
           key: ${{ secrets.TST_SSH_KEY }}
-          # Host key pinning intentionally disabled for tst:
-          # the appleboy/ssh-action `fingerprint` input expects an SSH key
-          # fingerprint (SHA256:...), but the secret we have contains
-          # known_hosts file lines — wrong format for this parameter.
-          # Track proper host pinning as a pro-only follow-up before pro launch.
+          # Host key pinning intentionally disabled for tst — track proper pinning
+          # as a pro-only follow-up.
           script: /home/deploy/deploy-tst.sh sha-${{ github.sha }}
 
-  # Post-deploy health check — verifies the new image actually came up and
-  # is serving the commit we just shipped. Catches failures the static gates
-  # can't see: bad env vars, PocketBase unreachable, container crashloop,
-  # rollback that didn't trigger. /api/health returns the build-time
-  # NEXT_PUBLIC_COMMIT_SHA, so commit mismatch = stale container = red gate.
-  #
-  # NOTE: /api/health alone is too shallow — it has no app dependencies, so
-  # an SSR error or hydration crash on `/` won't fail it. We also probe `/`
-  # for SSR markers (length + brand text). For full hydration coverage we
-  # need Playwright against deployed tst — tracked separately.
+  # ─────────────────────────────────────────────────────────────────────
+  # Post-deploy gate phase. Each gate runs in parallel (where safe) and
+  # feeds into confirm-tst, which carries `environment: tst` so the
+  # deployment status reflects ALL gates passing.
+  # ─────────────────────────────────────────────────────────────────────
+
   health-check-tst:
     name: Health check tst
-    needs: deploy-tst
+    needs: deploy-vps
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    env:
-      TST_BASE_URL: https://tst.178-104-237-14.sslip.io
+    permissions:
+      contents: read
     steps:
       - name: Probe /api/health until commit matches deployed SHA
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          # Container can take 20-40s to come up after docker compose up -d.
-          # Try for ~2 minutes with 10s spacing — total 12 attempts.
-          for attempt in $(seq 1 12); do
-            echo "Attempt ${attempt}/12 — GET ${TST_BASE_URL}/api/health"
+          # Tighter polling (5s × 24) per ADR-015 speed wins. Same 2-min ceiling,
+          # better detection granularity (avg ~5s faster than 10s × 12).
+          for attempt in $(seq 1 24); do
+            echo "Attempt ${attempt}/24 — GET ${TST_BASE_URL}/api/health"
             response=$(curl --silent --show-error --max-time 10 "${TST_BASE_URL}/api/health" || true)
             if [ -z "${response}" ]; then
               echo "  no response yet"
-              sleep 10
+              sleep 5
               continue
             fi
-            echo "  body: ${response}"
             ok=$(echo "${response}" | jq -r '.ok // false')
             commit=$(echo "${response}" | jq -r '.commit // "missing"')
             if [ "${ok}" = "true" ] && [ "${commit}" = "${EXPECTED_SHA}" ]; then
@@ -121,9 +241,9 @@ jobs:
               exit 0
             fi
             echo "  ok=${ok} commit=${commit} (expected ${EXPECTED_SHA}) — retrying"
-            sleep 10
+            sleep 5
           done
-          echo "Health check failed after 12 attempts. Container did not converge on ${EXPECTED_SHA}."
+          echo "Health check failed after 24 attempts. Container did not converge on ${EXPECTED_SHA}."
           exit 1
 
       - name: Probe homepage SSR (catches render errors /api/health misses)
@@ -142,3 +262,108 @@ jobs:
             exit 1
           fi
           echo "Homepage SSR OK (${bytes} bytes, brand marker present)."
+
+  schema-contract-tst:
+    name: Schema contract test (tst)
+    needs: [deploy-vps, health-check-tst]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # Runs vitest from the ops image (same SHA as the runner) inside the
+      # compose network, so it talks to `pocketbase:8090` exactly like the
+      # app does. This is the gate that would have caught the 2026-04-26
+      # SEV-1 (`availability_slots` empty schema on tst).
+      - name: Run schema-contract integration test from ops image
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.TST_SSH_HOST }}
+          username: ${{ secrets.TST_SSH_USER }}
+          key: ${{ secrets.TST_SSH_KEY }}
+          script: |
+            docker run --rm \
+              --network amg_default \
+              --env-file /srv/amg/.env.tst \
+              ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}-ops \
+              npx vitest run --config vitest.integration.config.ts tests/db/schema-contract.integration.test.ts
+
+  smoke-tst:
+    name: Smoke test against tst URL
+    needs: [deploy-vps, health-check-tst]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      BASE_URL: https://tst.178-104-237-14.sslip.io
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Cache Playwright browsers — saves ~1-2 min vs always reinstalling.
+      # Key on package-lock.json so cache invalidates on Playwright version bump.
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browser (cache miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run smoke spec
+        run: npx playwright test --config=playwright.smoke.config.ts
+
+      - name: Upload Playwright trace on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-smoke-trace
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────
+  # confirm-tst — the only job that carries `environment: tst`. The
+  # deployment status (used by branch protection's required_deployments
+  # rule) is marked successful only when ALL upstream gates pass. Without
+  # this aggregator, deploy-vps succeeding would mark the env as deployed
+  # even if smoke or schema-contract fail — false-green deployment.
+  # ─────────────────────────────────────────────────────────────────────
+
+  confirm-tst:
+    name: Confirm tst deployment
+    needs: [deploy-vps, health-check-tst, schema-contract-tst, smoke-tst]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    permissions:
+      contents: read
+    environment:
+      name: tst
+      url: https://tst.178-104-237-14.sslip.io
+    steps:
+      - name: Confirm all gates green
+        run: |
+          echo "✅ Deploy succeeded"
+          echo "✅ Health check converged on commit ${{ github.sha }}"
+          echo "✅ Schema contract test passed against deployed PB"
+          echo "✅ Smoke test passed against deployed URL"
+          echo ""
+          echo "tst deployment marked successful for ${TST_BASE_URL}"

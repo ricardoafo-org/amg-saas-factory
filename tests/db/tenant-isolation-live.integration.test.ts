@@ -15,7 +15,7 @@
  * stack) or locally when env is set.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
 
 const PB_URL = process.env.POCKETBASE_URL || 'http://127.0.0.1:8090';
 const EMAIL = process.env.PB_BOOTSTRAP_EMAIL || process.env.POCKETBASE_ADMIN_EMAIL;
@@ -27,8 +27,10 @@ interface AuthRes {
   record: { id: string };
 }
 
+// Top-level mutable refs — populated by setup() below via top-level await.
+// Why top-level await? `it.skipIf(...)` is evaluated at registration time,
+// not at runtime, so beforeAll() cannot gate test registration.
 let superToken: string | null = null;
-let pbReachable = false;
 let tenantAId: string | null = null;
 let tenantBId: string | null = null;
 let staffAToken: string | null = null;
@@ -42,7 +44,7 @@ async function pbReq<T = unknown>(
   urlPath: string,
   body?: unknown,
   token?: string,
-): Promise<{ status: number; body: T }> {
+): Promise<{ status: number; body: T; raw: string }> {
   const res = await fetch(`${PB_URL}${urlPath}`, {
     method,
     headers: {
@@ -52,19 +54,25 @@ async function pbReq<T = unknown>(
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     signal: AbortSignal.timeout(5000),
   });
+  const raw = await res.text();
   let parsed: unknown;
   try {
-    parsed = await res.json();
+    parsed = raw.length > 0 ? JSON.parse(raw) : undefined;
   } catch {
     parsed = undefined;
   }
-  return { status: res.status, body: parsed as T };
+  return { status: res.status, body: parsed as T, raw };
 }
 
-beforeAll(async () => {
+function isCreated<T extends { id?: string }>(res: { status: number; body: T; raw: string }): boolean {
+  // PB POST /records returns 200 with the created record body containing id.
+  return res.status === 200 && !!res.body && typeof res.body.id === 'string';
+}
+
+async function setup(): Promise<boolean> {
   if (!EMAIL || !PASSWORD) {
     console.warn('[tenant-isolation-live] missing PB creds — suite skipped');
-    return;
+    return false;
   }
 
   try {
@@ -73,37 +81,39 @@ beforeAll(async () => {
       '/api/collections/_superusers/auth-with-password',
       { identity: EMAIL, password: PASSWORD },
     );
-    if (auth.status !== 200 || !auth.body.token) {
-      console.warn(`[tenant-isolation-live] auth failed (${auth.status}) — suite skipped`);
-      return;
+    if (auth.status !== 200 || !auth.body || !auth.body.token) {
+      console.warn(
+        `[tenant-isolation-live] auth failed (${auth.status}) body=${auth.raw.slice(0, 400)} — suite skipped`,
+      );
+      return false;
     }
     superToken = auth.body.token;
-    pbReachable = true;
   } catch {
     console.warn(`[tenant-isolation-live] PB unreachable at ${PB_URL} — suite skipped`);
-    return;
+    return false;
   }
 
-  // Seed two tenants
+  // Seed two tenants — fields match src/schemas/tenants.schema.json
   const slug = `test-iso-${Date.now()}`;
   const aRes = await pbReq<{ id: string }>(
     'POST',
     '/api/collections/tenants/records',
-    { slug: `${slug}-a`, business_name: 'Tenant A', timezone: 'Europe/Madrid' },
+    { name: 'Tenant A', slug: `${slug}-a`, industry: 'automotive' },
     superToken,
   );
   const bRes = await pbReq<{ id: string }>(
     'POST',
     '/api/collections/tenants/records',
-    { slug: `${slug}-b`, business_name: 'Tenant B', timezone: 'Europe/Madrid' },
+    { name: 'Tenant B', slug: `${slug}-b`, industry: 'automotive' },
     superToken,
   );
-  if (aRes.status !== 200 || bRes.status !== 200) {
+  if (!isCreated(aRes) || !isCreated(bRes)) {
     console.warn(
-      `[tenant-isolation-live] tenant seed failed (a=${aRes.status} b=${bRes.status}) — suite will skip`,
+      `[tenant-isolation-live] tenant seed failed — suite will skip\n` +
+        `  a=${aRes.status} body=${aRes.raw.slice(0, 400)}\n` +
+        `  b=${bRes.status} body=${bRes.raw.slice(0, 400)}`,
     );
-    pbReachable = false;
-    return;
+    return false;
   }
   tenantAId = aRes.body.id;
   tenantBId = bRes.body.id;
@@ -119,7 +129,7 @@ beforeAll(async () => {
       email: emailA,
       password: PASS,
       passwordConfirm: PASS,
-      name: 'Staff A',
+      display_name: 'Staff A',
       role: 'admin',
       active: true,
     },
@@ -133,18 +143,19 @@ beforeAll(async () => {
       email: emailB,
       password: PASS,
       passwordConfirm: PASS,
-      name: 'Staff B',
+      display_name: 'Staff B',
       role: 'admin',
       active: true,
     },
     superToken,
   );
-  if (staffARes.status !== 200 || staffBRes.status !== 200) {
+  if (!isCreated(staffARes) || !isCreated(staffBRes)) {
     console.warn(
-      `[tenant-isolation-live] staff seed failed (a=${staffARes.status} b=${staffBRes.status}) — suite will skip`,
+      `[tenant-isolation-live] staff seed failed — suite will skip\n` +
+        `  a=${staffARes.status} body=${staffARes.raw.slice(0, 400)}\n` +
+        `  b=${staffBRes.status} body=${staffBRes.raw.slice(0, 400)}`,
     );
-    pbReachable = false;
-    return;
+    return false;
   }
 
   // One appointment per tenant
@@ -176,12 +187,13 @@ beforeAll(async () => {
     },
     superToken,
   );
-  if (aptA.status !== 200 || aptB.status !== 200) {
+  if (!isCreated(aptA) || !isCreated(aptB)) {
     console.warn(
-      `[tenant-isolation-live] appointment seed failed (a=${aptA.status} b=${aptB.status}) — suite will skip`,
+      `[tenant-isolation-live] appointment seed failed — suite will skip\n` +
+        `  a=${aptA.status} body=${aptA.raw.slice(0, 600)}\n` +
+        `  b=${aptB.status} body=${aptB.raw.slice(0, 600)}`,
     );
-    pbReachable = false;
-    return;
+    return false;
   }
   appointmentAId = aptA.body.id;
   appointmentBId = aptB.body.id;
@@ -192,15 +204,17 @@ beforeAll(async () => {
     '/api/collections/staff/auth-with-password',
     { identity: emailA, password: PASS },
   );
-  if (staffAuth.status !== 200) {
+  if (staffAuth.status !== 200 || !staffAuth.body || !staffAuth.body.token) {
     console.warn(
-      `[tenant-isolation-live] staff-A auth failed (${staffAuth.status}) — suite will skip`,
+      `[tenant-isolation-live] staff-A auth failed (${staffAuth.status}) body=${staffAuth.raw.slice(0, 400)} — suite will skip`,
     );
-    pbReachable = false;
-    return;
+    return false;
   }
   staffAToken = staffAuth.body.token;
-});
+  return true;
+}
+
+const pbReachable = await setup();
 
 afterAll(async () => {
   if (!superToken) return;
