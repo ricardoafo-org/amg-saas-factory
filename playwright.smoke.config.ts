@@ -19,7 +19,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
   retries: 2,
-  workers: '50%',
+  workers: process.env['CI'] ? '100%' : '50%',
   reporter: 'list',
 
   use: {
