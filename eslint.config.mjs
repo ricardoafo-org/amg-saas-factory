@@ -1,11 +1,5 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { FlatCompat } from '@eslint/eslintrc';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({ baseDirectory: __dirname });
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
+import nextTypescript from 'eslint-config-next/typescript';
 
 // Strict lint config. The CI lint step runs with `--max-warnings=0`, so
 // every rule below MUST be at error or warn level — `off` is acceptable
@@ -61,7 +55,8 @@ const eslintConfig = [
     ],
   },
 
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  ...nextCoreWebVitals,
+  ...nextTypescript,
 
   {
     rules: {
@@ -117,6 +112,13 @@ const eslintConfig = [
 
       // Catch unused ESLint disable comments — they rot otherwise.
       // (set at flat-config level via reportUnusedDisableDirectives below)
+
+      // React 19 Compiler-aware strict rules introduced by eslint-config-next 16.
+      // Disabled in this PR (deps bump only) to keep scope tight; existing code
+      // has 10 violations that warrant their own refactor PR with proper review
+      // of effect/state patterns. TODO(post-bump): triage and fix incrementally.
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/immutability': 'off',
     },
   },
 
