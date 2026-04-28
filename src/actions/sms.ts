@@ -42,7 +42,7 @@ export async function sendSms(input: SendSmsInput): Promise<SendSmsResult> {
 
   const parsed = SendSmsSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.errors[0]?.message ?? 'Datos inválidos' };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
   }
 
   const { toPhone, message, appointmentId, customerId } = parsed.data;
@@ -181,7 +181,7 @@ export async function sendBulkSms(input: z.infer<typeof SendBulkSmsSchema>): Pro
 
   const parsed = SendBulkSmsSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.errors[0]?.message ?? 'Datos inválidos' };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
   }
 
   const { customerIds, message } = parsed.data;
