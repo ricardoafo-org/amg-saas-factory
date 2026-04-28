@@ -70,6 +70,14 @@ env:
 # → Environment secrets). Only jobs with `environment: pro` can read them,
 # and the env's branch restriction means feature-branch / fork PR workflows
 # can't read them at all. Tighter blast radius than repo-level secrets.
+#
+# CAVEAT — `environment.url` field cannot reference env-scoped secrets.
+# GitHub evaluates `url:` at workflow-parse time, before the env context is
+# resolved; only repo-level secrets are in scope there. We hardcode the URL
+# literal in each job's `environment.url` (just deployment-view metadata).
+# Step-level `env:` blocks DO get env secrets at runtime — those still use
+# `${{ secrets.PRO_DOMAIN }}` correctly. On real-pro-day, search/replace the
+# `pro.178-104-237-14.sslip.io` literal for the new prod domain.
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────
@@ -160,7 +168,7 @@ jobs:
       contents: read
     environment:
       name: pro
-      url: https://${{ secrets.PRO_DOMAIN }}
+      url: https://pro.178-104-237-14.sslip.io  # see header note re env.url
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -244,7 +252,7 @@ jobs:
       contents: read
     environment:
       name: pro
-      url: https://${{ secrets.PRO_DOMAIN }}
+      url: https://pro.178-104-237-14.sslip.io  # see header note re env.url
     steps:
       - name: Probe /api/health until commit matches deployed SHA
         env:
@@ -299,7 +307,7 @@ jobs:
       contents: read
     environment:
       name: pro
-      url: https://${{ secrets.PRO_DOMAIN }}
+      url: https://pro.178-104-237-14.sslip.io  # see header note re env.url
     steps:
       - name: Run schema-contract integration test from ops image
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
@@ -323,7 +331,7 @@ jobs:
       contents: read
     environment:
       name: pro
-      url: https://${{ secrets.PRO_DOMAIN }}
+      url: https://pro.178-104-237-14.sslip.io  # see header note re env.url
     env:
       BASE_URL: https://${{ secrets.PRO_DOMAIN }}
     steps:
