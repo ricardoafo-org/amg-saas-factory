@@ -33,12 +33,22 @@ jobs:
     name: Push edge config and reload
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # The edge router lives on the tst VPS, so this workflow targets the `tst`
+    # environment for SSH credentials. PRO_DOMAIN can't come from the `pro`
+    # env (a job can target only one env); during fake-pro mode pro and tst
+    # share the VPS so we derive the pro probe URL from TST_DOMAIN inline.
+    # When pro moves to its own VPS, replace the derivation with a separate
+    # PRO_DOMAIN lookup (likely a repo-level non-sensitive variable).
+    environment:
+      name: tst
+      url: https://tst.178-104-237-14.sslip.io
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Echo reason
-        run: echo "Edge redeploy reason: ${{ github.event.inputs.reason }}"
+        run: |
+          echo "Edge redeploy reason: ${{ github.event.inputs.reason }}"
 
       - name: Sync edge files to tst VPS
         env:
@@ -71,9 +81,13 @@ jobs:
       - name: Probe both hostnames after reload
         env:
           TST_DOMAIN: ${{ secrets.TST_DOMAIN }}
-          PRO_DOMAIN: ${{ secrets.PRO_DOMAIN }}
         run: |
           set -euo pipefail
+          # Fake-pro mode: pro and tst share the VPS, so PRO_DOMAIN derives
+          # from TST_DOMAIN (replace `tst.` prefix with `pro.`). When pro
+          # moves to its own VPS, fetch PRO_DOMAIN from a repo-level variable
+          # instead — the `pro` env is unreachable from this `tst`-scoped job.
+          PRO_DOMAIN="pro.${TST_DOMAIN#*.}"
           for host in "$TST_DOMAIN" "$PRO_DOMAIN"; do
             if [ -z "$host" ]; then
               echo "Skipping empty host"
