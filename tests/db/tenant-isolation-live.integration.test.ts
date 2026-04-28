@@ -44,7 +44,7 @@ async function pbReq<T = unknown>(
   urlPath: string,
   body?: unknown,
   token?: string,
-): Promise<{ status: number; body: T }> {
+): Promise<{ status: number; body: T; raw: string }> {
   const res = await fetch(`${PB_URL}${urlPath}`, {
     method,
     headers: {
@@ -54,13 +54,19 @@ async function pbReq<T = unknown>(
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     signal: AbortSignal.timeout(5000),
   });
+  const raw = await res.text();
   let parsed: unknown;
   try {
-    parsed = await res.json();
+    parsed = raw.length > 0 ? JSON.parse(raw) : undefined;
   } catch {
     parsed = undefined;
   }
-  return { status: res.status, body: parsed as T };
+  return { status: res.status, body: parsed as T, raw };
+}
+
+function isCreated<T extends { id?: string }>(res: { status: number; body: T; raw: string }): boolean {
+  // PB POST /records returns 200 with the created record body containing id.
+  return res.status === 200 && !!res.body && typeof res.body.id === 'string';
 }
 
 async function setup(): Promise<boolean> {
@@ -75,8 +81,10 @@ async function setup(): Promise<boolean> {
       '/api/collections/_superusers/auth-with-password',
       { identity: EMAIL, password: PASSWORD },
     );
-    if (auth.status !== 200 || !auth.body.token) {
-      console.warn(`[tenant-isolation-live] auth failed (${auth.status}) — suite skipped`);
+    if (auth.status !== 200 || !auth.body || !auth.body.token) {
+      console.warn(
+        `[tenant-isolation-live] auth failed (${auth.status}) body=${auth.raw.slice(0, 400)} — suite skipped`,
+      );
       return false;
     }
     superToken = auth.body.token;
@@ -99,9 +107,11 @@ async function setup(): Promise<boolean> {
     { name: 'Tenant B', slug: `${slug}-b`, industry: 'automotive' },
     superToken,
   );
-  if (aRes.status !== 200 || bRes.status !== 200) {
+  if (!isCreated(aRes) || !isCreated(bRes)) {
     console.warn(
-      `[tenant-isolation-live] tenant seed failed (a=${aRes.status} b=${bRes.status}) — suite will skip`,
+      `[tenant-isolation-live] tenant seed failed — suite will skip\n` +
+        `  a=${aRes.status} body=${aRes.raw.slice(0, 400)}\n` +
+        `  b=${bRes.status} body=${bRes.raw.slice(0, 400)}`,
     );
     return false;
   }
@@ -139,9 +149,11 @@ async function setup(): Promise<boolean> {
     },
     superToken,
   );
-  if (staffARes.status !== 200 || staffBRes.status !== 200) {
+  if (!isCreated(staffARes) || !isCreated(staffBRes)) {
     console.warn(
-      `[tenant-isolation-live] staff seed failed (a=${staffARes.status} b=${staffBRes.status}) — suite will skip`,
+      `[tenant-isolation-live] staff seed failed — suite will skip\n` +
+        `  a=${staffARes.status} body=${staffARes.raw.slice(0, 400)}\n` +
+        `  b=${staffBRes.status} body=${staffBRes.raw.slice(0, 400)}`,
     );
     return false;
   }
@@ -175,9 +187,11 @@ async function setup(): Promise<boolean> {
     },
     superToken,
   );
-  if (aptA.status !== 200 || aptB.status !== 200) {
+  if (!isCreated(aptA) || !isCreated(aptB)) {
     console.warn(
-      `[tenant-isolation-live] appointment seed failed (a=${aptA.status} b=${aptB.status}) — suite will skip`,
+      `[tenant-isolation-live] appointment seed failed — suite will skip\n` +
+        `  a=${aptA.status} body=${aptA.raw.slice(0, 600)}\n` +
+        `  b=${aptB.status} body=${aptB.raw.slice(0, 600)}`,
     );
     return false;
   }
@@ -190,9 +204,9 @@ async function setup(): Promise<boolean> {
     '/api/collections/staff/auth-with-password',
     { identity: emailA, password: PASS },
   );
-  if (staffAuth.status !== 200) {
+  if (staffAuth.status !== 200 || !staffAuth.body || !staffAuth.body.token) {
     console.warn(
-      `[tenant-isolation-live] staff-A auth failed (${staffAuth.status}) — suite will skip`,
+      `[tenant-isolation-live] staff-A auth failed (${staffAuth.status}) body=${staffAuth.raw.slice(0, 400)} — suite will skip`,
     );
     return false;
   }
