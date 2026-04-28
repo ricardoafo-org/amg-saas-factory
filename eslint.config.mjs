@@ -53,6 +53,11 @@ const eslintConfig = [
       // TypeScript scripts in Week 1+ of the rebuild (apply-schema.ts,
       // seed-tenant.ts, generate-slots.ts). Until then, lint not applied.
       'scripts/*.js',
+
+      // Personal AI tooling lives off-repo per ADR-013. Local hooks /
+      // settings under .claude/ are not project source; the source of truth
+      // is ~/.claude/. ESLint should not lint anything under here.
+      '.claude/**',
     ],
   },
 
