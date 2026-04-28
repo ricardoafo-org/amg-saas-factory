@@ -24,7 +24,7 @@ export async function loginStaff(_prevState: LoginResult, formData: FormData): P
 
   const parsed = LoginSchema.safeParse(raw);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0]?.message ?? 'Datos inválidos' };
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
   }
 
   const pb = new PocketBase(PB_URL);

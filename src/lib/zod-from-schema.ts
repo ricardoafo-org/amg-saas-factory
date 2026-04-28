@@ -53,7 +53,7 @@ function propertyToZod(prop: JsonSchemaProperty): z.ZodTypeAny {
       schema = prop.items ? z.array(propertyToZod(prop.items)) : z.array(z.unknown());
       break;
     case 'object':
-      schema = prop.properties ? jsonSchemaToZod({ type: 'object', properties: prop.properties, required: prop.required }) : z.record(z.unknown());
+      schema = prop.properties ? jsonSchemaToZod({ type: 'object', properties: prop.properties, required: prop.required }) : z.record(z.string(), z.unknown());
       break;
     default:
       schema = z.unknown();
@@ -64,7 +64,7 @@ function propertyToZod(prop: JsonSchemaProperty): z.ZodTypeAny {
 }
 
 export function jsonSchemaToZod(schema: JsonSchema): z.ZodObject<z.ZodRawShape> {
-  const shape: z.ZodRawShape = {};
+  const shape: Record<string, z.ZodTypeAny> = {};
   const required = new Set(schema.required ?? []);
 
   for (const [key, prop] of Object.entries(schema.properties ?? {})) {
