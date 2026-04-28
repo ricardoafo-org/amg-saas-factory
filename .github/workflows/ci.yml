@@ -46,7 +46,7 @@ jobs:
   # ============================================================
   type-check:
     name: Type check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
@@ -59,7 +59,7 @@ jobs:
   next-build:
     name: Next build
     needs: [type-check, lint]  # Tier 2 — fail fast on style/type errors before paying for build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -77,7 +77,7 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
@@ -89,7 +89,7 @@ jobs:
 
   unit-tests:
     name: Unit tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
@@ -110,7 +110,7 @@ jobs:
 
   flows-validate:
     name: Validate chatbot flows
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
@@ -128,7 +128,7 @@ jobs:
   # ============================================================
   integration-tests:
     name: Integration tests (PocketBase)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     env:
       TENANT_ID: talleres-amg
@@ -249,7 +249,7 @@ jobs:
   # are caught BEFORE merge. PR scope: changed TS/TSX. Merge queue: full src/.
   security-gate:
     name: Security gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: write  # posts failure comment via github-script
@@ -316,7 +316,7 @@ jobs:
   # Deterministic grep gate so a future regression cannot quietly ship.
   castilian-lint:
     name: Castilian Spanish lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -360,7 +360,7 @@ jobs:
   # events (rebases) and the check would false-fail. See PR #97.
   pr-template-check:
     name: PR template
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: >-
       github.event_name == 'merge_group' ||
       (github.event.pull_request.user.login != 'dependabot[bot]'
@@ -434,7 +434,7 @@ jobs:
   # Uses --name-status so renames (R) are NOT treated as deletions (D).
   test-deletion-guard:
     name: Test deletion guard
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Skip on merge queue (deletion guard ran when the PR was opened)
         if: github.event_name == 'merge_group'
@@ -511,7 +511,7 @@ jobs:
   # ============================================================
   new-code-needs-test:
     name: New code needs test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -548,7 +548,7 @@ jobs:
   e2e-smoke:
     name: E2E smoke (shard ${{ matrix.shard }}/4)
     needs: next-build  # Tier 3 — don't burn 4×8min runners if build is broken
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     strategy:
       fail-fast: false
@@ -604,7 +604,7 @@ jobs:
     name: E2E admin
     if: false  # disabled — see FEAT-053 AC for re-enablement
     needs: next-build  # Tier 3
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       TENANT_ID: talleres-amg
@@ -669,7 +669,7 @@ jobs:
   # ============================================================
   npm-audit:
     name: npm audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
@@ -709,7 +709,7 @@ jobs:
       - new-code-needs-test
       - e2e-smoke
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Verify all required jobs succeeded
         env:

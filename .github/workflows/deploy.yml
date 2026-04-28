@@ -68,7 +68,7 @@ jobs:
 
   build-runner:
     name: Build runner image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -104,7 +104,7 @@ jobs:
 
   build-ops:
     name: Build ops image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -142,7 +142,7 @@ jobs:
   deploy-vps:
     name: Deploy to VPS
     needs: [build-runner, build-ops]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -237,7 +237,7 @@ jobs:
   health-check-tst:
     name: Health check tst
     needs: deploy-vps
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -289,7 +289,7 @@ jobs:
   schema-contract-tst:
     name: Schema contract test (tst)
     needs: [deploy-vps, health-check-tst]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -317,7 +317,7 @@ jobs:
   smoke-tst:
     name: Smoke test against tst URL
     needs: [deploy-vps, health-check-tst]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -377,7 +377,7 @@ jobs:
   confirm-tst:
     name: Confirm tst deployment
     needs: [deploy-vps, health-check-tst, schema-contract-tst, smoke-tst]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 1
     permissions:
       contents: read

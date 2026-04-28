@@ -2,6 +2,9 @@
   "name": "amg-factory",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "node -r dotenv/config scripts/schemas-sync.js && next build",
