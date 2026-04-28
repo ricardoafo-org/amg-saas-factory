@@ -106,6 +106,9 @@ jobs:
           script: |
             docker pull ${{ env.IMAGE_REPO }}:dedupe-${{ github.sha }}-ops
 
+      # Mirrors deploy.yml's snapshot pattern: pb_data is a NAMED docker volume
+      # (`amg_pb_data`), not a host bind. Mount it RO via alpine and tar it out
+      # to /home/deploy/pb-snapshots/. No need to stop pocketbase.
       - name: Snapshot pb_data on VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
@@ -114,12 +117,14 @@ jobs:
           key: ${{ secrets.TST_SSH_KEY }}
           script: |
             set -euo pipefail
-            STAMP=$(date -u +%Y%m%dT%H%M%SZ)
-            cd /srv/amg
-            docker compose stop pocketbase
-            tar -czf "pb_data-pre-dedupe-${STAMP}.tgz" pb_data
-            docker compose start pocketbase
-            ls -lh pb_data-pre-dedupe-*.tgz | tail -3
+            TS=$(date -u +%Y%m%dT%H%M%SZ)
+            mkdir -p /home/deploy/pb-snapshots
+            docker run --rm \
+              -v amg_pb_data:/source:ro \
+              -v /home/deploy/pb-snapshots:/dest \
+              alpine:3 \
+              tar czf /dest/pb-pre-dedupe-${TS}.tar.gz -C /source .
+            ls -lh /home/deploy/pb-snapshots/pb-pre-dedupe-${TS}.tar.gz
 
       - name: Run dedupe-config.ts (${{ inputs.mode }})
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
