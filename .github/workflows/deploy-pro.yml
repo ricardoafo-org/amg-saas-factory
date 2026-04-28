@@ -78,7 +78,7 @@ jobs:
 
   build-runner:
     name: Build runner image (pro)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -114,7 +114,7 @@ jobs:
 
   build-ops:
     name: Build ops image (pro)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -154,7 +154,7 @@ jobs:
   deploy-vps:
     name: Deploy to pro VPS
     needs: [build-runner, build-ops]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 1440  # up to 24h waiting for human approval before deploy
     permissions:
       contents: read
@@ -238,7 +238,7 @@ jobs:
   health-check-pro:
     name: Health check pro
     needs: deploy-vps
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -293,7 +293,7 @@ jobs:
   schema-contract-pro:
     name: Schema contract test (pro)
     needs: [deploy-vps, health-check-pro]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -317,7 +317,7 @@ jobs:
   smoke-pro:
     name: Smoke test against pro URL
     needs: [deploy-vps, health-check-pro]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -377,7 +377,7 @@ jobs:
   confirm-pro:
     name: Confirm pro deployment
     needs: [deploy-vps, health-check-pro, schema-contract-pro, smoke-pro]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 1
     permissions:
       contents: read
