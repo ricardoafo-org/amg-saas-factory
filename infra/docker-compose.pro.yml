@@ -2,15 +2,24 @@ services:
   caddy:
     image: caddy:2.8-alpine
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    # No host ports while pro is co-located on the tst VPS behind the edge
+    # router (FEAT-057 fake-pro). The edge owns 80/443 and reaches this caddy
+    # via the shared `amg_edge` network using the `pro-caddy` alias.
+    #
+    # When pro moves to its own VPS, revert: drop the `amg_edge` network +
+    # alias, restore `ports: 80/443`, and switch Caddyfile.pro back to a
+    # `{$PRO_DOMAIN} {` site block with TLS.
+    expose:
+      - "80"
     volumes:
       - ./Caddyfile.pro:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    environment:
-      - PRO_DOMAIN=${PRO_DOMAIN}
+    networks:
+      default:
+      amg_edge:
+        aliases:
+          - pro-caddy
     depends_on:
       - app
 
@@ -18,10 +27,10 @@ services:
     image: ghcr.io/ricardoafo-org/amg-saas-factory:${IMAGE_TAG:-pro}
     restart: unless-stopped
     env_file: .env.pro
-    ports:
-      # Loopback only — VPS deploy script hits localhost:3000/api/health for
-      # post-deploy verification. Caddy fronts public 80/443 via docker network.
-      - "127.0.0.1:3000:3000"
+    # No host port binding while pro is colocated on the tst VPS — tst already
+    # owns 127.0.0.1:3000 for its own deploy probe. Pro deploy probes the
+    # public URL via the edge router, so loopback access isn't needed.
+    # On real-pro-day (separate VPS), restore `ports: 127.0.0.1:3000:3000`.
     expose:
       - "3000"
     depends_on:
@@ -37,6 +46,11 @@ services:
       - "8090"
     volumes:
       - pb_data:/pb/pb_data
+
+networks:
+  default:
+  amg_edge:
+    external: true
 
 volumes:
   caddy_data:

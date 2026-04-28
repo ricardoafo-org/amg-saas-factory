@@ -49,8 +49,18 @@ Adopt a written GitHub repository governance policy across eight axes. Every axi
 - **PR-time sub-jobs (in `ci.yml`):** `type-check`, `next-build`, `lint`, `unit-tests`, `flows-validate`, `security-gate`, `pr-template-check`, `test-deletion-guard`, `npm-audit`. Each is independent; `ci-success` declares `needs:` for all.
 - **Post-merge CD gates (in `deploy.yml`):** `deploy-tst` → `health-check-tst` → (`schema-contract-tst`, `smoke-tst` in parallel) → `confirm-tst`. The `confirm-tst` job carries `environment: tst` and `needs: [all upstream]`, so the `tst` deployment is marked successful only when ALL gates pass.
 - **Cross-merge gating:** the Ruleset's `required_deployments: [tst]` rule blocks the next PR's merge until the previous main commit's `tst` deployment succeeds. Combined with `confirm-tst` ownership of the `environment: tst` declaration, a single failed gate (schema mismatch, smoke fail) freezes the merge queue until fix-forward lands.
+- **Pre-merge gating via merge queue:** `deploy.yml` triggers on `merge_group` in addition to `push: main`. When the queue creates a candidate (PR rebased on main), GitHub fires `merge_group`; deploy.yml runs against the candidate, deploys to tst, `confirm-tst` registers the deployment marker, and the `required_deployments` rule passes for that candidate. Without `merge_group`, the rule self-blocks — the PR's HEAD has no deployment because deploys only happen post-merge.
 
-**Rationale:** PR-time gates catch most issues cheaply. Post-merge CD gates catch what only the live environment exposes (schema drift, runtime SSR errors, integration failures). Tying the deployment status to ALL post-deploy gates closes the loophole where deploy-tst succeeds but a downstream gate fails — without `confirm-tst`, the next PR merges with a lying-green deployment status.
+**Bootstrap caveat:** `required_deployments: [tst]` is **only self-bootstrapping after the first successful tst deployment exists for any commit on main**. On a fresh repo (or after a sustained run of red main deploys, as in BUG-017's UNIQUE-index deadlock on 2026-04-28), no successful `environment: tst` deployment record exists for any reachable HEAD. The rule then blocks every PR forever, including the PR whose merge would fix the underlying problem.
+
+The one-time bootstrap procedure (admin action, ricardoafo-only):
+1. Settings → Rules → main ruleset → Edit → uncheck "Require deployments to succeed before merging" → Save.
+2. Allow auto-merge to land the queued PR(s). The post-merge `push: main` deploy fires, runs `deploy.yml` end-to-end, and `confirm-tst` registers the first successful deployment marker.
+3. Re-enable the `required_deployments: [tst]` rule (re-check the box, Save). From this point on, every subsequent PR is gated by `merge_group` exactly as designed.
+
+This procedure is reserved for genuine bootstrap state — never as a routine merge unblocker. If the rule blocks for any other reason, fix the underlying deploy failure forward; do not relax the rule. Document any future use of this procedure in a runbook entry that names the inciting bug, the date, and the timestamp the rule was re-enabled.
+
+**Rationale:** PR-time gates catch most issues cheaply. Post-merge CD gates catch what only the live environment exposes (schema drift, runtime SSR errors, integration failures). Tying the deployment status to ALL post-deploy gates closes the loophole where deploy-tst succeeds but a downstream gate fails — without `confirm-tst`, the next PR merges with a lying-green deployment status. The `merge_group` trigger closes the chicken-and-egg gap so the rule applies pre-merge instead of only retroactively.
 
 **Current state:**
 - ci.yml: 10 jobs including aggregator. ✓
