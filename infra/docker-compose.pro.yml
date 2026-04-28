@@ -27,10 +27,10 @@ services:
     image: ghcr.io/ricardoafo-org/amg-saas-factory:${IMAGE_TAG:-pro}
     restart: unless-stopped
     env_file: .env.pro
-    ports:
-      # Loopback only — VPS deploy script hits localhost:3000/api/health for
-      # post-deploy verification. Caddy fronts public 80/443 via docker network.
-      - "127.0.0.1:3000:3000"
+    # No host port binding while pro is colocated on the tst VPS — tst already
+    # owns 127.0.0.1:3000 for its own deploy probe. Pro deploy probes the
+    # public URL via the edge router, so loopback access isn't needed.
+    # On real-pro-day (separate VPS), restore `ports: 127.0.0.1:3000:3000`.
     expose:
       - "3000"
     depends_on:
