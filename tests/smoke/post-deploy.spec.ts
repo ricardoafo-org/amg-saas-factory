@@ -54,45 +54,44 @@ test.describe('post-deploy smoke — deployed URL booking happy path', () => {
     await expect(page).toHaveTitle(/Talleres AMG/i);
   });
 
-  test('chatbot FAB is reachable + opens dialog', async ({ page }) => {
+  test('chatbot FAB is reachable + opens dialog at vehicle step', async ({
+    page,
+  }) => {
     const fab = page.getByRole('button', {
       name: /Abrir asistente de reservas/i,
     });
     await expect(fab).toBeVisible({ timeout: 10_000 });
     await fab.click();
-    await expect(
-      page.getByRole('button', { name: /Iniciar conversación/i }),
-    ).toBeVisible({ timeout: 5_000 });
+    // BookingApp opens directly at STEP_VEHICLE — assert the matrícula field
+    // renders, which proves the lazy-loaded ChatPanel chunk + BookingApp
+    // hydrated successfully.
+    await expect(page.getByLabel(/Matrícula/i)).toBeVisible({
+      timeout: 5_000,
+    });
   });
 
-  test('booking flow advances past service selection', async ({ page }) => {
+  test('booking flow advances past vehicle step', async ({ page }) => {
     await page
       .getByRole('button', { name: /Abrir asistente de reservas/i })
-      .click();
-    await page
-      .getByRole('button', { name: /Iniciar conversación/i })
       .click();
 
     const dialog = page.getByRole('dialog', {
       name: /Asistente de reservas/i,
     });
 
-    await dialog.getByRole('button', { name: /Reservar cita/i }).click();
-    await expect(page.getByText(/servicios necesitas/i)).toBeVisible({
+    // Fill all four required vehicle fields with smoke values, then advance.
+    await dialog.getByLabel(/Matrícula/i).fill('1234 SMK');
+    await dialog.getByLabel(/Modelo/i).fill('Smoke Test');
+    await dialog.getByLabel(/Año/i).fill('2024');
+    await dialog.getByLabel(/Kilómetros/i).fill('50000');
+    await dialog.getByRole('button', { name: /^Continuar$/i }).click();
+
+    // Advance signal: services step renders the catalog. We assert at least
+    // one service is shown; not which one (catalog content is a contract
+    // test, not a smoke).
+    await expect(dialog.locator('button[role="checkbox"]').first()).toBeVisible({
       timeout: 5_000,
     });
-
-    // Pick whichever service shows first; we're proving the flow advances,
-    // not asserting catalog content (that's a contract test, not a smoke).
-    const firstServiceBtn = dialog.locator('button[role="checkbox"]').first();
-    await firstServiceBtn.click();
-    await dialog
-      .getByRole('button', { name: /Confirmar selección/i })
-      .click();
-
-    await expect(
-      dialog.getByRole('button', { name: /Continuar con la reserva/i }),
-    ).toBeVisible({ timeout: 5_000 });
   });
 });
 
