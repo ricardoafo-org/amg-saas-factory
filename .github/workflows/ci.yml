@@ -542,18 +542,22 @@ jobs:
   # ============================================================
   # E2E
   # ============================================================
-  # E2E smoke (Playwright). Sharded 4× for parallelism (~16x on GH-hosted
+  # E2E smoke (Playwright). Sharded 2× for parallelism (~8x on GH-hosted
   # 4-CPU runners with workers=100% per shard). Runs tests/e2e/smoke.spec.ts
   # + tests/e2e/regression/.
+  #
+  # Was 4 shards; dropped to 2 to halve the CI minute cost. Wall-clock
+  # impact is small because per-shard runtime is dominated by browser
+  # startup and `next-build` artifact handling, not test count.
   e2e-smoke:
-    name: E2E smoke (shard ${{ matrix.shard }}/4)
-    needs: next-build  # Tier 3 — don't burn 4×8min runners if build is broken
+    name: E2E smoke (shard ${{ matrix.shard }}/2)
+    needs: next-build  # Tier 3 — don't burn shards if build is broken
     runs-on: ubuntu-24.04
-    timeout-minutes: 8
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
@@ -579,7 +583,7 @@ jobs:
             tests/e2e/smoke.spec.ts \
             tests/e2e/regression/ \
             --project=chromium \
-            --shard=${{ matrix.shard }}/4
+            --shard=${{ matrix.shard }}/2
       # Always upload Playwright artifacts. With trace=retain-on-failure
       # (Playwright default), test-results/ only contains traces+videos for
       # the failed/retried attempts. `if: always()` + `if-no-files-found:
