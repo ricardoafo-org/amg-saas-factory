@@ -59,6 +59,10 @@ FROM node:20-alpine AS ops
 WORKDIR /app
 
 ENV NODE_ENV=production
+# Silence the "New major version of npm available" banner that npm 9.x prints
+# after every script. We can't upgrade — npm 11 requires node ≥ 20.17 — and
+# the banner pollutes deploy logs and one-shot ops command outputs.
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 ops
