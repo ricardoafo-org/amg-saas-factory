@@ -504,6 +504,42 @@ jobs:
           exit 0
 
   # ============================================================
+  # New code needs test — block PRs that touch high-risk paths
+  # (src/actions, src/lib) without any test change. Escape hatch:
+  # apply the `no-test-required` label with a justified PR body.
+  # Codifies the rubric lesson from the 2026-04-26 SEV-1.
+  # ============================================================
+  new-code-needs-test:
+    name: New code needs test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Skip on merge queue (validated at PR time)
+        if: github.event_name == 'merge_group'
+        run: echo "merge_group event — gate already validated on PR. Passing through."
+
+      - name: Checkout repository
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Run gate
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          bash scripts/check-new-code-needs-test.sh \
+            --base-sha "$base" \
+            --head-sha "$head" \
+            --label-list "${PR_LABELS}"
+
+  # ============================================================
   # E2E
   # ============================================================
   # E2E smoke (Playwright). Sharded 4× for parallelism (~16x on GH-hosted
@@ -670,6 +706,7 @@ jobs:
       - castilian-lint
       - pr-template-check
       - test-deletion-guard
+      - new-code-needs-test
       - e2e-smoke
     if: always()
     runs-on: ubuntu-latest
