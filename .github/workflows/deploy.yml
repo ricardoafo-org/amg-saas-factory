@@ -6,6 +6,18 @@ name: CD
 # Future: will gain `deploy-pro` job (gated by GitHub Environment `pro`
 # with required-reviewers + release-tag trigger). See
 # docs/decisions/2026-04-27-production-cd-plan.md for the target shape.
+#
+# Self-validating deploy (added 2026-04-28):
+#   1. Builds two images per commit — :sha-XXX (runner) and :sha-XXX-ops
+#      (scripts + tests + devDeps). Both pushed to GHCR.
+#   2. Snapshots pb_data BEFORE schema apply (rollback safety).
+#   3. Applies schema idempotently from the ops image, INSIDE the compose
+#      network, BEFORE the runner image is swapped in. Same commit hash
+#      drives schema and runtime — version-locked.
+#   4. After container swap and health check, runs the schema-contract
+#      integration test (ops image) + smoke spec (Playwright on runner
+#      against public URL). The schema-contract test is the one that
+#      would have caught the 2026-04-26 SEV-1.
 
 on:
   push:
@@ -24,6 +36,9 @@ concurrency:
 permissions:
   contents: read
   packages: write
+
+env:
+  IMAGE_REPO: ghcr.io/ricardoafo-org/amg-saas-factory
 
 jobs:
   deploy-tst:
@@ -53,19 +68,106 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
 
-      - name: Build and push image
+      # Runner image — Next.js standalone production runtime. Explicit
+      # `target: runner` because the Dockerfile now has an `ops` stage
+      # AFTER runner; without target, docker would build the last stage.
+      - name: Build and push runner image
         uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
         with:
           context: .
+          target: runner
           push: true
           tags: |
-            ghcr.io/ricardoafo-org/amg-saas-factory:tst
-            ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}
+            ${{ env.IMAGE_REPO }}:tst
+            ${{ env.IMAGE_REPO }}:sha-${{ github.sha }}
           build-args: |
             NEXT_PUBLIC_COMMIT_SHA=${{ github.sha }}
             TENANT_ID=talleres-amg
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=max,scope=runner
+
+      # Ops image — same source tree, devDeps included. Used post-deploy
+      # for apply-schema, seed-tenant, and the schema-contract integration
+      # test. Same SHA suffix as the runner so the artifacts are version-
+      # locked: the schema applied is the schema this deploy expects.
+      - name: Build and push ops image
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        with:
+          context: .
+          target: ops
+          push: true
+          tags: |
+            ${{ env.IMAGE_REPO }}:tst-ops
+            ${{ env.IMAGE_REPO }}:sha-${{ github.sha }}-ops
+          cache-from: type=gha
+          cache-to: type=gha,mode=max,scope=ops
+
+      # Sync infra files from repo to /srv/amg/ on the VPS so any change
+      # to compose / Caddyfile / Dockerfile.pocketbase auto-deploys.
+      # .env.tst is NOT synced — secrets live on the VPS only.
+      - name: Sync infra files to VPS
+        env:
+          SSH_KEY: ${{ secrets.TST_SSH_KEY }}
+          SSH_HOST: ${{ secrets.TST_SSH_HOST }}
+          SSH_USER: ${{ secrets.TST_SSH_USER }}
+        run: |
+          set -euo pipefail
+          KEY_FILE=$(mktemp)
+          trap 'rm -f $KEY_FILE' EXIT
+          echo "$SSH_KEY" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+          scp -i "$KEY_FILE" -o StrictHostKeyChecking=accept-new \
+            infra/docker-compose.tst.yml \
+            infra/Caddyfile \
+            infra/Dockerfile.pocketbase \
+            "$SSH_USER@$SSH_HOST:/srv/amg/"
+
+      # Snapshot pb_data BEFORE schema apply (rollback insurance).
+      # 14-snapshot retention (~2 weeks at one deploy/day).
+      - name: Snapshot PocketBase data dir
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.TST_SSH_HOST }}
+          username: ${{ secrets.TST_SSH_USER }}
+          key: ${{ secrets.TST_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            TS=$(date -u +%Y%m%dT%H%M%SZ)
+            mkdir -p /home/deploy/pb-snapshots
+            docker run --rm \
+              -v amg_pb_data:/source:ro \
+              -v /home/deploy/pb-snapshots:/dest \
+              alpine:3 \
+              tar czf /dest/pb-${TS}.tar.gz -C /source .
+            ls -1t /home/deploy/pb-snapshots/pb-*.tar.gz | tail -n +15 | xargs -r rm
+            ls -lh /home/deploy/pb-snapshots/pb-${TS}.tar.gz
+
+      # Pull ops image once so subsequent docker run steps reuse it locally.
+      - name: Pull ops image on VPS
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.TST_SSH_HOST }}
+          username: ${{ secrets.TST_SSH_USER }}
+          key: ${{ secrets.TST_SSH_KEY }}
+          script: |
+            docker pull ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}-ops
+
+      # Idempotent schema apply BEFORE container swap, so the new runner
+      # image always starts against the schema it expects. apply-schema.ts
+      # exits 0 when in sync; non-zero on drift unless --allow-destructive
+      # (which we never pass from CI).
+      - name: Apply schema to tst PB
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.TST_SSH_HOST }}
+          username: ${{ secrets.TST_SSH_USER }}
+          key: ${{ secrets.TST_SSH_KEY }}
+          script: |
+            docker run --rm \
+              --network amg_default \
+              --env-file /srv/amg/.env.tst \
+              ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}-ops \
+              npx tsx scripts/apply-schema.ts
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
@@ -88,8 +190,8 @@ jobs:
   #
   # NOTE: /api/health alone is too shallow — it has no app dependencies, so
   # an SSR error or hydration crash on `/` won't fail it. We also probe `/`
-  # for SSR markers (length + brand text). For full hydration coverage we
-  # need Playwright against deployed tst — tracked separately.
+  # for SSR markers (length + brand text). Full hydration coverage comes
+  # from `smoke-tst` below (Playwright against deployed URL).
   health-check-tst:
     name: Health check tst
     needs: deploy-tst
@@ -142,3 +244,57 @@ jobs:
             exit 1
           fi
           echo "Homepage SSR OK (${bytes} bytes, brand marker present)."
+
+  # Schema contract — proves every required field the app expects actually
+  # exists on the live tst PB. Runs from the ops image (same commit as the
+  # deploy) inside the compose network, so it talks to the same `pocketbase`
+  # service the app does. This is the test that would have caught the
+  # 2026-04-26 SEV-1 (`availability_slots` had only `id` field on tst PB).
+  schema-contract-tst:
+    name: Schema contract test (tst)
+    needs: [deploy-tst, health-check-tst]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run schema-contract integration test from ops image
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.TST_SSH_HOST }}
+          username: ${{ secrets.TST_SSH_USER }}
+          key: ${{ secrets.TST_SSH_KEY }}
+          script: |
+            docker run --rm \
+              --network amg_default \
+              --env-file /srv/amg/.env.tst \
+              ghcr.io/ricardoafo-org/amg-saas-factory:sha-${{ github.sha }}-ops \
+              npx vitest run --config vitest.integration.config.ts tests/db/schema-contract.integration.test.ts
+
+  # Smoke — end-to-end probe against the public URL. Distinguishes
+  # "container is up and SSR works" from "the booking flow actually
+  # touches PocketBase and writes a row". Closes the gap between green
+  # CI and broken production.
+  smoke-tst:
+    name: Smoke test against tst URL
+    needs: [deploy-tst, health-check-tst]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE_URL: https://tst.178-104-237-14.sslip.io
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run smoke spec
+        run: npx playwright test --config=playwright.smoke.config.ts
