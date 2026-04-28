@@ -15,7 +15,7 @@
  * stack) or locally when env is set.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, afterAll } from 'vitest';
 
 const PB_URL = process.env.POCKETBASE_URL || 'http://127.0.0.1:8090';
 const EMAIL = process.env.PB_BOOTSTRAP_EMAIL || process.env.POCKETBASE_ADMIN_EMAIL;
@@ -27,8 +27,10 @@ interface AuthRes {
   record: { id: string };
 }
 
+// Top-level mutable refs — populated by setup() below via top-level await.
+// Why top-level await? `it.skipIf(...)` is evaluated at registration time,
+// not at runtime, so beforeAll() cannot gate test registration.
 let superToken: string | null = null;
-let pbReachable = false;
 let tenantAId: string | null = null;
 let tenantBId: string | null = null;
 let staffAToken: string | null = null;
@@ -61,10 +63,10 @@ async function pbReq<T = unknown>(
   return { status: res.status, body: parsed as T };
 }
 
-beforeAll(async () => {
+async function setup(): Promise<boolean> {
   if (!EMAIL || !PASSWORD) {
     console.warn('[tenant-isolation-live] missing PB creds — suite skipped');
-    return;
+    return false;
   }
 
   try {
@@ -75,35 +77,33 @@ beforeAll(async () => {
     );
     if (auth.status !== 200 || !auth.body.token) {
       console.warn(`[tenant-isolation-live] auth failed (${auth.status}) — suite skipped`);
-      return;
+      return false;
     }
     superToken = auth.body.token;
-    pbReachable = true;
   } catch {
     console.warn(`[tenant-isolation-live] PB unreachable at ${PB_URL} — suite skipped`);
-    return;
+    return false;
   }
 
-  // Seed two tenants
+  // Seed two tenants — fields match src/schemas/tenants.schema.json
   const slug = `test-iso-${Date.now()}`;
   const aRes = await pbReq<{ id: string }>(
     'POST',
     '/api/collections/tenants/records',
-    { slug: `${slug}-a`, business_name: 'Tenant A', timezone: 'Europe/Madrid' },
+    { name: 'Tenant A', slug: `${slug}-a`, industry: 'automotive' },
     superToken,
   );
   const bRes = await pbReq<{ id: string }>(
     'POST',
     '/api/collections/tenants/records',
-    { slug: `${slug}-b`, business_name: 'Tenant B', timezone: 'Europe/Madrid' },
+    { name: 'Tenant B', slug: `${slug}-b`, industry: 'automotive' },
     superToken,
   );
   if (aRes.status !== 200 || bRes.status !== 200) {
     console.warn(
       `[tenant-isolation-live] tenant seed failed (a=${aRes.status} b=${bRes.status}) — suite will skip`,
     );
-    pbReachable = false;
-    return;
+    return false;
   }
   tenantAId = aRes.body.id;
   tenantBId = bRes.body.id;
@@ -119,7 +119,7 @@ beforeAll(async () => {
       email: emailA,
       password: PASS,
       passwordConfirm: PASS,
-      name: 'Staff A',
+      display_name: 'Staff A',
       role: 'admin',
       active: true,
     },
@@ -133,7 +133,7 @@ beforeAll(async () => {
       email: emailB,
       password: PASS,
       passwordConfirm: PASS,
-      name: 'Staff B',
+      display_name: 'Staff B',
       role: 'admin',
       active: true,
     },
@@ -143,8 +143,7 @@ beforeAll(async () => {
     console.warn(
       `[tenant-isolation-live] staff seed failed (a=${staffARes.status} b=${staffBRes.status}) — suite will skip`,
     );
-    pbReachable = false;
-    return;
+    return false;
   }
 
   // One appointment per tenant
@@ -180,8 +179,7 @@ beforeAll(async () => {
     console.warn(
       `[tenant-isolation-live] appointment seed failed (a=${aptA.status} b=${aptB.status}) — suite will skip`,
     );
-    pbReachable = false;
-    return;
+    return false;
   }
   appointmentAId = aptA.body.id;
   appointmentBId = aptB.body.id;
@@ -196,11 +194,13 @@ beforeAll(async () => {
     console.warn(
       `[tenant-isolation-live] staff-A auth failed (${staffAuth.status}) — suite will skip`,
     );
-    pbReachable = false;
-    return;
+    return false;
   }
   staffAToken = staffAuth.body.token;
-});
+  return true;
+}
+
+const pbReachable = await setup();
 
 afterAll(async () => {
   if (!superToken) return;

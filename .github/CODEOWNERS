@@ -1,0 +1,12 @@
+# CODEOWNERS — auto-route reviews per ADR-015 §7
+#
+# Today: ricardoafo owns everything (solo dev). When team grows, route per area:
+#   docs/adr/      → architecture-leads
+#   src/actions/   → backend-leads
+#   src/core/      → frontend-leads
+#   tests/e2e/     → qa-collaborator
+#   .github/       → infra-leads
+#
+# Until then, single default owner keeps PR routing simple and unambiguous.
+
+* @ricardoafo

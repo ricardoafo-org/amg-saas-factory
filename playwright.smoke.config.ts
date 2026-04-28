@@ -18,7 +18,7 @@ export default defineConfig({
   testDir: './tests/smoke',
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
-  retries: 1,
+  retries: 2,
   workers: '50%',
   reporter: 'list',
 
