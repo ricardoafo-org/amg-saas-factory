@@ -15,9 +15,9 @@ vi.mock('server-only', () => ({}));
 const messagesCreate = vi.fn();
 
 vi.mock('@anthropic-ai/sdk', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: { create: messagesCreate },
-  })),
+  default: vi.fn(function () {
+    return { messages: { create: messagesCreate } };
+  }),
 }));
 
 const OPTIONS = [

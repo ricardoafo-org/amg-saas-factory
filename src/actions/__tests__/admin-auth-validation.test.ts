@@ -13,10 +13,12 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('pocketbase', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    collection: () => ({ authWithPassword: vi.fn().mockRejectedValue(new Error('auth fail')) }),
-    authStore: { isValid: false, token: '' },
-  })),
+  default: vi.fn(function () {
+    return {
+      collection: () => ({ authWithPassword: vi.fn().mockRejectedValue(new Error('auth fail')) }),
+      authStore: { isValid: false, token: '' },
+    };
+  }),
 }));
 
 import { loginStaff } from '../admin-auth';
