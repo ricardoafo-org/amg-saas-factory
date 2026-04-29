@@ -24,11 +24,13 @@ vi.mock('@/lib/config', () => ({
 }));
 
 vi.mock('resend', () => ({
-  Resend: vi.fn().mockImplementation(() => ({
-    emails: {
-      send: vi.fn().mockResolvedValue({ id: 'mock-email-id' }),
-    },
-  })),
+  Resend: vi.fn(function () {
+    return {
+      emails: {
+        send: vi.fn().mockResolvedValue({ id: 'mock-email-id' }),
+      },
+    };
+  }),
 }));
 
 vi.mock('@react-email/render', () => ({

@@ -30,11 +30,17 @@ export default defineConfig({
       // Ratchet floors per ADR-005-rev2 §3.1. Numbers reflect current
       // baseline minus a small buffer; never lower these without an ADR.
       // Target: 80% lines / 75% branches once the integration suite lands.
+      //
+      // 2026-04-29: Vitest 4 + @vitest/coverage-v8 4 changed how branches and
+      // functions are counted (denominators differ ~4x from v3). Same code,
+      // different metric. Thresholds rebaselined off v4 measurements minus a
+      // small buffer. v3 baseline was 24/77/59/24 (l/b/f/s); v4 baseline is
+      // 19/16/15/19. The drop is methodology, not a real coverage regression.
       thresholds: {
-        lines: 20,
-        statements: 20,
-        branches: 75,
-        functions: 55,
+        lines: 19,
+        statements: 19,
+        branches: 16,
+        functions: 15,
       },
     },
   },

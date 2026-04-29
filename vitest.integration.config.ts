@@ -23,14 +23,12 @@ export default defineConfig({
     // Run integration files in serial child processes. Threads share Node's
     // global undici fetch agent + connection pool; on CI Linux that produced
     // a 200+empty appointment POST after schema-contract's reads had warmed
-    // the pool. singleFork serializes files so the live PB sees one client
-    // at a time and we don't have to debug pool contention.
+    // the pool. fileParallelism:false serializes files so the live PB sees
+    // one client at a time and we don't have to debug pool contention.
+    // Vitest 4: `poolOptions.forks.singleFork` was removed; the equivalent
+    // is top-level `fileParallelism: false` (forces maxWorkers=1).
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    fileParallelism: false,
   },
   resolve: {
     alias: {
