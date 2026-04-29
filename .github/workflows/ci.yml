@@ -962,6 +962,8 @@ jobs:
       - new-code-needs-test
       - e2e-smoke
       - codeql
+      - dependency-review
+      - semgrep
     if: always()
     runs-on: ubuntu-24.04
     steps:
