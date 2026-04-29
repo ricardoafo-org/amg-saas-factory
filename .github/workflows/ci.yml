@@ -93,6 +93,7 @@ jobs:
       # source files: any code change creates a new cache; restore-key falls
       # back to lockfile-only so npm-only bumps still hit a warm cache.
       - name: Cache .next
+        id: next-cache
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: .next/cache
@@ -100,12 +101,35 @@ jobs:
           restore-keys: |
             next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
             next-${{ runner.os }}-
+      # Perf instrumentation (lever 1 of CI perf review 2026-04-29). Logs
+      # whether the .next/cache restore hit the primary key, hit a fallback
+      # restore-key, or missed entirely — and the resulting cache size after
+      # the build. Two consecutive weeks of these logs feeds the decision on
+      # whether to widen the cache key (current: lockfile + every src file,
+      # which busts on any code change).
+      - name: Log .next/cache restore status (perf instrumentation)
+        run: |
+          if [[ "${{ steps.next-cache.outputs.cache-hit }}" == "true" ]]; then
+            echo "::notice::next-cache: PRIMARY KEY HIT (best case)"
+          elif [[ -d .next/cache ]]; then
+            echo "::notice::next-cache: RESTORE-KEY HIT (lockfile-keyed fallback)"
+          else
+            echo "::notice::next-cache: MISS (cold build)"
+          fi
       # `npm run build:docker` is `next build` only — skips schemas:sync (needs
       # PocketBase, not available in CI). Same command runs inside the deploy
       # Docker stage, so a green run here means tst will deploy.
       - run: npm run build:docker
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+      - name: Log .next/cache size after build (perf instrumentation)
+        if: always()
+        run: |
+          if [[ -d .next/cache ]]; then
+            echo "::notice::next-cache size after build: $(du -sh .next/cache | cut -f1)"
+          else
+            echo "::notice::next-cache: not present after build"
+          fi
 
   lint:
     name: Lint
@@ -632,7 +656,10 @@ jobs:
         with:
           name: playwright-trace-shard-${{ matrix.shard }}
           path: test-results/
-          retention-days: 7
+          # Retention dropped 7d → 3d (CI perf review 2026-04-29 lever 2).
+          # Diagnostic value of a 7-day-old trace is near zero; a flake gets
+          # diagnosed on the same day or it's stale anyway.
+          retention-days: 3
           if-no-files-found: ignore
 
   # E2E admin (Playwright + seeded PocketBase). DISABLED until admin login is
@@ -702,7 +729,9 @@ jobs:
         with:
           name: playwright-trace-admin
           path: test-results/
-          retention-days: 7
+          # Retention dropped 7d → 3d (CI perf review 2026-04-29 lever 2),
+          # mirroring the e2e-smoke trace upload.
+          retention-days: 3
           if-no-files-found: ignore
 
   # ============================================================

@@ -140,10 +140,12 @@ Lever 1 (cache visibility) is the prerequisite for any further build-time work �
 
 ## Acceptance for this review
 
-- [x] Lever 5 (workflow concurrency cancel) bundled with this doc — see ci.yml `concurrency:` block.
-- [ ] Levers 1 + 2 land in a follow-up CI-tweak PR.
+- [x] Lever 5 (workflow concurrency cancel) shipped in PR #139.
+- [x] Lever 1 (.next/cache hit-rate logging — `id: next-cache` + restore-status notice + post-build `du -sh`) shipped on `perf/ci-cache-logging-trace-retention`.
+- [x] Lever 2 (Playwright trace retention 7d → 3d) shipped same branch.
 - [ ] Cache-hit log reviewed after 1 week of PR data.
-- [ ] If hit rate < 50%, lever 1 follow-up tunes cache key.
+- [ ] If primary-key hit rate < 50%, lever 1 follow-up widens cache key (drop the `src/**/*` portion, keep lockfile only).
+- [ ] Lever 4 (conditional CodeQL `actions` query) — proper implementation needs `dorny/paths-filter` + matrix → 2-job split + ci-success.needs update. Deferred.
 - [ ] Doc-only fast lane (lever 3) opened as a separate PR with a representative test PR proving it short-circuits.
 
 ## References
