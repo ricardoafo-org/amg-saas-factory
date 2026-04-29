@@ -140,7 +140,8 @@ Lever 1 (cache visibility) is the prerequisite for any further build-time work â
 
 ## Acceptance for this review
 
-- [ ] Levers 5 + 1 + 2 land in a single CI-tweak PR.
+- [x] Lever 5 (workflow concurrency cancel) bundled with this doc â€” see ci.yml `concurrency:` block.
+- [ ] Levers 1 + 2 land in a follow-up CI-tweak PR.
 - [ ] Cache-hit log reviewed after 1 week of PR data.
 - [ ] If hit rate < 50%, lever 1 follow-up tunes cache key.
 - [ ] Doc-only fast lane (lever 3) opened as a separate PR with a representative test PR proving it short-circuits.

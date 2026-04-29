@@ -38,6 +38,21 @@ on:
     - cron: '0 6 * * 1'  # Mondays 06:00 UTC
   branch_protection_rule:
 
+# Cancel superseded PR runs — when a developer pushes a fix-up to an open
+# PR, abort the in-flight CI for the previous SHA and start fresh on the new
+# one. Pure win for developer feedback latency; no waste on stale results.
+#
+# Scoped tightly:
+# - `cancel-in-progress` ONLY fires on `pull_request` events. Merge-queue
+#   runs (`merge_group`), the weekly schedule, and `branch_protection_rule`
+#   events MUST NOT be cancelled — aborting a merge_group run breaks the
+#   queue, and the schedule run is the "main is still green" canary.
+# - Group key falls through to `github.ref` for non-PR events, so each non-PR
+#   run gets its own group and never collides with a PR run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read  # least-privilege default; jobs that need more (security-gate) opt-in below
 
