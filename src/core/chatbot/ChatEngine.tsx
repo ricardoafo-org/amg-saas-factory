@@ -94,11 +94,13 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
     if (!node) { setDone(true); return; }
 
     if (node.action === 'save_appointment') {
+      // eslint-disable-next-line react-hooks/immutability -- ChatEngine retires in FEAT-039 PR-D (#92)
       handleSave(nodeId, node, vars);
       return;
     }
 
     if (node.action === 'save_quote') {
+      // eslint-disable-next-line react-hooks/immutability -- ChatEngine retires in FEAT-039 PR-D (#92)
       handleSaveQuote(nodeId, node, vars);
       return;
     }
@@ -133,6 +135,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
               addBotMessage(`No hay huecos disponibles — llámanos al ${phone}`, 300);
               // No slots — advance into the contact-collection branch via goToNode so
               // the next node's message + input actually render. BUG-012.
+              // eslint-disable-next-line react-hooks/immutability -- ChatEngine retires in FEAT-039 PR-D (#92)
               if (node.next) goToNode(node.next, newVars);
             }
           })
@@ -394,6 +397,7 @@ export function ChatEngine({ flow, tenantId, phone, businessName, policyUrl, pol
     const matchedService = services.find((s) => s.id === initialService);
     const serviceLabel = matchedService?.name ?? matchedOption.label;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ChatEngine retires in FEAT-039 PR-D (#92)
     setStarted(true);
     setSelectedServiceValues([initialService]);
     setCurrentNodeId('ask_service');

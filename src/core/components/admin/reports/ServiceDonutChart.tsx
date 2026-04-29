@@ -64,16 +64,21 @@ export function ServiceDonutChart({ data }: Props) {
   }
 
   const total = data.reduce((s, d) => s + d.total, 0);
-  let currentAngle = -90;
 
-  const slices = data.map((item, i) => {
-    const sweep = (item.total / total) * 360;
-    const start = currentAngle;
-    const end = currentAngle + sweep;
-    currentAngle = end;
-    const color = COLORS[i % COLORS.length];
-    return { item, start, end, color, index: i };
-  });
+  const slices = data.reduce<
+    { slices: Array<{ item: ServiceRevenue; start: number; end: number; color: string; index: number }>; angle: number }
+  >(
+    (acc, item, i) => {
+      const sweep = (item.total / total) * 360;
+      const start = acc.angle;
+      const end = start + sweep;
+      const color = COLORS[i % COLORS.length];
+      acc.slices.push({ item, start, end, color, index: i });
+      acc.angle = end;
+      return acc;
+    },
+    { slices: [], angle: -90 },
+  ).slices;
 
   const activeSlice = hovered !== null ? slices[hovered] : null;
 

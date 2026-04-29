@@ -24,18 +24,22 @@ export function StepSlot({ tenantId, onComplete }: Props) {
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     const today = new Date().toISOString().split('T')[0];
-    setLoading(true);
-    setLoadError(false);
     getAvailableSlots(tenantId, today, 14)
       .then((available) => {
+        if (cancelled) return;
         setSlots(available);
         setLoading(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setLoadError(true);
         setLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [tenantId]);
 
   function handleSelect(slot: AvailableSlot) {

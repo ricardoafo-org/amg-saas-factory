@@ -24,8 +24,12 @@ export function CookieBanner() {
   });
 
   useEffect(() => {
+    // localStorage is browser-only; reading at mount avoids hydration mismatch
+    // that would result from a lazy useState initializer. useSyncExternalStore
+    // would be the "purest" fix but adds non-trivial setup for a one-shot read.
     try {
       const stored = localStorage.getItem(CONSENT_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot localStorage read on mount; hydration-safe pattern
       if (!stored) setVisible(true);
     } catch {
       // localStorage unavailable (e.g. SSR context) — do nothing
