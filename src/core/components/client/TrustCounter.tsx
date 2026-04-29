@@ -55,6 +55,7 @@ export function TrustCounter({
     // Respect prefers-reduced-motion
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reduced-motion snap; effect IS the right primitive for animation init
       setValue(end);
       return;
     }

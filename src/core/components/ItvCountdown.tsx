@@ -139,6 +139,8 @@ export function ItvCountdown() {
   /* ── tween the displayed number whenever targetDays changes ── */
   useEffect(() => {
     if (targetDays === null) {
+      // Reset path: clear displayed value when input becomes invalid.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- animation lifecycle reset; effect IS the right primitive
       setDisplayDays(null);
       prevDaysRef.current = 0;
       return;

@@ -14,6 +14,9 @@ export function RuleDivider({ className }: RuleDividerProps) {
     const el = ref.current;
     if (!el) return;
     if (typeof IntersectionObserver === 'undefined') {
+      // Fallback for ancient browsers / SSR (jsdom) — show immediately rather
+      // than animate. One-shot setState on mount is correct here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- IO unavailable fallback; rare path
       setInView(true);
       return;
     }

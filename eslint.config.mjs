@@ -113,12 +113,12 @@ const eslintConfig = [
       // Catch unused ESLint disable comments — they rot otherwise.
       // (set at flat-config level via reportUnusedDisableDirectives below)
 
-      // React 19 Compiler-aware strict rules introduced by eslint-config-next 16.
-      // Disabled in this PR (deps bump only) to keep scope tight; existing code
-      // has 10 violations that warrant their own refactor PR with proper review
-      // of effect/state patterns. TODO(post-bump): triage and fix incrementally.
-      'react-hooks/set-state-in-effect': 'off',
-      'react-hooks/immutability': 'off',
+      // React 19 Compiler-aware strict rules from eslint-config-next 16.
+      // Triaged: 2 real fixes (ServiceDonutChart reduce, StepSlot cancellation),
+      // 4 ChatEngine disables (file retires in FEAT-039 PR-D #92), 4 documented
+      // disables for legit effect-as-animation-init / browser-only-read patterns.
+      'react-hooks/set-state-in-effect': 'error',
+      'react-hooks/immutability': 'error',
     },
   },
 
